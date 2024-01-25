@@ -10,6 +10,9 @@ import utilities
 import logging
 from fastapi.responses import JSONResponse
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+
 # Check OpenAI version is correct
 required_version = version.parse("1.1.1")
 current_version = version.parse(openai.__version__)
@@ -18,12 +21,10 @@ if current_version < required_version:
   raise ValueError(f"Error: OpenAI version {openai.__version__}"
                    " is less than the required version 1.1.1")
 else:
-  print("OpenAI version is compatible.")
+  logger.info("OpenAI version is compatible.")
 
-# Init FastAPI app
 app = FastAPI()
 
-# Init client
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Create new assistant or load existing
@@ -40,9 +41,9 @@ async def root():
 
 @app.get("/start")
 async def start_conversation():
-    logging.info("Starting a new conversation...")
+    logger.info("Starting a new conversation...")
     thread = client.beta.threads.create()
-    logging.info(f"New thread created with ID: {thread.id}")
+    logger.info(f"New thread created with ID: {thread.id}")
     return {"thread_id": thread.id}
 
 
@@ -52,10 +53,10 @@ async def chat(chat_request: ChatRequest):
     user_input = chat_request.message
 
     if not thread_id:
-        logging.error("Error: Missing thread_id")
+        logger.error("Error: Missing thread_id")
         raise HTTPException(status_code=400, detail="Missing thread_id")
 
-    logging.info(f"Received message: {user_input} for thread ID: {thread_id}")
+    logger.info(f"Received message: {user_input} for thread ID: {thread_id}")
 
     # Add the user's message to the thread
     client.beta.threads.messages.create(thread_id=thread_id,
@@ -66,11 +67,11 @@ async def chat(chat_request: ChatRequest):
     run = client.beta.threads.runs.create(thread_id=thread_id,
                                           assistant_id=assistant_id)
 
-    # Check if the Run requires action (function call)
+    # Wait for the run to be completed
     while True:
         run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
                                                        run_id=run.id)
-        print(f"Run status: {run_status.status}")
+        logger.info(f"Run status: {run_status.status}")
         if run_status.status == 'completed':
             break
         sleep(1)  # Wait for a second before checking again
@@ -79,11 +80,8 @@ async def chat(chat_request: ChatRequest):
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     response = messages.data[0].content[0].text.value
 
-    logging.info(f"Assistant response: {response}")
+    logger.info(f"Assistant response: {response}")
     return JSONResponse(content={"response": response})
-
-# FastAPI's development server can be started using the command: uvicorn script_name:app --reload
-# where 'script_name' is the name of your Python script containing the FastAPI app
 
 
 # Run server
