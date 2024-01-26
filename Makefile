@@ -9,6 +9,7 @@
 set-up-project: ## Set up tools and dependencies
 	poetry run pip install --upgrade pip
 	poetry run pip install pre-commit
+	chmod +x .git/hooks/pre-commit
 
 install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
 	poetry install
