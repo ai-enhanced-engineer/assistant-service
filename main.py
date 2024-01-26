@@ -1,15 +1,17 @@
-from gevent import monkey
-monkey.patch_all()
-
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
 import os
 from time import sleep
-from flask import Flask, request, jsonify
 from packaging import version
 import openai
 from openai import OpenAI
 import utilities
-from gevent.pywsgi import WSGIServer
 import logging
+from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 # Check OpenAI version is correct
 required_version = version.parse("1.1.1")
@@ -19,71 +21,69 @@ if current_version < required_version:
   raise ValueError(f"Error: OpenAI version {openai.__version__}"
                    " is less than the required version 1.1.1")
 else:
-  print("OpenAI version is compatible.")
+  logger.info("OpenAI version is compatible.")
 
-# Start Flask app
-app = Flask(__name__)
+app = FastAPI()
 
-
-# Init client
-client = OpenAI(
-    api_key=OPENAI_API_KEY
-)  # should use env variable OPENAI_API_KEY in secrets (bottom left corner)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Create new assistant or load existing
 assistant_id = utilities.create_assistant(client)
 
+class ChatRequest(BaseModel):
+    thread_id: str
+    message: str
 
-# Start conversation thread
-@app.route('/start', methods=['GET'])
-def start_conversation():
-  logging.info("Starting a new conversation...")
-  thread = client.beta.threads.create()
-  logging.info(f"New thread created with ID: {thread.id}")
-  return jsonify({"thread_id": thread.id})
+@app.get("/")
+async def root():
+  return {"status": "healthy"}
+  
+
+@app.get("/start")
+async def start_conversation():
+    logger.info("Starting a new conversation...")
+    thread = client.beta.threads.create()
+    logger.info(f"New thread created with ID: {thread.id}")
+    return {"thread_id": thread.id}
 
 
-# Generate response
-@app.route('/chat', methods=['POST'])
-def chat():
-  data = request.json
-  thread_id = data.get('thread_id')
-  user_input = data.get('message', '')
+@app.post("/chat")
+async def chat(chat_request: ChatRequest):
+    thread_id = chat_request.thread_id
+    user_input = chat_request.message
 
-  if not thread_id:
-    logging.info("Error: Missing thread_id")
-    return jsonify({"error": "Missing thread_id"}), 400
+    if not thread_id:
+        logger.error("Error: Missing thread_id")
+        raise HTTPException(status_code=400, detail="Missing thread_id")
 
-  logging.info(f"Received message: {user_input} for thread ID: {thread_id}"
-        )
+    logger.info(f"Received message: {user_input} for thread ID: {thread_id}")
 
-  # Add the user's message to the thread
-  client.beta.threads.messages.create(thread_id=thread_id,
-                                      role="user",
-                                      content=user_input)
+    # Add the user's message to the thread
+    client.beta.threads.messages.create(thread_id=thread_id,
+                                        role="user",
+                                        content=user_input)
 
-  # Run the Assistant
-  run = client.beta.threads.runs.create(thread_id=thread_id,
-                                        assistant_id=assistant_id)
+    # Run the Assistant
+    run = client.beta.threads.runs.create(thread_id=thread_id,
+                                          assistant_id=assistant_id)
 
-  # Check if the Run requires action (function call)
-  while True:
-    run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
-                                                   run_id=run.id)
-    print(f"Run status: {run_status.status}")
-    if run_status.status == 'completed':
-      break
-    sleep(1)  # Wait for a second before checking again
+    # Wait for the run to be completed
+    while True:
+        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
+                                                       run_id=run.id)
+        logger.info(f"Run status: {run_status.status}")
+        if run_status.status == 'completed':
+            break
+        sleep(1)  # Wait for a second before checking again
 
-  # Retrieve and return the latest message from the assistant
-  messages = client.beta.threads.messages.list(thread_id=thread_id)
-  response = messages.data[0].content[0].text.value
+    # Retrieve and return the latest message from the assistant
+    messages = client.beta.threads.messages.list(thread_id=thread_id)
+    response = messages.data[0].content[0].text.value
 
-  logging.info(f"Assistant response: {response}")
-  return jsonify({"response": response})
+    logger.info(f"Assistant response: {response}")
+    return JSONResponse(content={"response": response})
 
 
 # Run server
 if __name__ == '__main__':
-  http_server = WSGIServer(('0.0.0.0', 8080), app)
-  http_server.serve_forever()
+  uvicorn.run(app,host="0.0.0.0",port=8080)
