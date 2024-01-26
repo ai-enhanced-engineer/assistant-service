@@ -1,9 +1,11 @@
-import os
 import json
-import prompts
+import os
+
+from nowisthetime import prompts
+
 
 def create_assistant(client):
-  assistant_file_path = 'assistant.json'
+  assistant_file_path = '../assistant.json'
 
   # Assistant does exists
   if os.path.exists(assistant_file_path):  

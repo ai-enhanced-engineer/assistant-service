@@ -3,20 +3,20 @@
 # Define the default target
 .DEFAULT_GOAL := help
 
-# Define variables
-PYTHON := python
-FLOW := flow.py
-CONFIG_FILE := experiment_config.yaml
-
 # Define phony targets
 .PHONY: install help
 
 install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
 	poetry install
 
-run-local-flow: ## Run the flow.py script with the specified config file
-	python lora/flow.py run
-	# python flow.py run --config-file $(CONFIG_FILE)
+update: ## Update .lock file with new dependencies.
+	poetry install
+
+lint:
+	poetry run ruff check .
+
+lint-fix:
+	poetry run ruff check --fix .
 
 
 help: ## Display this help message

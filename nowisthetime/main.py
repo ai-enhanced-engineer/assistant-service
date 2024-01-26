@@ -1,14 +1,15 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import uvicorn
+import logging
 import os
 from time import sleep
-from packaging import version
+
 import openai
-from openai import OpenAI
 import utilities
-import logging
+import uvicorn
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from openai import OpenAI
+from packaging import version
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
