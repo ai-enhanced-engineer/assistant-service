@@ -7,7 +7,6 @@ import utilities
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from openai import OpenAI
 from packaging import version
 from pydantic import BaseModel
 
@@ -17,16 +16,18 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 # Check OpenAI version is correct
 required_version = version.parse("1.1.1")
 current_version = version.parse(openai.__version__)
-OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 if current_version < required_version:
-    raise ValueError(f"Error: OpenAI version {openai.__version__}"
-                     " is less than the required version 1.1.1")
+    raise ValueError(
+        f"Error: OpenAI version {openai.__version__}"
+        " is less than the required version 1.1.1"
+    )
 else:
     logger.info("OpenAI version is compatible.")
 
 app = FastAPI()
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Create new assistant or load existing
 assistant_id = utilities.create_assistant(client)
@@ -62,20 +63,22 @@ async def chat(chat_request: ChatRequest):
     logger.info(f"Received message: {user_input} for thread ID: {thread_id}")
 
     # Add the user's message to the thread
-    client.beta.threads.messages.create(thread_id=thread_id,
-                                        role="user",
-                                        content=user_input)
+    client.beta.threads.messages.create(
+        thread_id=thread_id, role="user", content=user_input
+    )
 
     # Run the Assistant
-    run = client.beta.threads.runs.create(thread_id=thread_id,
-                                          assistant_id=assistant_id)
+    run = client.beta.threads.runs.create(
+        thread_id=thread_id, assistant_id=assistant_id
+    )
 
     # Wait for the run to be completed
     while True:
-        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id,
-                                                       run_id=run.id)
+        run_status = client.beta.threads.runs.retrieve(
+            thread_id=thread_id, run_id=run.id
+        )
         logger.info(f"Run status: {run_status.status}")
-        if run_status.status == 'completed':
+        if run_status.status == "completed":
             break
         sleep(1)  # Wait for a second before checking again
 
@@ -88,5 +91,5 @@ async def chat(chat_request: ChatRequest):
 
 
 # Run server
-if __name__ == '__main__':
+if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
