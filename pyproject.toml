@@ -8,9 +8,12 @@ authors = ["Leopoldo Garcia Vargas <lk13.dev@gmail.com>"]
 python = ">=3.10.0,<3.11"
 openai = "^1.2.3"
 packaging = "^23.2"
-fastapi = "^0.109.0"
+fastapi = "^0.100.0"
 pydantic = "^2.5.3"
-uvicorn = "^0.27.0"
+uvicorn = "^0.25.0"
+
+#Chainlit
+chainlit = "^1.0.200"
 
 [tool.poetry.dev-dependencies]
 ruff = "^0.1.14"
