@@ -15,7 +15,7 @@ install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
 	poetry install
 
 update: ## Update .lock file with new dependencies.
-	poetry install
+	poetry update
 
 lint:  ## Check for code issues.
 	poetry run ruff check .

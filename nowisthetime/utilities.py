@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 
 from nowisthetime import prompts
+
+logger = logging.getLogger(__name__)
 
 
 def create_assistant(client):
@@ -9,10 +12,13 @@ def create_assistant(client):
 
     # Assistant does exist
     if os.path.exists(assistant_file_path):
-        with open(assistant_file_path, "r") as file:
-            assistant_data = json.load(file)
-            assistant_id = assistant_data["assistant_id"]
-            print("Loaded existing assistant ID.")
+        try:
+            with open(assistant_file_path) as file:
+                assistant_data = json.load(file)
+                assistant_id = assistant_data["assistant_id"]
+            logger.info("Loaded existing assistant ID.")
+        except FileNotFoundError:
+            logger.warning("Assistant ID file not found. Creating new one...")
     else:
         # Call to create assistant
         assistant = client.beta.assistants.create(
@@ -21,7 +27,7 @@ def create_assistant(client):
 
         with open(assistant_file_path, "w") as file:
             json.dump({"assistant_id": assistant.id}, file)
-            print("Created a new assistant and saved the ID.")
+            logger.info("Created a new assistant and saved the ID.")
 
         assistant_id = assistant.id
 
