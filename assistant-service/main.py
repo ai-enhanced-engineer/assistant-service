@@ -40,6 +40,7 @@ async def run(thread_id: str, human_query: str):
     )
     logging.info(f"Created run: {run.id}")
 
+    thread_processor = ThreadProcessor()
     # While to periodically check for updates
     while True:
         run = await client.beta.threads.runs.retrieve(
@@ -65,7 +66,7 @@ async def run(thread_id: str, human_query: str):
                     message_id=step_details.message_creation.message_id,
                     thread_id=thread_id,
                 )
-                await ThreadProcessor().process(thread_message)
+                await thread_processor.process(thread_message)
 
         await cl.sleep(2)  # Refresh every 2 seconds
         if run.status in ["cancelled", "failed", "completed", "expired"]:
