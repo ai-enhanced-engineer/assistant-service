@@ -1,8 +1,12 @@
+import logging
+
 import chainlit as cl
 from openai.types.beta.threads import (
     MessageContentText,
     ThreadMessage,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ThreadProcessor:
@@ -10,7 +14,10 @@ class ThreadProcessor:
         self._message_references: dict[str, cl.Message] = {}
 
     async def process(self, thread_message: ThreadMessage):
-        """Load the documents to be chunked"""
+        """Process the message thread."""
+        logger.info(
+            f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
+        )
         for idx, content_message in enumerate(thread_message.content):
             message_id = thread_message.id + str(idx)
             if isinstance(content_message, MessageContentText):
@@ -24,4 +31,4 @@ class ThreadProcessor:
                     )
                     await self._message_references[message_id].send()
             else:
-                print("unknown message type", type(content_message))
+                logger.warning("unknown message type", type(content_message))
