@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "now-is-the-time"
+name = "assistant-service"
 version = "0.1.0"
 description = ""
 authors = ["Leopoldo Garcia Vargas <lk13.dev@gmail.com>"]
