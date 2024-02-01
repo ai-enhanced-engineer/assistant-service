@@ -6,14 +6,19 @@ from openai.types.beta.threads import (
     ThreadMessage,
 )
 
+all = ["ThreadMessageProcessor"]
+
 logger = logging.getLogger(__name__)
 
 
-class ThreadProcessor:
+class ThreadMessageProcessor:
+    """Process thread message."""
+
     def __init__(self):
         self._message_references: dict[str, cl.Message] = {}
+        self.send_message = True
 
-    async def process(self, thread_message: ThreadMessage):
+    async def process(self, thread_message: ThreadMessage) -> cl.Message:
         """Process the message thread."""
         logger.info(
             f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
@@ -24,11 +29,12 @@ class ThreadProcessor:
                 if message_id in self._message_references:
                     msg = self._message_references[message_id]
                     msg.content = content_message.text.value
-                    await msg.update()
+                    self.send_message = False
+                    return msg
                 else:
                     self._message_references[message_id] = cl.Message(
                         author=thread_message.role, content=content_message.text.value
                     )
-                    await self._message_references[message_id].send()
+                    return self._message_references[message_id]
             else:
                 logger.warning("unknown message type", type(content_message))
