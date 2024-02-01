@@ -6,8 +6,6 @@ from openai.types.beta.threads import (
     ThreadMessage,
 )
 
-all = ["ThreadMessageProcessor"]
-
 logger = logging.getLogger(__name__)
 
 
