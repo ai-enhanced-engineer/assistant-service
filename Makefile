@@ -26,6 +26,9 @@ lint-fix:  ## Check and fix code issues.
 format:  ## Format code
 	poetry run ruff format .
 
+assistant-local-run:
+	poetry run chainlit run assistant-service/app.py
+
 
 help: ## Display this help message
 	@echo "Usage: make [target]"
