@@ -2,3 +2,4 @@
 .ruff_cache
 .env
 chainlit.md
+.pytest_cache
