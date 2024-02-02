@@ -1,0 +1,11 @@
+.gcloudignore
+.git
+.gitignore
+
+.env
+
+.chainlit
+chainlit.md
+
+.ruff_cache
+.pytest_cache
