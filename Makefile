@@ -26,6 +26,9 @@ install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
 update: ## Update .lock file with new dependencies.
 	poetry update
 
+show_dependencies:
+	poetry show --tree
+
 clean:
 	rm -r .chainlit .pytest_cache .ruff_cache chainlit.md
 

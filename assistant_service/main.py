@@ -4,11 +4,14 @@ import os
 import chainlit as cl
 from openai import AsyncOpenAI
 from processors import ThreadMessageProcessor
+from retreivers import BotBrewersSecretRetriever
 
 logger = logging.getLogger("Assistant")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
-API_KEY = os.environ.get("OPENAI_API_KEY")
+secret_retriever = BotBrewersSecretRetriever(os.environ.get("CLIENT_ID"))
+
+API_KEY = secret_retriever.access_secret(suffix="-openai")
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
 client = AsyncOpenAI(api_key=API_KEY)
