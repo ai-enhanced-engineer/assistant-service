@@ -1,0 +1,9 @@
+version: '3.4'
+services:
+  assistant:
+    image: assistant-service:latest
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    working_dir: /home/appuser/app/

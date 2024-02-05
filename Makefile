@@ -26,6 +26,11 @@ lint-fix:  ## Check and fix code issues.
 format:  ## Format code
 	poetry run ruff format .
 
+assistant-local-run:
+	poetry run chainlit run assistant-service/main.py
+
+assistant-service-build:
+	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-service:latest
 
 help: ## Display this help message
 	@echo "Usage: make [target]"
