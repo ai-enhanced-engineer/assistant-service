@@ -4,17 +4,21 @@ import os
 import chainlit as cl
 from openai import AsyncOpenAI
 from processors import ThreadMessageProcessor
-from retreivers import BotBrewersSecretRetriever
+
+from assistant_service.config import build_engine_config
+from commons.data_models.config import BaseConfig
+from commons.repositories.secrets import GCPSecretRepository
 
 logger = logging.getLogger("Assistant")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
-secret_retriever = BotBrewersSecretRetriever(os.environ.get("CLIENT_ID"))
+base_config = BaseConfig()  # Loads variables from the environment
+secret_repository = GCPSecretRepository(
+    project_id=base_config.project_id, client_id=base_config.client_id
+)
+engine_config = build_engine_config(secret_repository)
 
-API_KEY = secret_retriever.access_secret(suffix="-openai")
-ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
-
-client = AsyncOpenAI(api_key=API_KEY)
+client = AsyncOpenAI(api_key=engine_config.openai_apikey)
 
 
 @cl.on_chat_start
@@ -38,7 +42,9 @@ async def run(thread_id: str, human_query: str):
     logging.info(f"Created message: {init_message.id}, content:{init_message.content}")
 
     # Create the run
-    run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=ASSISTANT_ID)
+    run = await client.beta.threads.runs.create(
+        thread_id=thread_id, assistant_id=engine_config.assistant_id
+    )
     logging.info(f"Created run: {run.id}")
 
     thread_processor = ThreadMessageProcessor()

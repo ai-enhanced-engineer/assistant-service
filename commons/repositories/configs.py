@@ -1,37 +1,38 @@
 import abc
 import json
 
-import BBConfig
 from google.cloud import storage
 
+from commons.data_models.config import BaseConfig
 
-class BBConfigRepository(abc.ABC):
+
+class BaseConfigRepository(abc.ABC):
     @abc.abstractmethod
-    def write_config(self, config: BBConfig) -> None:
+    def write_config(self, config: BaseConfig) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def read_config(self, config_name: str) -> BBConfig:
+    def read_config(self, config_name: str) -> BaseConfig:
         raise NotImplementedError
 
 
-class LocalConfigRepository(BBConfigRepository):
-    def write_config(self, config: BBConfig) -> None:
+class LocalConfigRepository(BaseConfigRepository):
+    def write_config(self, config: BaseConfig) -> None:
         with open("local-config.json", "w") as f:
             json.dump(config.dict(), f)
 
-    def read_config(self, config_name: str) -> BBConfig:
+    def read_config(self, config_name: str) -> BaseConfig:
         with open(config_name) as f:
             return json.load(f)
 
 
-class GCPConfigRepository(BBConfigRepository):
+class GCPConfigRepository(BaseConfigRepository):
     def __init__(self, client_id: str, bucket_name: str):
         client = storage.Client()
         self.client_id = client_id
         self.bucket = client.bucket(bucket_name)
 
-    def write_config(self, config: BBConfig) -> None:
+    def write_config(self, config: BaseConfig) -> None:
         blob = self.bucket.blob(config)
 
         with blob.open("w") as f:
