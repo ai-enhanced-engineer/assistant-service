@@ -3,6 +3,7 @@ name = "assistant-service"
 version = "0.1.0"
 description = ""
 authors = ["Leopoldo Garcia Vargas <lk13.dev@gmail.com>"]
+#packages = [{include = "commons", from = "lib"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10.0,<3.11"
@@ -24,6 +25,7 @@ ruff = "^0.1.14"
 pytest = "^7.4.4"
 pytest-asyncio = "^0.23.4"
 pytest-mock = "3.12.0"
+#commons = { path = "./commons/", develop = true }
 #pyright = "^1.1.348"
 
 [tool.pyright]

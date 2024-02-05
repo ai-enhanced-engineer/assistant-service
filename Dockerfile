@@ -50,6 +50,7 @@ COPY --chown=1001:1001 --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY ./chainlit.md /home/appuser/app/chainlit.md
 COPY ./.env /home/appuser/app/.env
 COPY --chown=1001:1001 ./.chainlit /home/appuser/app/.chainlit
-COPY assistant_service /home/appuser/app/assistant_service
+COPY commons /home/appuser/app/commons
+COPY assistant_engine /home/appuser/app/assistant_engine
 
-CMD ["chainlit", "run", "/home/appuser/app/assistant_service/main.py"]
+CMD ["chainlit", "run", "/home/appuser/app/assistant_engine/main.py"]
