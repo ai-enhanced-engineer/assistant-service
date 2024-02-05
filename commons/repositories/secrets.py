@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseSecretRepository(abc.ABC):
-
     @abc.abstractmethod
     def write_secret(self, secret: str) -> None:
         raise NotImplementedError
@@ -18,7 +17,6 @@ class BaseSecretRepository(abc.ABC):
 
 
 class LocalSecretRepository(BaseSecretRepository):
-
     def __init__(self, client_id: str, project_id: str):
         self._project_id = project_id
         self._secret_id = client_id + "-openai"
