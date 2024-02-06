@@ -3,7 +3,6 @@ name = "assistant-service"
 version = "0.1.0"
 description = ""
 authors = ["Leopoldo Garcia Vargas <lk13.dev@gmail.com>"]
-#packages = [{ include = "./botbrew_commons", from = "lib" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.0,<3.11"
@@ -11,13 +10,10 @@ openai = "^1.2.3"
 packaging = "^23.2"
 fastapi = "^0.100.0"
 pydantic = "^2.5.3"
+pydantic-settings = "^2.1.0"
 uvicorn = "^0.25.0"
-#Chainlit
 chainlit = "^1.0.200"
 botbrew_commons = { path = "./botbrew_commons", develop = true }
-#botbrew_commons = {file = "botbrew_commons/dist/botbrew_commons-0.1.0-py3-none-any.whl"}
-
-
 
 [tool.poetry.dev-dependencies]
 ruff = "^0.1.14"
@@ -25,12 +21,15 @@ pytest = "^7.4.4"
 pytest-asyncio = "^0.23.4"
 pytest-mock = "3.12.0"
 
-#pyright = "^1.1.348"
-
-[tool.pyright]
-# https://github.com/microsoft/pyright/blob/main/docs/configuration.md
-useLibraryCodeForTypes = true
-exclude = [".cache"]
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+log_cli_level = "info"
+testpaths = [
+  "tests",
+]
 
 [tool.ruff]
 # https://beta.ruff.rs/docs/configuration/

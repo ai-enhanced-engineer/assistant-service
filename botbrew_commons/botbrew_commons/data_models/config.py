@@ -1,13 +1,13 @@
 from typing import Optional
 
 from pydantic import BaseModel, Field
-from pydantic.v1 import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class BaseConfig(BaseSettings):
-    project_id: str = Field(..., env="PROJECT_ID")
-    bucket_id: str = Field(..., env="BUCKET_ID")
-    client_id: str = Field(..., env="CLIENT_ID")
+    project_id: str = Field(json_schema_extra={"environ": True})
+    bucket_id: str = Field(json_schema_extra={"environ": True})
+    client_id: str = Field(json_schema_extra={"environ": True})
 
 
 class AssistantConfig(BaseModel):

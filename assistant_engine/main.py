@@ -14,7 +14,9 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 base_config = BaseConfig()  # Loads variables from the environment
 secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
-config_repository = GCPConfigRepository(client_id=base_config.client_id, bucket_name=base_config.bucket_id)
+config_repository = GCPConfigRepository(
+    client_id=base_config.client_id, project_id=base_config.project_id, bucket_name=base_config.bucket_id
+)
 engine_config = build_engine_config(secret_repository, config_repository)
 
 client = AsyncOpenAI(api_key=engine_config.openai_apikey)

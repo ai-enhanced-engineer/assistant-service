@@ -28,8 +28,8 @@ class LocalConfigRepository(BaseConfigRepository):
 
 
 class GCPConfigRepository(BaseConfigRepository):
-    def __init__(self, client_id: str, bucket_name: str):
-        client = storage.Client()
+    def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        client = storage.Client(project=project_id)
         self._blob = client.bucket(bucket_name).blob("configs/" + client_id)
 
     def write_config(self, config: AssistantConfig) -> None:

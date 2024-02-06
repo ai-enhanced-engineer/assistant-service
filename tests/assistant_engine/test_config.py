@@ -1,6 +1,6 @@
-from assistant_engine.config import build_engine_config
-from botbrew_commons.commons.data_models.config import AssistantConfig, BaseConfig
-from botbrew_commons.commons.repositories import LocalConfigRepository, LocalSecretRepository
+from assistant_engine import build_engine_config
+from botbrew_commons.data_models import AssistantConfig, BaseConfig
+from botbrew_commons.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test__build_engine_config(monkeypatch):
