@@ -2,13 +2,12 @@ import logging
 import os
 
 import chainlit as cl
+from config import build_engine_config
 from openai import AsyncOpenAI
 from processors import ThreadMessageProcessor
 
-from assistant_engine.config import build_engine_config
-from commons.data_models.config import BaseConfig
-from commons.repositories.configs import GCPConfigRepository
-from commons.repositories.secrets import GCPSecretRepository
+from botbrew_commons.data_models import BaseConfig
+from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
 logger = logging.getLogger("assistant-engine")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))

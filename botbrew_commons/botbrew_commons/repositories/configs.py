@@ -3,7 +3,7 @@ import json
 
 from google.cloud import storage
 
-from commons.data_models.config import AssistantConfig
+from botbrew_commons.data_models import AssistantConfig
 
 
 class BaseConfigRepository(abc.ABC):

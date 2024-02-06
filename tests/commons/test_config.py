@@ -1,6 +1,6 @@
 import pytest
 
-from commons.data_models.config import BaseConfig
+from botbrew_commons.data_models import BaseConfig
 
 
 def test__env_variables_are_loaded(monkeypatch):
