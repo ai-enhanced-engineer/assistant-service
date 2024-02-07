@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from nowisthetime import prompts
+from nowisthetime_legacy import prompts
 
 logger = logging.getLogger(__name__)
 

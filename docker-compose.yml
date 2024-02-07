@@ -4,6 +4,9 @@ services:
     image: assistant-service:latest
     build:
       context: .
+    environment:
+      - OPENAI_API_KEY=
+      - ASSISTANT_ID=
     ports:
       - "8000:8000"
     working_dir: /home/appuser/app/
