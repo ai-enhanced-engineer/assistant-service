@@ -18,9 +18,7 @@ class ThreadMessageProcessor:
 
     async def process(self, thread_message: ThreadMessage) -> cl.Message:
         """Process the message thread."""
-        logger.info(
-            f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
-        )
+        logger.info(f"Processing thread message: {thread_message.id} with content: {thread_message.content}")
         for idx, content_message in enumerate(thread_message.content):
             message_id = thread_message.id + str(idx)
             if isinstance(content_message, MessageContentText):

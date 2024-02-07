@@ -40,7 +40,7 @@ docker push northamerica-northeast1-docker.pkg.dev/botbrewers/assistant-service/
 
 # DEPLOY
 gcloud run deploy assistant-service-app --image=northamerica-northeast1-docker.pkg.dev/botbrewers/assistant-service/assistant-service-app:latest \
-    --set-env-vars=OPENAI_API_KEY=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,ASSISTANT_ID=asst_Vu5GoPzaJpQFNcJkycx3CMks \
+    --set-env-vars=OPENAI_API_KEY=,ASSISTANT_ID= \
     --region=northamerica-northeast1 \
     --service-account=assistant-service-app@botbrewers.iam.gserviceaccount.com \
     --port=8000

@@ -5,13 +5,18 @@ import chainlit as cl
 from openai import AsyncOpenAI
 from processors import ThreadMessageProcessor
 
+from assistant_service.config import build_engine_config
+from commons.data_models.config import BaseConfig
+from commons.repositories.secrets import GCPSecretRepository
+
 logger = logging.getLogger("Assistant")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
-API_KEY = os.environ.get("OPENAI_API_KEY")
-ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
+base_config = BaseConfig()  # Loads variables from the environment
+secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
+engine_config = build_engine_config(secret_repository)
 
-client = AsyncOpenAI(api_key=API_KEY)
+client = AsyncOpenAI(api_key=engine_config.openai_apikey)
 
 
 @cl.on_chat_start
@@ -29,13 +34,11 @@ async def start_chat():
 @cl.step(name="Assistant", type="run", root=True)
 async def run(thread_id: str, human_query: str):
     # Add the message to the thread
-    init_message = await client.beta.threads.messages.create(
-        thread_id=thread_id, role="user", content=human_query
-    )
+    init_message = await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
     logging.info(f"Created message: {init_message.id}, content:{init_message.content}")
 
     # Create the run
-    run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=ASSISTANT_ID)
+    run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=engine_config.assistant_id)
     logging.info(f"Created run: {run.id}")
 
     thread_processor = ThreadMessageProcessor()
@@ -46,9 +49,7 @@ async def run(thread_id: str, human_query: str):
         logging.info(f"Retrieved run: {run.id}")
 
         # Retrieve the run steps
-        run_steps = await client.beta.threads.runs.steps.list(
-            thread_id=thread_id, run_id=run.id, order="asc"
-        )
+        run_steps = await client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run.id, order="asc")
 
         for step in run_steps.data:
             logging.info(f"Step: {step.step_details}")
