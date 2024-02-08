@@ -1,7 +1,7 @@
 version: '3.4'
 services:
   assistant:
-    image: assistant-service:latest
+    image: assistant-engine:latest
     build:
       context: .
     environment:

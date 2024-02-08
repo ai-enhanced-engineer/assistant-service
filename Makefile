@@ -26,7 +26,7 @@ install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
 update: ## Update .lock file with new dependencies.
 	poetry update
 
-show_dependencies:
+show-dependencies:
 	poetry show --tree
 
 clean:
@@ -51,12 +51,12 @@ format:  ## Format code
 ############################
 
 local-run:
-	poetry run chainlit run assistant_service/main.py
+	poetry run chainlit run assistant_engine/main.py
 
 ############################
 ##### Build and deploy #####
 ############################
 
-service-build:
-	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-service:latest
+build-engine:
+	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-engine:latest
 
