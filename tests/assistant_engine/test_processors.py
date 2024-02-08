@@ -1,7 +1,8 @@
 import pytest
 from openai.types.beta.threads import MessageContentText, ThreadMessage
 from openai.types.beta.threads.message_content_text import Text
-from processors import ThreadMessageProcessor
+
+from assistant_engine import ThreadMessageProcessor
 
 
 @pytest.mark.asyncio

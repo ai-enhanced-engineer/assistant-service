@@ -2,20 +2,21 @@ import logging
 import os
 
 import chainlit as cl
+from config import build_engine_config
 from openai import AsyncOpenAI
 from processors import ThreadMessageProcessor
 
-from assistant_engine.config import build_engine_config
-from commons.data_models.config import BaseConfig
-from commons.repositories.configs import GCPConfigRepository
-from commons.repositories.secrets import GCPSecretRepository
+from botbrew_commons.data_models import BaseConfig
+from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
 logger = logging.getLogger("assistant-engine")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 base_config = BaseConfig()  # Loads variables from the environment
 secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
-config_repository = GCPConfigRepository(client_id=base_config.client_id, bucket_name=base_config.bucket_id)
+config_repository = GCPConfigRepository(
+    client_id=base_config.client_id, project_id=base_config.project_id, bucket_name=base_config.bucket_id
+)
 engine_config = build_engine_config(secret_repository, config_repository)
 
 client = AsyncOpenAI(api_key=engine_config.openai_apikey)
