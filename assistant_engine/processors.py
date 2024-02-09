@@ -1,7 +1,9 @@
 import logging
 
 import chainlit as cl
+from openai import AsyncOpenAI
 from openai.types.beta.threads import (
+    MessageContentImageFile,
     MessageContentText,
     ThreadMessage,
 )
@@ -12,7 +14,8 @@ logger = logging.getLogger(__name__)
 class ThreadMessageProcessor:
     """Process thread message."""
 
-    def __init__(self):
+    def __init__(self, client: AsyncOpenAI):
+        self._client = client
         self._message_references: dict[str, cl.Message] = {}
         self.send_message = True
 
@@ -30,6 +33,20 @@ class ThreadMessageProcessor:
                 else:
                     self._message_references[message_id] = cl.Message(
                         author=thread_message.role, content=content_message.text.value
+                    )
+                    return self._message_references[message_id]
+            elif isinstance(content_message, MessageContentImageFile):
+                image_id = content_message.image_file.file_id
+                response = await self._client.files.with_raw_response.retrieve_content(image_id)
+                elements = [
+                    cl.Image(name=image_id, content=response.content, display="inline", size="large"),
+                ]
+
+                if message_id not in self._message_references:
+                    self._message_references[message_id] = cl.Message(
+                        author=thread_message.role,
+                        content="",
+                        elements=elements,
                     )
                     return self._message_references[message_id]
             else:
