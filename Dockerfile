@@ -21,8 +21,9 @@ RUN pip install --user --no-cache-dir --upgrade pip && \
     pip install --user --no-cache-dir poetry==1.3.2
 
 WORKDIR /home/appuser/app/
+COPY botbrew_commons /home/appuser/app/botbrew_commons
 COPY pyproject.toml poetry.lock /home/appuser/app/
-RUN poetry install --no-cache --no-root && \
+RUN poetry install --no-cache --no-root --without dev && \
     rm -rf $POETRY_CACHE_DIR
 
 # The runtime image, used to just run the code provided its virtual environment
@@ -50,7 +51,7 @@ COPY --chown=1001:1001 --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY ./chainlit.md /home/appuser/app/chainlit.md
 COPY ./.env /home/appuser/app/.env
 COPY --chown=1001:1001 ./.chainlit /home/appuser/app/.chainlit
-COPY commons /home/appuser/app/commons
+COPY botbrew_commons /home/appuser/app/botbrew_commons
 COPY assistant_engine /home/appuser/app/assistant_engine
 
 CMD ["chainlit", "run", "/home/appuser/app/assistant_engine/main.py"]

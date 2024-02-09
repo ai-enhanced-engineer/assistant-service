@@ -235,6 +235,25 @@ lint = ["pre-commit"]
 test = ["hypothesis", "pytest", "pytest-benchmark[histogram]", "pytest-cov", "pytest-xdist", "sortedcollections", "sortedcontainers", "sphinx"]
 
 [[package]]
+name = "botbrew-commons"
+version = "0.1.0"
+description = "Shared tools"
+category = "main"
+optional = false
+python-versions = ">=3.10.0,<3.11"
+files = []
+develop = true
+
+[package.dependencies]
+google-cloud-secret-manager = "^2.18.0"
+google_cloud_storage = "^2.14.0"
+pydantic = "^2.5.3"
+
+[package.source]
+type = "directory"
+url = "botbrew_commons"
+
+[[package]]
 name = "cachetools"
 version = "5.3.2"
 description = "Extensible memoizing collections and decorators"
@@ -622,14 +641,14 @@ files = [
 
 [[package]]
 name = "google-api-core"
-version = "2.16.2"
+version = "2.17.0"
 description = "Google API client core library"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-api-core-2.16.2.tar.gz", hash = "sha256:032d37b45d1d6bdaf68fb11ff621e2593263a239fa9246e2e94325f9c47876d2"},
-    {file = "google_api_core-2.16.2-py3-none-any.whl", hash = "sha256:449ca0e3f14c179b4165b664256066c7861610f70b6ffe54bb01a04e9b466929"},
+    {file = "google-api-core-2.17.0.tar.gz", hash = "sha256:de7ef0450faec7c75e0aea313f29ac870fdc44cfaec9d6499a9a17305980ef66"},
+    {file = "google_api_core-2.17.0-py3-none-any.whl", hash = "sha256:08ed79ed8e93e329de5e3e7452746b734e6bf8438d8d64dd3319d21d3164890c"},
 ]
 
 [package.dependencies]
@@ -1153,14 +1172,14 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "0.1.5"
+version = "0.1.6"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.1.5-py3-none-any.whl", hash = "sha256:4614118d4a95b2e7ba3611a0b6b21707a259a21652a04fbe3c31205bcf3fcd50"},
-    {file = "langchain-0.1.5.tar.gz", hash = "sha256:69603a5bb21b044ddea69d38131dbbf47475afdf79728644faa67d1ad325d652"},
+    {file = "langchain-0.1.6-py3-none-any.whl", hash = "sha256:925e180fd1ae53b7085e46b3cdc9db04c24ddc6f4ac08f171eea29498d99603a"},
+    {file = "langchain-0.1.6.tar.gz", hash = "sha256:a885e16c10b9ed11f312eaa6570bc48d27305362b26f6c235cafdcc794e26e71"},
 ]
 
 [package.dependencies]
@@ -1168,8 +1187,8 @@ aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
 dataclasses-json = ">=0.5.7,<0.7"
 jsonpatch = ">=1.33,<2.0"
-langchain-community = ">=0.0.17,<0.1"
-langchain-core = ">=0.1.16,<0.2"
+langchain-community = ">=0.0.18,<0.1"
+langchain-core = ">=0.1.22,<0.2"
 langsmith = ">=0.0.83,<0.1"
 numpy = ">=1,<2"
 pydantic = ">=1,<3"
@@ -1221,14 +1240,14 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.1.21"
+version = "0.1.22"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain_core-0.1.21-py3-none-any.whl", hash = "sha256:9dd1cedc5a3a6081136352e9403d1a87befbab4d36d6ee1877b2e639e85f15ed"},
-    {file = "langchain_core-0.1.21.tar.gz", hash = "sha256:b5625901d38121aa449ef73446605032ddd31ac2787be1428c52e9c793ef8229"},
+    {file = "langchain_core-0.1.22-py3-none-any.whl", hash = "sha256:d1263c2707ce18bb13654c88f891e53f39edec9b11ff7d0d0f23fd920927b2d6"},
+    {file = "langchain_core-0.1.22.tar.gz", hash = "sha256:deac12b3e42a08bbbaa2acf83d5f8dd2d5513256d8daf0e853e9d68ff4c99d79"},
 ]
 
 [package.dependencies]
@@ -1481,14 +1500,14 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.11.1"
+version = "1.12.0"
 description = "The official Python library for the openai API"
 category = "main"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.11.1-py3-none-any.whl", hash = "sha256:e0f388ce499f53f58079d0c1f571f356f2b168b84d0d24a412506b6abc714980"},
-    {file = "openai-1.11.1.tar.gz", hash = "sha256:f66b8fe431af43e09594147ef3cdcb79758285de72ebafd52be9700a2af41e99"},
+    {file = "openai-1.12.0-py3-none-any.whl", hash = "sha256:a54002c814e05222e413664f651b5916714e4700d041d5cf5724d3ae1a3e3481"},
+    {file = "openai-1.12.0.tar.gz", hash = "sha256:99c5d257d09ea6533d689d1cc77caa0ac679fa21efef8893d8b0832a86877f1b"},
 ]
 
 [package.dependencies]
@@ -1867,6 +1886,22 @@ files = [
 
 [package.dependencies]
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
+
+[[package]]
+name = "pydantic-settings"
+version = "2.1.0"
+description = "Settings management using Pydantic"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pydantic_settings-2.1.0-py3-none-any.whl", hash = "sha256:7621c0cb5d90d1140d2f0ef557bdf03573aac7035948109adf2574770b77605a"},
+    {file = "pydantic_settings-2.1.0.tar.gz", hash = "sha256:26b1492e0a24755626ac5e6d715e9077ab7ad4fb5f19a8b7ed7011d52f36141c"},
+]
+
+[package.dependencies]
+pydantic = ">=2.3.0"
+python-dotenv = ">=0.21.0"
 
 [[package]]
 name = "pyjwt"
@@ -2792,4 +2827,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<3.11"
-content-hash = "bae804b0ed124784947b6cc241c677bab996ac740abb82e9bfdc6b8f8b60ee71"
+content-hash = "2787fca31dbbe9a4540cfe41db1b8c528c2dcf08851192ca5cfd5e2e5d8ba458"
