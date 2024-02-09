@@ -32,12 +32,6 @@ show-dependencies:
 clean:
 	rm -r .chainlit .pytest_cache .ruff_cache chainlit.md
 
-############################
-######### Tests ############
-############################
-
-test:
-	poetry run python -m pytest
 
 ############################
 ### Linter and formatter ###
@@ -65,10 +59,4 @@ local-run:
 
 build-engine:
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-engine:latest
-
-auth-gcloud:
-	 gcloud auth application-default login
-
-# auth-docker: /Users/lkronecker/.config/gcloud/application_default_credentials.json
-# 	gcloud auth configure-docker
 

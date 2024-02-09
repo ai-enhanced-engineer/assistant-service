@@ -5,11 +5,8 @@ services:
     build:
       context: .
     environment:
-      - PROJECT_ID=botbrewers
-      - BUCKET_ID=botbrewers
-      - CLIENT_ID=nowisthetime
-      - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/app/application_default_credentials.json
+      - OPENAI_API_KEY=
+      - ASSISTANT_ID=
     ports:
       - "8000:8000"
-    volumes:
-      - $GOOGLE_APPLICATION_CREDENTIALS:/home/appuser/app/application_default_credentials.json:ro
+    working_dir: /home/appuser/app/

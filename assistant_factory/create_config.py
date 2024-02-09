@@ -1,5 +1,5 @@
-from botbrew_commons.data_models import AssistantConfig
-from botbrew_commons.repositories import GCPConfigRepository
+from commons.data_models.config import AssistantConfig
+from commons.repositories.configs import GCPConfigRepository
 
 CLIENT_ID = "nowisthetime"
 BUCKET = "botbrewers"

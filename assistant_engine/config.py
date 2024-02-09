@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
-from botbrew_commons.repositories import BaseConfigRepository, BaseSecretRepository
+from commons.repositories.configs import BaseConfigRepository
+from commons.repositories.secrets import BaseSecretRepository
 
 
 class AssistantEngineConfig(BaseModel):

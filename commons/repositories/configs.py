@@ -3,7 +3,7 @@ import json
 
 from google.cloud import storage
 
-from botbrew_commons.data_models import AssistantConfig
+from commons.data_models.config import AssistantConfig
 
 
 class BaseConfigRepository(abc.ABC):
@@ -28,8 +28,8 @@ class LocalConfigRepository(BaseConfigRepository):
 
 
 class GCPConfigRepository(BaseConfigRepository):
-    def __init__(self, client_id: str, project_id: str, bucket_name: str):
-        client = storage.Client(project=project_id)
+    def __init__(self, client_id: str, bucket_name: str):
+        client = storage.Client()
         self._blob = client.bucket(bucket_name).blob("configs/" + client_id)
 
     def write_config(self, config: AssistantConfig) -> None:
