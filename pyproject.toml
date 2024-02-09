@@ -16,6 +16,9 @@ uvicorn = "^0.25.0"
 #Chainlit
 chainlit = "^1.0.200"
 
+# Assistant factory
+langchain = "^0.1.5"
+
 #GCP
 google-cloud-secret-manager = "^2.18.0"
 google_cloud_storage = "^2.14.0"
