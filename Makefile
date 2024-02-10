@@ -30,7 +30,7 @@ show-dependencies:
 	poetry show --tree
 
 clean:
-	rm -r .pytest_cache .ruff_cache chainlit.md
+	rm -r .pytest_cache .ruff_cache chainlit.md .files
 
 ############################
 ######### Tests ############

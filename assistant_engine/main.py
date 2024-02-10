@@ -1,16 +1,12 @@
 import json
 import logging
 import os
-from datetime import datetime
-from typing import Any
 
 import chainlit as cl
 from config import build_engine_config
 from functions import TOOL_MAP
 from openai import AsyncOpenAI
-from openai.types.beta.threads.runs import RunStep
-from openai.types.beta.threads.runs.tool_calls_step_details import ToolCall
-from processors import ThreadMessageProcessor
+from processors import ThreadMessageProcessor, ToolProcessor
 
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
@@ -52,45 +48,6 @@ class DictToObject:
         return "\n".join(f"{key}: {value}" for key, value in self.__dict__.items())
 
 
-async def process_tool_call(
-    step_references: dict[str, cl.Step],
-    step: RunStep,
-    tool_call: ToolCall,
-    name: str,
-    input: Any,
-    output: Any,
-    show_input: str = None,
-):
-    logger.info(f"DEBUG: Step references: {step_references}")
-    cl_step = None
-    update = False
-    if tool_call.id not in step_references:
-        cl_step = cl.Step(
-            name=name,
-            type="tool",
-            parent_id=cl.context.current_step.id,
-            show_input=show_input,
-        )
-        step_references[tool_call.id] = cl_step
-
-    else:
-        update = True
-        cl_step = step_references[tool_call.id]
-
-    if step.created_at:
-        cl_step.start = datetime.fromtimestamp(step.created_at).isoformat()
-    if step.completed_at:
-        cl_step.end = datetime.fromtimestamp(step.completed_at).isoformat()
-
-    cl_step.input = input
-    cl_step.output = output
-
-    if update:
-        await cl_step.update()
-    else:
-        await cl_step.send()
-
-
 @cl.step(name="Assistant", type="run", root=True)
 async def run(thread_id: str, human_query: str):
     # Add the message to the thread
@@ -102,8 +59,9 @@ async def run(thread_id: str, human_query: str):
     logging.info(f"Created run: {run.id}")
 
     thread_processor = ThreadMessageProcessor()
-    step_references = {}  # type: dict[str, cl.Step]
-    tool_outputs = []
+    tool_processor = ToolProcessor()
+    tool_outputs: list = []
+
     # While to periodically check for updates
     while True:
         # Retrieve the previously created run
@@ -139,35 +97,45 @@ async def run(thread_id: str, human_query: str):
                         tool_call = DictToObject(tool_call)
 
                     if tool_call.type == "retrieval":
-                        logger.info(f"Processing tool: {tool_call.type}")
-                        await process_tool_call(
-                            step_references=step_references,
+                        cl_step = await tool_processor.process_tool_call(
                             step=step,
                             tool_call=tool_call,
                             name=tool_call.type,
-                            input="Retrieving information",
-                            output="Retrieved information",
+                            t_input="Retrieving information",
+                            t_output="Retrieved information",
                         )
 
-                    elif tool_call.type == "function":
-                        function_name = tool_call.function.name
-                        function_args = json.loads(tool_call.function.arguments)
+                        if tool_processor.update:
+                            await cl_step.update()
+                        else:
+                            await cl_step.send()
 
+                    elif tool_call.type == "function":
+                        logger.info("Processing function tool")
+                        logger.info(tool_call)
+                        function_name = tool_call.function.name
+                        logger.info(function_name)
+                        function_args = json.loads(tool_call.function.arguments)
                         function_output = TOOL_MAP[function_name](**json.loads(tool_call.function.arguments))
 
-                        await process_tool_call(
-                            step_references=step_references,
+                        cl_step = await tool_processor.process_tool_call(
                             step=step,
                             tool_call=tool_call,
                             name=function_name,
-                            input=function_args,
-                            output=function_output,
+                            t_input=function_args,
+                            t_output=function_output,
                             show_input="json",
                         )
+
+                        if tool_processor.update:
+                            await cl_step.update()
+                        else:
+                            await cl_step.send()
 
                         tool_outputs.append({"output": function_output, "tool_call_id": tool_call.id})
 
             if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
+                logger.info(f"Submitting tool outputs for thread: {thread_id}, run: {run.id}")
                 await client.beta.threads.runs.submit_tool_outputs(
                     thread_id=thread_id,
                     run_id=run.id,
