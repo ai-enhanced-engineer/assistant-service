@@ -35,7 +35,7 @@ async def start_chat():
     cl.user_session.set("thread", thread)
     await cl.Message(
         author="assistant",
-        content="Ask me some meditation questions!",
+        content="Ask me some questions!",
         disable_feedback=True,
     ).send()
 
@@ -53,13 +53,13 @@ class DictToObject:
 
 
 async def process_tool_call(
-    step_references: dict[str, cl.Step],
-    step: RunStep,
-    tool_call: ToolCall,
-    name: str,
-    input: Any,
-    output: Any,
-    show_input: str = None,
+        step_references: dict[str, cl.Step],
+        step: RunStep,
+        tool_call: ToolCall,
+        name: str,
+        input: Any,
+        output: Any,
+        show_input: str = None,
 ):
     logger.info(f"DEBUG: Step references: {step_references}")
     cl_step = None
@@ -72,6 +72,7 @@ async def process_tool_call(
             show_input=show_input,
         )
         step_references[tool_call.id] = cl_step
+
     else:
         update = True
         cl_step = step_references[tool_call.id]
@@ -80,6 +81,7 @@ async def process_tool_call(
         cl_step.start = datetime.fromtimestamp(step.created_at).isoformat()
     if step.completed_at:
         cl_step.end = datetime.fromtimestamp(step.completed_at).isoformat()
+
     cl_step.input = input
     cl_step.output = output
 
@@ -182,6 +184,13 @@ async def run(thread_id: str, human_query: str):
                         )
 
                         tool_outputs.append({"output": function_output, "tool_call_id": tool_call.id})
+
+            if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
+                await client.beta.threads.runs.submit_tool_outputs(
+                    thread_id=thread_id,
+                    run_id=run.id,
+                    tool_outputs=tool_outputs,
+                )
 
         await cl.sleep(2)  # Refresh every 2 seconds
         if run.status in ["cancelled", "failed", "completed", "expired"]:
