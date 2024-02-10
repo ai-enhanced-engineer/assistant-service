@@ -31,9 +31,9 @@ class ToolBuilder:
     def build_tools(self) -> list[dict]:
         final_tools = []
         if self.code_interpreter:
-            final_tools.append(CodeInterpreter().dict())
+            final_tools.append(CodeInterpreter().model_dump())
         if self.retrieval:
-            final_tools.append(Retrieval().dict())
+            final_tools.append(Retrieval().model_dump())
         if self.functions:
             for function_raw in self.functions:
                 if isinstance(self.functions[0], dict):
@@ -41,6 +41,6 @@ class ToolBuilder:
                 else:
                     function_model = Function(function=convert_to_openai_function(function_raw))
 
-                final_tools.append(function_model.dict())
+                final_tools.append(function_model.model_dump())
 
         return final_tools

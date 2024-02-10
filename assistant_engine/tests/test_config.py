@@ -1,5 +1,4 @@
-from config import build_engine_config
-
+from assistant_engine.config import build_engine_config
 from botbrew_commons.data_models import BaseConfig, EngineAssistantConfig
 from botbrew_commons.repositories import LocalConfigRepository, LocalSecretRepository
 

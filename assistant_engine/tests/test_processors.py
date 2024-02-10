@@ -1,14 +1,15 @@
 import pytest
 from openai.types.beta.threads import MessageContentText, ThreadMessage
 from openai.types.beta.threads.message_content_text import Text
-from processors import ThreadMessageProcessor
+
+from assistant_engine.processors import ThreadMessageProcessor
 
 
 @pytest.mark.asyncio
 async def test__processor_updates_message_if_already_in_message_references(mocker):
     # Mock Chainlit's Message model. This mocks the user session as well :)
-    mocker.patch("processors.cl.Message", spec=True)
-    mock_msg = mocker.patch("processors.cl.Message")
+    mocker.patch("assistant_engine.processors.cl.Message", spec=True)
+    mock_msg = mocker.patch("assistant_engine.processors.cl.Message")
     mock_msg.id.side_effect = ["12345"]
 
     processor = ThreadMessageProcessor()

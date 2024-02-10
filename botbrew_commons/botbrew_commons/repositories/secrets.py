@@ -25,7 +25,8 @@ class LocalSecretRepository(BaseSecretRepository):
     def write_secret(self, secret_suffix: str) -> None:
         self._secret = self._project_id + "/" + self._client_id + "-" + secret_suffix
 
-    def access_secret(self) -> str:
+    def access_secret(self, secret_suffix: str) -> str:
+        print(secret_suffix)  # Silence warning
         return self._secret
 
 

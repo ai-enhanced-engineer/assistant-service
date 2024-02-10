@@ -53,13 +53,13 @@ class DictToObject:
 
 
 async def process_tool_call(
-        step_references: dict[str, cl.Step],
-        step: RunStep,
-        tool_call: ToolCall,
-        name: str,
-        input: Any,
-        output: Any,
-        show_input: str = None,
+    step_references: dict[str, cl.Step],
+    step: RunStep,
+    tool_call: ToolCall,
+    name: str,
+    input: Any,
+    output: Any,
+    show_input: str = None,
 ):
     logger.info(f"DEBUG: Step references: {step_references}")
     cl_step = None
@@ -101,7 +101,7 @@ async def run(thread_id: str, human_query: str):
     run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=engine_config.assistant_id)
     logging.info(f"Created run: {run.id}")
 
-    thread_processor = ThreadMessageProcessor(client=client)
+    thread_processor = ThreadMessageProcessor()
     step_references = {}  # type: dict[str, cl.Step]
     tool_outputs = []
     # While to periodically check for updates
@@ -138,25 +138,7 @@ async def run(thread_id: str, human_query: str):
                     if isinstance(tool_call, dict):
                         tool_call = DictToObject(tool_call)
 
-                    if tool_call.type == "code_interpreter":
-                        await process_tool_call(
-                            step_references=step_references,
-                            step=step,
-                            tool_call=tool_call,
-                            name=tool_call.type,
-                            input=tool_call.code_interpreter.input or "# Generating code",
-                            output=tool_call.code_interpreter.outputs,
-                            show_input="python",
-                        )
-
-                        tool_outputs.append(
-                            {
-                                "output": tool_call.code_interpreter.outputs or "",
-                                "tool_call_id": tool_call.id,
-                            }
-                        )
-
-                    elif tool_call.type == "retrieval":
+                    if tool_call.type == "retrieval":
                         logger.info(f"Processing tool: {tool_call.type}")
                         await process_tool_call(
                             step_references=step_references,
