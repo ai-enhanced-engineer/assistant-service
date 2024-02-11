@@ -10,13 +10,14 @@ from openai.types.beta.threads import (
 from openai.types.beta.threads.runs import RunStep
 from openai.types.beta.threads.runs.tool_calls_step_details import ToolCall
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name="processors")
 
 
 class ToolProcessor:
     def __init__(self):
         self.step_references: dict[str, cl.Step] = {}
         self.update = False
+        self.tool_outputs: dict = {}
 
     async def process_tool_call(
         self,
@@ -50,6 +51,8 @@ class ToolProcessor:
         cl_step.input = t_input
         cl_step.output = t_output
 
+        logger.info(f"Saving function output:{t_output} with id: {tool_call.id}")
+        self.tool_outputs[tool_call.id] = {"output": t_output, "tool_call_id": tool_call.id}
         return cl_step
 
 

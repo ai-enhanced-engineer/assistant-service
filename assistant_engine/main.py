@@ -1,7 +1,7 @@
 import json
 import logging
-import os
 
+# from bb_logging import configure_logger
 import chainlit as cl
 from config import build_engine_config
 from functions import TOOL_MAP
@@ -11,8 +11,10 @@ from processors import ThreadMessageProcessor, ToolProcessor
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
-logger = logging.getLogger("assistant-engine")
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+# configure_logger()
+
+
+logger = logging.getLogger(name="assistant-engine")
 
 base_config = BaseConfig()  # Loads variables from the environment
 secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
@@ -52,27 +54,26 @@ class DictToObject:
 async def run(thread_id: str, human_query: str):
     # Add the message to the thread
     init_message = await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
-    logging.info(f"Created message: {init_message.id}, content:{init_message.content}")
+    logger.info(f"Received user message with content:{init_message.content}")
 
     # Create the run
     run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=engine_config.assistant_id)
-    logging.info(f"Created run: {run.id}")
+    logger.info(f"Created run: {run.id}")
 
     thread_processor = ThreadMessageProcessor()
     tool_processor = ToolProcessor()
-    tool_outputs: list = []
 
     # While to periodically check for updates
     while True:
         # Retrieve the previously created run
         run = await client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        logging.info(f"Retrieved run: {run.id}")
+        logger.info(f"Retrieved run: {run.id}")
 
         # Retrieve the run steps
         run_steps = await client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run.id, order="asc")
 
         for step in run_steps.data:
-            logging.info(f"Step: {step.step_details}")
+            logger.info(f"Step: {step.step_details}")
             # Fetch step details
             run_step = await client.beta.threads.runs.steps.retrieve(
                 thread_id=thread_id, run_id=run.id, step_id=step.id
@@ -132,14 +133,17 @@ async def run(thread_id: str, human_query: str):
                         else:
                             await cl_step.send()
 
-                        tool_outputs.append({"output": function_output, "tool_call_id": tool_call.id})
+                        # tool_outputs.append({"output": function_output, "tool_call_id": tool_call.id})
 
             if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
-                logger.info(f"Submitting tool outputs for thread: {thread_id}, run: {run.id}")
+                logger.info(
+                    f"Submitting tool outputs for thread: {thread_id}, run: {run.id}, "
+                    f"outputs: {tool_processor.tool_outputs}"
+                )
                 await client.beta.threads.runs.submit_tool_outputs(
                     thread_id=thread_id,
                     run_id=run.id,
-                    tool_outputs=tool_outputs,
+                    tool_outputs=tool_processor.tool_outputs.values(),
                 )
 
         await cl.sleep(2)  # Refresh every 2 seconds
