@@ -28,7 +28,6 @@ class ToolProcessor:
         t_output: Any,
         show_input: Union[bool, str] = None,
     ):
-        logger.info(f"DEBUG: Step references: {self.step_references}")
         cl_step = None
         if tool_call.id not in self.step_references:
             cl_step = cl.Step(
@@ -51,7 +50,6 @@ class ToolProcessor:
         cl_step.input = t_input
         cl_step.output = t_output
 
-        logger.info(f"Saving function output:{t_output} with id: {tool_call.id}")
         self.tool_outputs[tool_call.id] = {"output": t_output, "tool_call_id": tool_call.id}
         return cl_step
 
@@ -65,7 +63,13 @@ class ThreadMessageProcessor:
 
     async def process(self, thread_message: ThreadMessage) -> cl.Message:
         """Process the message thread."""
-        logger.info(f"Processing thread message: {thread_message.id} with content: {thread_message.content}")
+        if thread_message.content[0].text != "":
+            log_message = f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
+        else:
+            log_message = "Message has not been generated yet..."
+
+        logger.info(log_message)
+
         for idx, content_message in enumerate(thread_message.content):
             message_id = thread_message.id + str(idx)
             if isinstance(content_message, MessageContentText):
