@@ -1,8 +1,7 @@
 import json
-import logging
 
-# from bb_logging import configure_logger
 import chainlit as cl
+from bb_logging import get_logger
 from config import build_engine_config
 from functions import TOOL_MAP
 from openai import AsyncOpenAI
@@ -11,10 +10,7 @@ from processors import ThreadMessageProcessor, ToolProcessor
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
-# configure_logger()
-
-
-logger = logging.getLogger(name="assistant-engine")
+logger = get_logger("MAIN")
 
 base_config = BaseConfig()  # Loads variables from the environment
 secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
@@ -115,8 +111,10 @@ async def run(thread_id: str, human_query: str):
                         logger.info("Processing function tool")
                         logger.info(tool_call)
                         function_name = tool_call.function.name
-                        logger.info(function_name)
-                        function_args = json.loads(tool_call.function.arguments)
+                        logger.info(function_name)  # TODO: Validate that function name is in TOOL_MAP
+                        function_args = json.loads(
+                            tool_call.function.arguments
+                        )  # TODO: Validate that arguments are present
                         function_output = TOOL_MAP[function_name](**json.loads(tool_call.function.arguments))
 
                         cl_step = await tool_processor.process_tool_call(

@@ -1,8 +1,8 @@
-import logging
 from datetime import datetime
 from typing import Any, Union
 
 import chainlit as cl
+from bb_logging import get_logger
 from openai.types.beta.threads import (
     MessageContentText,
     ThreadMessage,
@@ -10,7 +10,7 @@ from openai.types.beta.threads import (
 from openai.types.beta.threads.runs import RunStep
 from openai.types.beta.threads.runs.tool_calls_step_details import ToolCall
 
-logger = logging.getLogger(name="processors")
+logger = get_logger("PROCESSORS")
 
 
 class ToolProcessor:

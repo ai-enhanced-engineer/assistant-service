@@ -1,19 +1,25 @@
 import logging
 
+LEVEL = "INFO"
+FORMATTER = logging.Formatter(fmt="%(asctime)s: %(levelname)s: %(name)s: %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 
-def configure_logger(level="INFO", logger=None):
-    """
-    Configures a simple console logger with the givel level.
-    A usecase is to change the formatting of the default handler of the root logger
-    """
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    logger = logger or logging.getLogger()  # either the given logger or the root logger
-    logger.setLevel(level)
-    # If the logger has handlers, we configure the first one. Otherwise we add a handler and configure it
-    if logger.handlers:
-        console = logger.handlers[0]  # we assume the first handler is the one we want to configure
-    else:
-        console = logging.StreamHandler()
-        logger.addHandler(console)
-    console.setFormatter(formatter)
-    console.setLevel(level)
+
+class OenAIFilter(logging.Filter):
+    def filter(self, record):
+        # print(f"Filtering record: {record.msg}")
+        return not record.getMessage().startswith("HTTP Request:")
+
+
+def configure_root_logger():
+    logger = logging.getLogger()
+    handler = logger.handlers[0]
+    handler.setFormatter(FORMATTER)
+    handler.addFilter(OenAIFilter())
+    handler.setLevel(LEVEL)
+
+
+def get_logger(name):
+    return logging.getLogger(name)
+
+
+configure_root_logger()
