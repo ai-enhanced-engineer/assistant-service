@@ -62,13 +62,15 @@ local-run:
 ############################
 ##### Build and deploy #####
 ############################
+CLIENT_ID = leogv
 
 build-engine:
+	@echo "Building docker for client: ${CLIENT_ID}"
+	cp assistant_factory/client_spec/$(CLIENT_ID)/functions.py assistant_engine/functions.py
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-engine:latest
 
 auth-gcloud:
 	 gcloud auth application-default login
 
-# auth-docker: /Users/lkronecker/.config/gcloud/application_default_credentials.json
-# 	gcloud auth configure-docker
+
 
