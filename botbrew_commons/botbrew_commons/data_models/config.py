@@ -10,6 +10,7 @@ class BaseConfig(BaseSettings):
 
 class EngineAssistantConfig(BaseModel):
     assistant_id: str
+    initial_messages: list[str]
     code_interpreter: bool = Field(default=False)
     retrieval: bool = Field(default=False)
     function_names: list[str] = Field(default=None)

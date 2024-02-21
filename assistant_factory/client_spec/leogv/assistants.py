@@ -10,9 +10,10 @@ class ClientAssistantConfig(BaseModel):
     client_id: str
     assistant_name: str
     instructions: str
+    initial_messages: list[str]
     model: str
     # Tools
-    code_interpreter: Optional[bool]
+    code_interpreter: Optional[bool] = False
     functions: Optional[list[dict]]
     retrieval: Optional[bool]
     file_paths: Optional[list[str]]
@@ -20,10 +21,14 @@ class ClientAssistantConfig(BaseModel):
 
 personal_assistant = ClientAssistantConfig(
     client_id="leogv",
-    assistant_name="Personal assistant",
+    assistant_name="personal-assistant",
     instructions=PERSONAL_ASSISTANT,
+    initial_messages=[
+        "Hello! I'm Leopoldo's personal assistant",
+        "I can answer any question regarding Leo's professional life",
+        "I'm happy to help!",
+    ],
     model="gpt-4-1106-preview",
-    code_interpreter=True,
     functions=[weather_search_dict, n_day_weather_forecast_dict],
     retrieval=True,
     file_paths=["Resume_LGV_Oct_2023.pdf"],
