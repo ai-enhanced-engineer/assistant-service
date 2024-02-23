@@ -18,6 +18,7 @@ config_repository = GCPConfigRepository(
     client_id=base_config.client_id, project_id=base_config.project_id, bucket_name=base_config.bucket_id
 )
 engine_config = build_engine_config(secret_repository, config_repository)
+logger.info(f"Booting with config: {engine_config}")
 
 client = AsyncOpenAI(api_key=engine_config.openai_apikey)
 
@@ -28,8 +29,8 @@ async def start_chat():
     logger.info(f"### Starting chat with thread:: {thread.id} ###")
     cl.user_session.set("thread", thread)
     await cl.Message(
-        author="assistant",
-        content="Ask me some questions!",
+        author=engine_config.assistant_name,
+        content=engine_config.initial_message,
         disable_feedback=True,
     ).send()
 

@@ -63,6 +63,8 @@ class ThreadMessageProcessor:
 
     async def process(self, thread_message: ThreadMessage) -> cl.Message:
         """Process the message thread."""
+        logger.info(f"### {thread_message.content} ###")
+        # TODO: Handle cases when thread_message.content is empty []. Otherwise the line below will crash.
         if thread_message.content[0].text != "":
             log_message = f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
         else:

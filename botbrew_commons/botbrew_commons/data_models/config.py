@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
@@ -10,7 +12,10 @@ class BaseConfig(BaseSettings):
 
 class EngineAssistantConfig(BaseModel):
     assistant_id: str
-    initial_messages: list[str]
+    assistant_name: str
+    initial_message: str
     code_interpreter: bool = Field(default=False)
     retrieval: bool = Field(default=False)
     function_names: list[str] = Field(default=None)
+    # Secrets
+    openai_apikey: Optional[str] = Field(default=None)
