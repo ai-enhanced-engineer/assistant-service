@@ -1,5 +1,5 @@
 from assistant_engine import build_engine_config
-from botbrew_commons.data_models import AssistantConfig, BaseConfig
+from botbrew_commons.data_models import BaseConfig, EngineAssistantConfig
 from botbrew_commons.repositories import LocalConfigRepository, LocalSecretRepository
 
 
@@ -17,7 +17,7 @@ def test__build_engine_config(monkeypatch):
         local_secrets.write_secret("test-secret")
 
         local_config = LocalConfigRepository()
-        local_config.write_config(AssistantConfig(assistant_id="test-assistant-id"))
+        local_config.write_config(EngineAssistantConfig(assistant_id="test-assistant-id"))
 
         engine_config = build_engine_config(local_secrets, local_config)
         assert engine_config.assistant_id == "test-assistant-id"

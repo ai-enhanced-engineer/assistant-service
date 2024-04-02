@@ -1,3 +1,3 @@
-from .config import AssistantConfig, BaseConfig
+from .config import BaseConfig, EngineAssistantConfig
 
-__all__ = ["BaseConfig", "AssistantConfig"]
+__all__ = ["BaseConfig", "EngineAssistantConfig"]

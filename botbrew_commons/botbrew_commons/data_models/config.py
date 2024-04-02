@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
@@ -10,6 +8,9 @@ class BaseConfig(BaseSettings):
     client_id: str = Field(json_schema_extra={"environ": True})
 
 
-class AssistantConfig(BaseModel):
+class EngineAssistantConfig(BaseModel):
     assistant_id: str
-    function_names: Optional[list[str]] = Field(default=None)
+    initial_messages: list[str]
+    code_interpreter: bool = Field(default=False)
+    retrieval: bool = Field(default=False)
+    function_names: list[str] = Field(default=None)

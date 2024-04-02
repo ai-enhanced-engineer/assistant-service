@@ -1,5 +1,7 @@
+.idea
 .chainlit
 .ruff_cache
-.env
+.env/
 chainlit.md
-.pytest_cache
+.pytest_cache/
+__pycache__/
