@@ -1,3 +1,5 @@
+from types import FunctionType
+
 weather_search_dict = {
     "name": "get_current_weather",
     "description": "Get the current weather",
@@ -53,7 +55,7 @@ def get_n_day_weather_forecast(location: str, format: str, num_days: int):
     return "The weather forecast for the next {} days in {} is {} degrees {}".format(num_days, location, 20, format)
 
 
-TOOL_MAP = {
+TOOL_MAP: dict[str:FunctionType] = {
     "get_current_weather": get_current_weather,
     "get_n_day_weather_forecast": get_n_day_weather_forecast,
 }

@@ -42,9 +42,10 @@ def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a
 
 
 def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
-    assistant_config = EngineAssistantConfig(
+    as_config = EngineAssistantConfig(
         assistant_id=assistant_id,
-        initial_messages=assistant_config.initial_messages,
+        assistant_name=assistant_config.assistant_name,
+        initial_message=assistant_config.initial_message,
         code_interpreter=assistant_config.code_interpreter,
         retrieval=assistant_config.retrieval,
         function_names=[function["name"] for function in assistant_config.functions],
@@ -53,14 +54,15 @@ def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
     config_repo = GCPConfigRepository(
         client_id=personal_assistant.client_id, project_id=PROJECT_ID, bucket_name=BUCKET_ID
     )
-    config_repo.write_config(assistant_config)
+    config_repo.write_config(as_config)
 
 
 if __name__ == "__main__":
     # import client specific assistant configuration
     from assistant_factory.client_spec.leogv.assistants import personal_assistant
 
-    tools = build_tools(personal_assistant)
-    file_id = upload_files(personal_assistant, personal_assistant.retrieval)
-    a_id = create_new_assistant(personal_assistant, file_id, tools)
+    # tools = build_tools(personal_assistant)
+    # file_id = upload_files(personal_assistant, personal_assistant.retrieval)
+    # a_id = create_new_assistant(personal_assistant, file_id, tools)
+    a_id = "asst_wvwA5xnpUJJDYeDSDQaHVCF0"
     persist_config(personal_assistant, a_id)

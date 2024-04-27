@@ -1,9 +1,6 @@
 import abc
-import logging
 
 from google.cloud import secretmanager
-
-logger = logging.getLogger(__name__)
 
 
 class BaseSecretRepository(abc.ABC):
@@ -25,7 +22,8 @@ class LocalSecretRepository(BaseSecretRepository):
     def write_secret(self, secret_suffix: str) -> None:
         self._secret = self._project_id + "/" + self._client_id + "-" + secret_suffix
 
-    def access_secret(self) -> str:
+    def access_secret(self, secret_suffix: str) -> str:
+        print(secret_suffix)  # Silence warning
         return self._secret
 
 
@@ -42,7 +40,6 @@ class GCPSecretRepository(BaseSecretRepository):
         path = self._client.secret_version_path(
             project=self._project_id, secret=self.build_secret_name(secret_suffix), secret_version="latest"
         )
-        logger.info(f"Retrieved secret at: {path}")
 
         response = self._client.access_secret_version(name=path)
         secret = response.payload.data.decode("UTF-8")
