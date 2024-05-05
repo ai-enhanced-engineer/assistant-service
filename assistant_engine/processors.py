@@ -3,12 +3,9 @@ from typing import Any, Union
 
 import chainlit as cl
 from bb_logging import get_logger
-from openai.types.beta.threads import (
-    MessageContentText,
-    ThreadMessage,
-)
-from openai.types.beta.threads.runs import RunStep
-from openai.types.beta.threads.runs.tool_calls_step_details import ToolCall
+from openai.types.beta.threads import TextContentBlock
+from openai.types.beta.threads.message import Message
+from openai.types.beta.threads.runs import RunStep, ToolCall
 
 logger = get_logger("PROCESSORS")
 
@@ -61,7 +58,7 @@ class ThreadMessageProcessor:
         self._message_references: dict[str, cl.Message] = {}
         self.send_message = True
 
-    async def process(self, thread_message: ThreadMessage) -> cl.Message:
+    async def process(self, thread_message: Message) -> cl.Message:
         """Process the message thread."""
         logger.info(f"### {thread_message.content} ###")
         # TODO: Handle cases when thread_message.content is empty []. Otherwise the line below will crash.
@@ -74,7 +71,7 @@ class ThreadMessageProcessor:
 
         for idx, content_message in enumerate(thread_message.content):
             message_id = thread_message.id + str(idx)
-            if isinstance(content_message, MessageContentText):
+            if isinstance(content_message, TextContentBlock):
                 if message_id in self._message_references:
                     msg = self._message_references[message_id]
                     msg.content = content_message.text.value
