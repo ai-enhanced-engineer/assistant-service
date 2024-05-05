@@ -1,23 +1,6 @@
-from typing import Optional
-
-from pydantic import BaseModel
-
 from assistant_factory.client_spec.leogv.functions import n_day_weather_forecast_dict, weather_search_dict
 from assistant_factory.client_spec.leogv.instructions import PERSONAL_ASSISTANT
-
-
-class ClientAssistantConfig(BaseModel):
-    client_id: str
-    assistant_name: str = "Assistant"
-    instructions: str
-    initial_message: str = "Ask me some questions"
-    model: str
-    # Tools
-    code_interpreter: Optional[bool] = False
-    functions: Optional[list[dict]]
-    retrieval: Optional[bool]
-    file_paths: Optional[list[str]]
-
+from assistant_factory.config import ClientAssistantConfig
 
 personal_assistant = ClientAssistantConfig(
     client_id="leogv",
