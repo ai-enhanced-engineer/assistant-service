@@ -12,7 +12,11 @@ PROJECT_ID = "botbrewers"
 
 def build_tools(assistant_config: ClientAssistantConfig):
     # Define tools to be used
-    tool_builder = ToolBuilder(code_interpreter=True, retrieval=True, functions=assistant_config.functions)
+    tool_builder = ToolBuilder(
+        code_interpreter=assistant_config.code_interpreter,
+        retrieval=assistant_config.retrieval,
+        functions=assistant_config.functions,
+    )
     return tool_builder.build_tools()
 
 
@@ -42,13 +46,16 @@ def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a
 
 
 def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
+    function_names = []
+    if assistant_config.functions:
+        function_names = [function["name"] for function in assistant_config.functions]
     as_config = EngineAssistantConfig(
         assistant_id=assistant_id,
         assistant_name=assistant_config.assistant_name,
         initial_message=assistant_config.initial_message,
         code_interpreter=assistant_config.code_interpreter,
         retrieval=assistant_config.retrieval,
-        function_names=[function["name"] for function in assistant_config.functions],
+        function_names=function_names,
     )
 
     config_repo = GCPConfigRepository(
@@ -59,10 +66,10 @@ def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
 
 if __name__ == "__main__":
     # import client specific assistant configuration
-    from assistant_factory.client_spec.leogv.assistants import personal_assistant
+    from assistant_factory.client_spec.lazycampervan.assistants import personal_assistant
 
     # tools = build_tools(personal_assistant)
     # file_id = upload_files(personal_assistant, personal_assistant.retrieval)
     # a_id = create_new_assistant(personal_assistant, file_id, tools)
-    a_id = "asst_wvwA5xnpUJJDYeDSDQaHVCF0"
+    a_id = "asst_aTAJn0UQQ6dMwcKtLkAwPHKn"
     persist_config(personal_assistant, a_id)
