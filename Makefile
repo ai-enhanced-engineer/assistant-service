@@ -4,7 +4,11 @@
 .DEFAULT_GOAL := help
 
 # Define phony targets
-.PHONY: install help
+.PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format test local-run
+
+VENV := .venv
+PYTHON := $(VENV)/bin/python
+UV := $(VENV)/bin/uv
 
 help: ## Display this help message
 	@echo "Usage: make [target]"
@@ -15,19 +19,29 @@ help: ## Display this help message
 ### Project set-up ###
 ######################
 
-set-up-project: ## Set up tools and dependencies
-	poetry run pip install --upgrade pip
-	poetry run pip install pre-commit
-	chmod +x .git/hooks/pre-commit
+environment-create: ## Set up venv and install dependencies using uv
+	@echo "Setting up environment..."
+	uv venv $(VENV)
+	$(UV) sync --all-extras
+	$(UV) run pre-commit install
+	@echo "Environment ready"
 
-install: ## Make sure you are using a local version of python >= 3.10 and < 3.11
-	poetry install
+install: environment-create ## Create environment and install deps
 
-update: ## Update .lock file with new dependencies.
-	poetry update
+environment-sync: ## Re-sync project dependencies
+	$(UV) sync --all-extras
+
+environment-delete: ## Remove the virtual environment folder
+	rm -rf $(VENV)
+
+environment-list: ## List installed packages
+	$(UV) pip list
+
+update: ## Update dependencies
+	$(UV) pip install -e .[dev] --upgrade
 
 show-dependencies:
-	poetry show --tree
+	$(UV) pip list
 
 clean:
 	rm -r .pytest_cache .ruff_cache chainlit.md .files
@@ -37,27 +51,27 @@ clean:
 ############################
 
 test:
-	poetry run python -m pytest
+	$(UV) run python -m pytest
 
 ############################
 ### Linter and formatter ###
 ############################
 
 lint:  ## Check for code issues.
-	poetry run ruff check .
+	$(UV) run ruff check .
 
 lint-fix:  ## Check and fix code issues.
-	poetry run ruff check --fix .
+	$(UV) run ruff check --fix .
 
 format:  ## Format code
-	poetry run ruff format .
+	$(UV) run ruff format .
 
 ############################
 ######## Local runs ########
 ############################
 
 local-run:
-	poetry run chainlit run assistant_engine/main.py
+	$(UV) run chainlit run assistant_engine/main.py
 
 ############################
 ##### Build and deploy #####
@@ -68,7 +82,7 @@ build-engine:
 	@echo "Building docker for client: ${CLIENT_ID}"
 	cp assistant_factory/client_spec/$(CLIENT_ID)/functions.py assistant_engine/functions.py
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-engine:latest
-
+	
 auth-gcloud:
 	 gcloud auth application-default login
 
