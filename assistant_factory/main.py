@@ -52,7 +52,9 @@ def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
     )
 
     config_repo = GCPConfigRepository(
-        client_id=personal_assistant.client_id, project_id=PROJECT_ID, bucket_name=BUCKET_ID
+        client_id=assistant_config.client_id,
+        project_id=PROJECT_ID,
+        bucket_name=BUCKET_ID,
     )
     config_repo.write_config(as_config)
 
