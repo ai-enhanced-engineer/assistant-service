@@ -13,6 +13,19 @@ logger = get_logger("PROCESSORS")
 
 @dataclass
 class StepData:
+    """Information collected about a single run step.
+
+    Attributes:
+        name: The name of the step or tool.
+        type: The type of step being executed.
+        parent_id: Identifier for any parent step.
+        show_input: Whether to display the input when presenting the step.
+        start: ISO formatted creation time.
+        end: ISO formatted completion time.
+        input: Input payload provided to the step.
+        output: Output returned from the step.
+    """
+
     name: Optional[str] = None
     type: Optional[str] = None
     parent_id: Optional[str] = None
@@ -25,12 +38,22 @@ class StepData:
 
 @dataclass
 class MessageData:
+    """Represents a single message extracted from a thread.
+
+    Attributes:
+        author: Role of the message sender.
+        content: Textual content of the message.
+        id: Unique identifier for the message content block.
+    """
+
     author: Optional[str] = None
     content: Optional[str] = None
     id: Optional[str] = None
 
 
 class ToolProcessor:
+    """Track and update tool call steps during a run."""
+
     def __init__(self):
         self.step_references: dict[str, StepData] = {}
         self.update = False
