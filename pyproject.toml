@@ -1,26 +1,33 @@
-[tool.poetry]
+[project]
 name = "assistant-service"
 version = "0.1.0"
 description = ""
-authors = ["Leopoldo Garcia Vargas <lk13.dev@gmail.com>"]
+authors = [{name="Leopoldo Garcia Vargas", email="lk13.dev@gmail.com"}]
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "openai>=1.2.3",
+    "packaging>=23.2",
+    "fastapi>=0.100.0",
+    "pydantic>=2.5.3",
+    "pydantic-settings>=2.1.0",
+    "uvicorn>=0.25.0",
+    "chainlit>=1.0.200",
+    "langchain>=0.1.5",
+    "botbrew_commons @ file://./botbrew_commons",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10.0,<3.11"
-openai = "^1.2.3"
-packaging = "^23.2"
-fastapi = "^0.100.0"
-pydantic = "^2.5.3"
-pydantic-settings = "^2.1.0"
-uvicorn = "^0.25.0"
-chainlit = "^1.0.200"
-langchain = "^0.1.5"
-botbrew_commons = { path = "./botbrew_commons", develop = true }
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1.14",
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.4",
+    "pytest-mock>=3.12.0",
+    "mypy>=1.13.0",
+    "pre-commit>=3.7.0",
+]
 
-[tool.poetry.dev-dependencies]
-ruff = "^0.1.14"
-pytest = "^7.4.4"
-pytest-asyncio = "^0.23.4"
-pytest-mock = "3.12.0"
+[tool.uv.sources]
+botbrew_commons = { path = "./botbrew_commons" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -28,29 +35,37 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 log_cli_level = "info"
 testpaths = [
-#  "tests", # Todo: Move these tests under commons and activate them. They are currently failing.
-  "assistant_factory/tests",
-  "assistant_engine/tests"
+    "assistant_factory/tests",
+    "assistant_engine/tests",
 ]
 
 [tool.ruff]
-# https://beta.ruff.rs/docs/configuration/
-exclude = ['nowisthetime_legacy/prompts.py']
-target-version = "py310"
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".hg", ".ipynb_checkpoints", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", ".venv", ".vscode", "__pypackages__", "build",
+    "dist", "site-packages", "venv", "nowisthetime_legacy/prompts.py",
+]
+fix = true
 line-length = 120
+target-version = "py310"
 
 [tool.ruff.lint]
-select = ['E', 'W', 'F', 'I', 'B', 'C4', 'ARG', 'SIM']
-ignore = ['W291', 'W292', 'W293', 'SIM115']
+select = ["E", "W", "F", "I", "B", "C4", "ARG", "SIM"]
+ignore = ["W291", "W292", "W293", "SIM115"]
+fixable = ["ALL"]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-docstring-code-format = false
-docstring-code-line-length = "dynamic"
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+plugins = []
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
