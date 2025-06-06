@@ -10,6 +10,7 @@ from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
 from .bb_logging import get_logger
+from .openai_helpers import submit_tool_outputs_with_backoff
 
 logger = get_logger("MAIN")
 
@@ -147,7 +148,8 @@ async def run(thread_id: str, human_query: str):
                 f"Submitting tool outputs for thread: {thread_id}, run: {run_id}, "
                 f"outputs: {tool_processor.tool_outputs}"
             )
-            await client.beta.threads.runs.submit_tool_outputs(
+            await submit_tool_outputs_with_backoff(
+                client,
                 thread_id=thread_id,
                 run_id=run_id,
                 tool_outputs=tool_processor.tool_outputs.values(),

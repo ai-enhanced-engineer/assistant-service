@@ -5,26 +5,26 @@ description = ""
 authors = [{name="Leopoldo Garcia Vargas", email="lk13.dev@gmail.com"}]
 requires-python = ">=3.10,<3.11"
 dependencies = [
-    "openai>=1.2.3",
-    "packaging>=23.2",
-    "fastapi>=0.100.0",
-    "pydantic>=2.5.3",
-    "pydantic-settings>=2.1.0",
-    "uvicorn>=0.25.0",
-    "chainlit>=1.0.200",
-    "langchain>=0.1.5",
-    "google-cloud-storage>=2.14.0",
-    "google-cloud-secret-manager>=2.21.0",
+    "openai>=1.84.0",
+    "packaging>=24.2",
+    "fastapi>=0.115.12",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "uvicorn>=0.34.3",
+    "chainlit>=2.5.5",
+    "langchain>=0.3.25",
+    "google-cloud-storage>=3.1.0",
+    "google-cloud-secret-manager>=2.24.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.1.14",
-    "pytest>=7.4.4",
-    "pytest-asyncio>=0.23.4",
-    "pytest-mock>=3.12.0",
-    "mypy>=1.13.0",
-    "pre-commit>=3.7.0",
+    "ruff>=0.11.13",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.1",
+    "mypy>=1.16.0",
+    "pre-commit>=4.2.0",
 ]
 
 [tool.uv.sources]
@@ -33,10 +33,10 @@ botbrew_commons = { path = "./botbrew_commons" }
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "assistant_engine",
-    "assistant_factory",
-    "botbrew_commons",
-    "nowisthetime_legacy",
+    "assistant_engine*",
+    "assistant_factory*",
+    "botbrew_commons*",
+    "nowisthetime_legacy*",
 ]
 
 [tool.pytest.ini_options]
