@@ -5,7 +5,7 @@
 
 # Define phony targets
 .PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format test local-run
-.PHONY: frontend-install frontend-build frontend-test ui-run
+.PHONY: frontend-install frontend-build frontend-test
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -74,7 +74,7 @@ format:  ## Format code
 ############################
 
 local-run:
-  $(UV) run uvicorn assistant_engine.main:app --reload
+	$(UV) run uvicorn assistant_engine.main:app --reload
 
 frontend-install:
 	cd $(FRONTEND_DIR) && $(NPM) install
@@ -84,9 +84,6 @@ frontend-build:
 
 frontend-test:
 	cd $(FRONTEND_DIR) && $(NPM) test -- --run
-
-ui-run: frontend-build
-	$(UV) run chainlit run assistant_engine/main.py
 
 ############################
 ##### Build and deploy #####

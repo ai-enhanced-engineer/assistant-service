@@ -82,7 +82,7 @@ class ThreadMessageProcessor:
         logger.info(f"### {thread_message.content} ###")
 
         if not thread_message.content:
-            logger.info("Received thread message with no content. Skipping Chainlit message creation")
+            logger.info("Received thread message with no content. Skipping message creation")
             return None
 
         if thread_message.content[0].text != "":

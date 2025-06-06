@@ -39,7 +39,7 @@ Refer to `AGENTS.md` for automated contributor guidelines.
 
 ## FastAPI backend
 
-The API lives in `assistant_engine/api.py` and exposes two endpoints:
+The API lives in `assistant_engine/main.py` and exposes two endpoints:
 
 * `GET /start` – create a new chat thread and return its ID
 * `POST /chat` – send a message to the thread and receive the echoed response
@@ -47,7 +47,7 @@ The API lives in `assistant_engine/api.py` and exposes two endpoints:
 Run the server during development with:
 
 ```bash
-uvicorn assistant_engine.api:app --reload
+uvicorn assistant_engine.main:app --reload
 ```
 
 ## Custom React UI
@@ -60,8 +60,7 @@ Useful Make targets:
 ```bash
 make frontend-install  # install Node dependencies
 make frontend-test     # run Vitest unit tests
-make ui-run            # build the UI and serve with Chainlit
 ```
 
-The compiled build is served by Chainlit via `.chainlit/config.toml` which sets
-`custom_build = "./frontend/dist"`.
+Run the React dev server separately using `npm run dev` or build the UI with
+`npm run build`.

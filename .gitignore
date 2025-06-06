@@ -1,11 +1,6 @@
 .idea
-.chainlit
-!/.chainlit/
-!/.chainlit/config.toml
-/.chainlit/translations/
 .ruff_cache
 .env/
-chainlit.md
 .pytest_cache/
 __pycache__
 .venv/
