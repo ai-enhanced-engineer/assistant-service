@@ -17,7 +17,13 @@ def test__build_engine_config(monkeypatch):
         local_secrets.write_secret("test-secret")
 
         local_config = LocalConfigRepository()
-        local_config.write_config(EngineAssistantConfig(assistant_id="test-assistant-id"))
+        local_config.write_config(
+            EngineAssistantConfig(
+                assistant_id="test-assistant-id",
+                assistant_name="name",
+                initial_message="hi",
+            )
+        )
 
         engine_config = build_engine_config(local_secrets, local_config)
         assert engine_config.assistant_id == "test-assistant-id"

@@ -1,7 +1,6 @@
 import json
 
 import chainlit as cl
-from bb_logging import get_logger
 from config import build_engine_config
 from functions import TOOL_MAP
 from openai import AsyncOpenAI
@@ -9,6 +8,8 @@ from processors import ThreadMessageProcessor, ToolProcessor
 
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
+
+from .bb_logging import get_logger
 
 logger = get_logger("MAIN")
 

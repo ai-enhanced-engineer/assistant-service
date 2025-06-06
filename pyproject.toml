@@ -13,7 +13,8 @@ dependencies = [
     "uvicorn>=0.25.0",
     "chainlit>=1.0.200",
     "langchain>=0.1.5",
-    "botbrew_commons @ file://./botbrew_commons",
+    "google-cloud-storage>=2.14.0",
+    "google-cloud-secret-manager>=2.21.0",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,15 @@ dev = [
 
 [tool.uv.sources]
 botbrew_commons = { path = "./botbrew_commons" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "assistant_engine",
+    "assistant_factory",
+    "botbrew_commons",
+    "nowisthetime_legacy",
+]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

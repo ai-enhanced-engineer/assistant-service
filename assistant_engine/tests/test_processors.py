@@ -1,6 +1,6 @@
 import pytest
-from openai.types.beta.threads import MessageContentText, ThreadMessage
-from openai.types.beta.threads.message_content_text import Text
+from openai.types.beta.threads import Message, TextContentBlock
+from openai.types.beta.threads.text import Text
 
 from assistant_engine.processors import ThreadMessageProcessor
 
@@ -14,14 +14,15 @@ async def test__processor_updates_message_if_already_in_message_references(mocke
 
     processor = ThreadMessageProcessor()
 
-    thread_message = ThreadMessage(
+    thread_message = Message(
         id="12340",
-        content=[MessageContentText(text=Text(annotations=[], value="test message"), type="text")],
+        content=[TextContentBlock(text=Text(annotations=[], value="test message"), type="text")],
         created_at=1234,
         file_ids=[],
         object="thread.message",
         role="user",
         thread_id="thread_123",
+        status="completed",
     )
 
     msg_returned_once = await processor.process(thread_message=thread_message)
