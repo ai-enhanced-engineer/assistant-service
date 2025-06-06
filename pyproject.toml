@@ -76,6 +76,11 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 plugins = []
 
+[tool.semantic_release]
+version_variable = "pyproject.toml:version"
+branch = "main"
+upload_to_vcs_release = true
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
