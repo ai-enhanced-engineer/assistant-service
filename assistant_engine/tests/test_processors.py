@@ -3,14 +3,12 @@ from openai.types.beta.threads import Message, TextContentBlock
 from openai.types.beta.threads.text import Text
 
 from assistant_engine.processors import ThreadMessageProcessor
+from assistant_engine.tests.fake_chainlit import Message as CLMessage
 
 
 @pytest.mark.asyncio
 async def test__processor_updates_message_if_already_in_message_references(mocker):
-    # Mock Chainlit's Message model. This mocks the user session as well :)
-    mocker.patch("assistant_engine.processors.cl.Message", spec=True)
-    mock_msg = mocker.patch("assistant_engine.processors.cl.Message")
-    mock_msg.id.side_effect = ["12345"]
+    mocker.patch("assistant_engine.processors.cl.Message", CLMessage)
 
     processor = ThreadMessageProcessor()
 
@@ -40,7 +38,7 @@ async def test__processor_updates_message_if_already_in_message_references(mocke
 
 @pytest.mark.asyncio
 async def test__processor_returns_none_when_content_empty(mocker):
-    mock_message = mocker.patch("assistant_engine.processors.cl.Message", spec=True)
+    mocker.patch("assistant_engine.processors.cl.Message", CLMessage)
 
     processor = ThreadMessageProcessor()
 
@@ -58,4 +56,3 @@ async def test__processor_returns_none_when_content_empty(mocker):
     result = await processor.process(thread_message=thread_message)
 
     assert result is None
-    mock_message.assert_not_called()

@@ -4,25 +4,13 @@ from datetime import datetime
 import pytest
 
 from assistant_engine.processors import ToolProcessor
-
-
-class DummyStep:
-    def __init__(self, name=None, type=None, parent_id=None, show_input=None):
-        self.name = name
-        self.type = type
-        self.parent_id = parent_id
-        self.show_input = show_input
-        self.start = None
-        self.end = None
-        self.input = None
-        self.output = None
+from assistant_engine.tests.fake_chainlit import Context, Step
 
 
 @pytest.mark.asyncio
 async def test_process_tool_call_creates_and_updates(monkeypatch):
-    monkeypatch.setattr("assistant_engine.processors.cl.Step", DummyStep)
-    context = types.SimpleNamespace(current_step=types.SimpleNamespace(id="parent"))
-    monkeypatch.setattr("assistant_engine.processors.cl.context", context)
+    monkeypatch.setattr("assistant_engine.processors.cl.Step", Step)
+    monkeypatch.setattr("assistant_engine.processors.cl.context", Context())
 
     processor = ToolProcessor()
     run_step = types.SimpleNamespace(created_at=1000, completed_at=1010)
@@ -37,7 +25,7 @@ async def test_process_tool_call_creates_and_updates(monkeypatch):
         t_output="out1",
     )
 
-    assert isinstance(step1, DummyStep)
+    assert isinstance(step1, Step)
     assert step1.parent_id == "parent"
     assert step1.name == "tool"
     assert step1.type == "tool"
