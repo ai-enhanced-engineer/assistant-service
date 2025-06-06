@@ -1,3 +1,4 @@
+import inspect
 import json
 
 import chainlit as cl
@@ -46,6 +47,69 @@ class DictToObject:
 
     def __str__(self):
         return "\n".join(f"{key}: {value}" for key, value in self.__dict__.items())
+
+
+async def handle_function_tool_call(
+    *,
+    tool_call,
+    step,
+    tool_processor: ToolProcessor,
+) -> cl.Step | None:
+    """Execute a function tool call if possible.
+
+    Parameters
+    ----------
+    tool_call: Any
+        The tool call information from the assistant API.
+    step: RunStep
+        The current run step being processed.
+    tool_processor: ToolProcessor
+        Processor that manages Chainlit steps.
+
+    Returns
+    -------
+    Optional[cl.Step]
+        The Chainlit step representing the tool call or ``None`` if the call
+        could not be executed.
+    """
+    logger.info("# Using FUNCTION #")
+    logger.info(tool_call)
+    function_name = tool_call.function.name
+    logger.info(function_name)
+
+    if function_name not in TOOL_MAP:
+        logger.error("Unknown function requested: %s", function_name)
+        return None
+
+    function_args = json.loads(tool_call.function.arguments or "{}")
+    function = TOOL_MAP[function_name]
+    required_params = [
+        p.name
+        for p in inspect.signature(function).parameters.values()
+        if p.default is inspect.Parameter.empty
+        and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    ]
+    missing_params = [param for param in required_params if param not in function_args]
+
+    if missing_params:
+        logger.error(
+            "Missing required parameters %s for function %s",
+            missing_params,
+            function_name,
+        )
+        return None
+
+    function_output = function(**function_args)
+
+    cl_step = await tool_processor.process_tool_call(
+        step=step,
+        tool_call=tool_call,
+        name=function_name,
+        t_input=function_args,
+        t_output=function_output,
+        show_input="json",
+    )
+    return cl_step
 
 
 @cl.step(name="Assistant", type="run", root=True)
@@ -112,28 +176,17 @@ async def run(thread_id: str, human_query: str):
                             await cl_step.send()
 
                     elif tool_call.type == "function":
-                        logger.info("# Using FUNCTION #")
-                        logger.info(tool_call)
-                        function_name = tool_call.function.name
-                        logger.info(function_name)  # TODO: Validate that function name is in TOOL_MAP
-                        function_args = json.loads(
-                            tool_call.function.arguments
-                        )  # TODO: Validate that arguments are present
-                        function_output = TOOL_MAP[function_name](**json.loads(tool_call.function.arguments))
-
-                        cl_step = await tool_processor.process_tool_call(
-                            step=step,
+                        cl_step = await handle_function_tool_call(
                             tool_call=tool_call,
-                            name=function_name,
-                            t_input=function_args,
-                            t_output=function_output,
-                            show_input="json",
+                            step=step,
+                            tool_processor=tool_processor,
                         )
 
-                        if tool_processor.update:
-                            await cl_step.update()
-                        else:
-                            await cl_step.send()
+                        if cl_step is not None:
+                            if tool_processor.update:
+                                await cl_step.update()
+                            else:
+                                await cl_step.send()
 
             if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
                 logger.info(
