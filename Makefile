@@ -21,11 +21,11 @@ help: ## Display this help message
 
 environment-create: ## Set up venv and install dependencies using uv
 	@echo "Setting up environment..."
-	uv venv $(VENV)
-	$(UV) sync --all-extras
-	$(UV) run pre-commit install
+	uv venv $(VENV) --seed
+	$(VENV)/bin/pip install uv
+	$(VENV)/bin/uv sync --all-extras
+	$(VENV)/bin/uv run pre-commit install
 	@echo "Environment ready"
-
 install: environment-create ## Create environment and install deps
 
 environment-sync: ## Re-sync project dependencies
