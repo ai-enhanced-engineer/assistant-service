@@ -10,6 +10,7 @@ repository.
 ## Running Tests
 - Execute `make test` before submitting changes. This uses `pytest` and expects
   the development dependencies from `pyproject.toml` to be installed.
+- For the React UI, run `make frontend-test` to execute Vitest unit tests.
 
 ## Environment Setup
 - Use `make environment-create` to create the local virtual environment. It
