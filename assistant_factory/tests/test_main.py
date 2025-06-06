@@ -1,7 +1,6 @@
-import pytest
 
-from assistant_factory.main import persist_config
 from assistant_factory.client_spec.leogv.assistants import ClientAssistantConfig
+from assistant_factory.main import persist_config
 from botbrew_commons.data_models import EngineAssistantConfig
 
 
