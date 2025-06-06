@@ -11,13 +11,21 @@ PROJECT_ID = "botbrewers"
 
 
 def build_tools(assistant_config: ClientAssistantConfig):
-    # Define tools to be used
+    """Build tool definitions from a ClientAssistantConfig.
+
+    assistant_config: ClientAssistantConfig.
+    Returns list[dict].
+    """
     tool_builder = ToolBuilder(code_interpreter=True, retrieval=True, functions=assistant_config.functions)
     return tool_builder.build_tools()
 
 
 def upload_files(assistant_config: ClientAssistantConfig, retrieval: bool):
-    # RETRIEVAL: Upload necessary files
+    """Upload retrieval files when retrieval is True.
+
+    assistant_config: ClientAssistantConfig, retrieval: bool.
+    Returns file ID or None.
+    """
     file_id = None
     if retrieval:
         file_id = asyncio.run(upload_files_for_retrieval(path_to_file=assistant_config.file_paths[0]))
@@ -25,6 +33,11 @@ def upload_files(assistant_config: ClientAssistantConfig, retrieval: bool):
 
 
 def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a_tools: list[dict]):
+    """Create an assistant with provided tools and uploaded file.
+
+    assistant_config: ClientAssistantConfig, fileid: str, a_tools: list[dict].
+    Returns assistant ID as str.
+    """
     assistant_name = f"{assistant_config.client_id}-{assistant_config.assistant_name}"
     assistant = asyncio.run(
         create_assistant(
@@ -42,6 +55,10 @@ def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a
 
 
 def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
+    """Persist assistant configuration to storage.
+
+    assistant_config: ClientAssistantConfig, assistant_id: str. Returns None.
+    """
     as_config = EngineAssistantConfig(
         assistant_id=assistant_id,
         assistant_name=assistant_config.assistant_name,
