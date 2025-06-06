@@ -1,4 +1,11 @@
+# ruff: noqa: E402
+import sys
 import types
+
+sys.modules.setdefault("chainlit", types.ModuleType("chainlit"))
+sys.modules["chainlit"].Message = object
+sys.modules["chainlit"].Step = object
+sys.modules["chainlit"].context = types.SimpleNamespace(current_step=types.SimpleNamespace(id="parent"))
 from datetime import datetime
 
 import pytest
