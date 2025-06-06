@@ -47,7 +47,7 @@ show-dependencies:
 	$(UV) pip list
 
 clean:
-	rm -r .pytest_cache .ruff_cache chainlit.md .files
+	rm -r .pytest_cache .ruff_cache .files
 
 ############################
 ######### Tests ############
@@ -74,7 +74,7 @@ format:  ## Format code
 ############################
 
 local-run:
-	$(UV) run chainlit run assistant_engine/main.py
+  $(UV) run uvicorn assistant_engine.main:app --reload
 
 frontend-install:
 	cd $(FRONTEND_DIR) && $(NPM) install

@@ -18,7 +18,7 @@ required_version = version.parse("1.1.1")
 current_version = version.parse(openai.__version__)
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 if current_version < required_version:
-    raise ValueError(f"Error: OpenAI version {openai.__version__}" " is less than the required version 1.1.1")
+    raise ValueError(f"Error: OpenAI version {openai.__version__} is less than the required version 1.1.1")
 else:
     logger.info("OpenAI version is compatible.")
 
@@ -67,7 +67,11 @@ async def chat(chat_request: ChatRequest):
 
     # Wait for the run to be completed
     while True:
-        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        try:
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        except Exception as err:  # noqa: BLE001
+            logger.error("Failed to retrieve run status: %s", err)
+            break
         logger.info(f"Run status: {run_status.status}")
         if run_status.status == "completed":
             break

@@ -2,10 +2,23 @@ name: CI
 
 on:
   pull_request:
-    branches: ["*"]
+    branches: ["main"]
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  pull-requests: read
 
 jobs:
-  lint-and-test:
+  semantic-pr:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,5 +32,68 @@ jobs:
           pip install ".[dev]"
       - name: Run linters
         run: ruff check .
+
+  test:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
       - name: Run tests
         run: pytest
+
+  merged-test:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+      - name: Run tests
+        run: pytest
+
+  release:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+          pip install python-semantic-release
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+      - name: Bump version and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semantic-release version
+          git push --follow-tags origin ${{ github.ref_name }}
+          semantic-release publish
