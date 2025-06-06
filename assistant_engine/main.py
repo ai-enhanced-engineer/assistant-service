@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import Any, List
 
@@ -13,8 +12,6 @@ from .bb_logging import get_logger
 from .config import build_engine_config
 from .functions import TOOL_MAP
 from .openai_helpers import (
-    list_run_steps,
-    retrieve_run,
     submit_tool_outputs_with_backoff,
 )
 
@@ -55,25 +52,23 @@ def _dict_to_object(data: Any) -> Any:
 async def process_run(thread_id: str, human_query: str) -> list[str]:
     """Run the assistant for the provided query and return responses."""
     await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
-    run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=engine_config.assistant_id)
+
+    event_stream = await client.beta.threads.runs.create(
+        thread_id=thread_id,
+        assistant_id=engine_config.assistant_id,
+        stream=True,
+    )
 
     messages: list[str] = []
     tool_outputs: dict[str, dict[str, Any]] = {}
+    run_id = None
 
-    while True:
-        run = await retrieve_run(client, thread_id=thread_id, run_id=run.id)
-        if not run:
-            break
+    async for event in event_stream:
+        if event.event == "thread.run.created":
+            run_id = event.data.id
 
-        run_steps = await list_run_steps(client, thread_id=thread_id, run_id=run.id)
-        if not run_steps:
-            break
-
-        for step in run_steps.data:
-            run_step = await client.beta.threads.runs.steps.retrieve(
-                thread_id=thread_id, run_id=run.id, step_id=step.id
-            )
-            step_details = run_step.step_details
+        if event.event == "thread.run.step.completed":
+            step_details = event.data.step_details
 
             if step_details.type == "message_creation":
                 thread_message = await client.beta.threads.messages.retrieve(
@@ -94,7 +89,7 @@ async def process_run(thread_id: str, human_query: str) -> list[str]:
                         }
                     elif tool_call.type == "function":
                         name = tool_call.function.name
-                        args = json.loads(tool_call.function.arguments)
+                        args = json.loads(tool_call.function.arguments or "{}")
                         if name not in TOOL_MAP:
                             logger.error("Unknown function %s", name)
                             continue
@@ -104,18 +99,25 @@ async def process_run(thread_id: str, human_query: str) -> list[str]:
                             "output": output,
                         }
 
-        if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
+        if (
+            event.event == "thread.run.requires_action"
+            and event.data.required_action.type == "submit_tool_outputs"
+            and run_id
+        ):
             await submit_tool_outputs_with_backoff(
                 client,
                 thread_id=thread_id,
-                run_id=run.id,
+                run_id=run_id,
                 tool_outputs=tool_outputs.values(),
             )
 
-        if run.status in ["cancelled", "failed", "completed", "expired"]:
+        if event.event in [
+            "thread.run.completed",
+            "thread.run.failed",
+            "thread.run.cancelled",
+            "thread.run.expired",
+        ]:
             break
-
-        await asyncio.sleep(2)
 
     return messages
 
