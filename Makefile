@@ -5,10 +5,13 @@
 
 # Define phony targets
 .PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format test local-run
+.PHONY: frontend-install frontend-build ui-run
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
 UV := $(VENV)/bin/uv
+NPM := npm
+FRONTEND_DIR := frontend
 
 help: ## Display this help message
 	@echo "Usage: make [target]"
@@ -71,6 +74,15 @@ format:  ## Format code
 ############################
 
 local-run:
+	$(UV) run chainlit run assistant_engine/main.py
+
+frontend-install:
+	cd $(FRONTEND_DIR) && $(NPM) install
+
+frontend-build:
+	cd $(FRONTEND_DIR) && $(NPM) run build
+
+ui-run: frontend-build
 	$(UV) run chainlit run assistant_engine/main.py
 
 ############################

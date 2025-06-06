@@ -1,5 +1,8 @@
 .idea
 .chainlit
+!/.chainlit/
+!/.chainlit/config.toml
+/.chainlit/translations/
 .ruff_cache
 .env/
 chainlit.md
@@ -8,3 +11,4 @@ __pycache__
 .venv/
 *.egg-info/
 uv.lock
+.files/
