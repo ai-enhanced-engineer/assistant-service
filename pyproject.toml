@@ -33,10 +33,10 @@ botbrew_commons = { path = "./botbrew_commons" }
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "assistant_engine",
-    "assistant_factory",
-    "botbrew_commons",
-    "nowisthetime_legacy",
+    "assistant_engine*",
+    "assistant_factory*",
+    "botbrew_commons*",
+    "nowisthetime_legacy*",
 ]
 
 [tool.pytest.ini_options]
