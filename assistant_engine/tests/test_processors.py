@@ -36,3 +36,26 @@ async def test__processor_updates_message_if_already_in_message_references(mocke
     assert processor.send_message is False
     # Verify hat it is the same message
     assert msg_returned_once_id == msg_returned_twice.id
+
+
+@pytest.mark.asyncio
+async def test__processor_returns_none_when_content_empty(mocker):
+    mock_message = mocker.patch("assistant_engine.processors.cl.Message", spec=True)
+
+    processor = ThreadMessageProcessor()
+
+    thread_message = Message(
+        id="empty01",
+        content=[],
+        created_at=1234,
+        file_ids=[],
+        object="thread.message",
+        role="assistant",
+        thread_id="thread_123",
+        status="completed",
+    )
+
+    result = await processor.process(thread_message=thread_message)
+
+    assert result is None
+    mock_message.assert_not_called()
