@@ -59,10 +59,14 @@ class ThreadMessageProcessor:
         self._message_references: dict[str, cl.Message] = {}
         self.send_message = True
 
-    async def process(self, thread_message: Message) -> cl.Message:
+    async def process(self, thread_message: Message) -> cl.Message | None:
         """Process the message thread."""
         logger.info(f"### {thread_message.content} ###")
-        # TODO: Handle cases when thread_message.content is empty []. Otherwise the line below will crash.
+
+        if not thread_message.content:
+            logger.info("Received thread message with no content. Skipping Chainlit message creation")
+            return None
+
         if thread_message.content[0].text != "":
             log_message = f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
         else:

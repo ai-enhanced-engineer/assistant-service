@@ -10,6 +10,11 @@ from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepositor
 from .bb_logging import get_logger
 from .config import build_engine_config
 from .functions import TOOL_MAP
+from .openai_helpers import (
+    list_run_steps,
+    retrieve_run,
+    submit_tool_outputs_with_backoff,
+)
 from .processors import ThreadMessageProcessor, ToolProcessor
 
 logger = get_logger("MAIN")
@@ -128,11 +133,15 @@ async def run(thread_id: str, human_query: str):
     # While to periodically check for updates
     while True:
         # Retrieve the previously created run
-        run = await client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        run = await retrieve_run(client, thread_id=thread_id, run_id=run.id)
+        if not run:
+            break
         logger.info(f"Retrieved run: {run.id}, status: {run.status}")
 
         # Retrieve the run steps
-        run_steps = await client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run.id, order="asc")
+        run_steps = await list_run_steps(client, thread_id=thread_id, run_id=run.id)
+        if not run_steps:
+            break
 
         for step in run_steps.data:
             logger.info(f"## Processing step: {step.type} ##")
@@ -193,11 +202,14 @@ async def run(thread_id: str, human_query: str):
                     f"Submitting tool outputs for thread: {thread_id}, run: {run.id}, "
                     f"outputs: {tool_processor.tool_outputs}"
                 )
-                await client.beta.threads.runs.submit_tool_outputs(
+                result = await submit_tool_outputs_with_backoff(
+                    client,
                     thread_id=thread_id,
                     run_id=run.id,
                     tool_outputs=tool_processor.tool_outputs.values(),
                 )
+                if result is None:
+                    break
 
         await cl.sleep(2)  # Refresh every 2 seconds
         if run.status in ["cancelled", "failed", "completed", "expired"]:

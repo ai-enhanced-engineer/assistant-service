@@ -67,7 +67,11 @@ async def chat(chat_request: ChatRequest):
 
     # Wait for the run to be completed
     while True:
-        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        try:
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        except Exception as err:  # noqa: BLE001
+            logger.error("Failed to retrieve run status: %s", err)
+            break
         logger.info(f"Run status: {run_status.status}")
         if run_status.status == "completed":
             break
