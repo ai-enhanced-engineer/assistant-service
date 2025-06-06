@@ -5,7 +5,7 @@
 
 # Define phony targets
 .PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format test local-run
-.PHONY: frontend-install frontend-build ui-run
+.PHONY: frontend-install frontend-build frontend-test ui-run
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -81,6 +81,9 @@ frontend-install:
 
 frontend-build:
 	cd $(FRONTEND_DIR) && $(NPM) run build
+
+frontend-test:
+	cd $(FRONTEND_DIR) && $(NPM) test -- --run
 
 ui-run: frontend-build
 	$(UV) run chainlit run assistant_engine/main.py
