@@ -1,8 +1,11 @@
+import asyncio
 import inspect
 import json
+from typing import Any, List
 
-import chainlit as cl
+from fastapi import FastAPI, HTTPException
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
@@ -15,75 +18,46 @@ from .openai_helpers import (
     retrieve_run,
     submit_tool_outputs_with_backoff,
 )
-from .processors import ThreadMessageProcessor, ToolProcessor
 
 logger = get_logger("MAIN")
 
-base_config = BaseConfig()  # Loads variables from the environment
+# Load configuration from the environment and repositories
+base_config = BaseConfig()
 secret_repository = GCPSecretRepository(project_id=base_config.project_id, client_id=base_config.client_id)
 config_repository = GCPConfigRepository(
-    client_id=base_config.client_id, project_id=base_config.project_id, bucket_name=base_config.bucket_id
+    client_id=base_config.client_id,
+    project_id=base_config.project_id,
+    bucket_name=base_config.bucket_id,
 )
 engine_config = build_engine_config(secret_repository, config_repository)
 logger.info(f"Booting with config: {engine_config}")
 
 client = AsyncOpenAI(api_key=engine_config.openai_apikey)
 
-
-@cl.on_chat_start
-async def start_chat():
-    thread = await client.beta.threads.create()
-    logger.info(f"### Starting chat with thread:: {thread.id} ###")
-    cl.user_session.set("thread", thread)
-    await cl.Message(
-        author=engine_config.assistant_name,
-        content=engine_config.initial_message,
-        disable_feedback=True,
-    ).send()
+app = FastAPI()
 
 
-class DictToObject:
-    def __init__(self, dictionary):
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                setattr(self, key, DictToObject(value))
-            else:
-                setattr(self, key, value)
-
-    def __str__(self):
-        return "\n".join(f"{key}: {value}" for key, value in self.__dict__.items())
+class ChatRequest(BaseModel):
+    thread_id: str
+    message: str
 
 
-async def handle_function_tool_call(
-    *,
-    tool_call,
-    step,
-    tool_processor: ToolProcessor,
-) -> cl.Step | None:
-    """Execute a function tool call if possible.
+class ChatResponse(BaseModel):
+    responses: List[str]
 
-    Parameters
-    ----------
-    tool_call: Any
-        The tool call information from the assistant API.
-    step: RunStep
-        The current run step being processed.
-    tool_processor: ToolProcessor
-        Processor that manages Chainlit steps.
 
-    Returns
-    -------
-    Optional[cl.Step]
-        The Chainlit step representing the tool call or ``None`` if the call
-        could not be executed.
-    """
-    logger.info("# Using FUNCTION #")
-    logger.info(tool_call)
+def _dict_to_object(data: Any) -> Any:
+    """Convert nested dictionaries to simple objects."""
+    if isinstance(data, dict):
+        return type("Obj", (), {k: _dict_to_object(v) for k, v in data.items()})()
+    return data
+
+
+def handle_function_tool_call(tool_call: Any) -> Any | None:
+    """Return the output of a tool call if valid."""
     function_name = tool_call.function.name
-    logger.info(function_name)
-
     if function_name not in TOOL_MAP:
-        logger.error("Unknown function requested: %s", function_name)
+        logger.error("Unknown function %s", function_name)
         return None
 
     function_args = json.loads(tool_call.function.arguments or "{}")
@@ -94,129 +68,90 @@ async def handle_function_tool_call(
         if p.default is inspect.Parameter.empty
         and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
     ]
-    missing_params = [param for param in required_params if param not in function_args]
-
-    if missing_params:
-        logger.error(
-            "Missing required parameters %s for function %s",
-            missing_params,
-            function_name,
-        )
+    missing = [param for param in required_params if param not in function_args]
+    if missing:
+        logger.error("Missing required parameters %s for function %s", missing, function_name)
         return None
 
-    function_output = function(**function_args)
-
-    cl_step = await tool_processor.process_tool_call(
-        step=step,
-        tool_call=tool_call,
-        name=function_name,
-        t_input=function_args,
-        t_output=function_output,
-        show_input="json",
-    )
-    return cl_step
+    return function(**function_args)
 
 
-@cl.step(name="Assistant", type="run", root=True)
-async def run(thread_id: str, human_query: str):
-    # Add the message to the thread
-    init_message = await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
-    logger.info(f"### Received user message with content:{init_message.content} ###")
-
-    # Create the run
+async def process_run(thread_id: str, human_query: str) -> list[str]:
+    """Run the assistant for the provided query and return responses."""
+    await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
     run = await client.beta.threads.runs.create(thread_id=thread_id, assistant_id=engine_config.assistant_id)
-    logger.info(f"Created run: {run.id}")
 
-    thread_processor = ThreadMessageProcessor()
-    tool_processor = ToolProcessor()
+    messages: list[str] = []
+    tool_outputs: dict[str, dict[str, Any]] = {}
 
-    # While to periodically check for updates
     while True:
-        # Retrieve the previously created run
         run = await retrieve_run(client, thread_id=thread_id, run_id=run.id)
         if not run:
             break
-        logger.info(f"Retrieved run: {run.id}, status: {run.status}")
 
-        # Retrieve the run steps
         run_steps = await list_run_steps(client, thread_id=thread_id, run_id=run.id)
         if not run_steps:
             break
 
         for step in run_steps.data:
-            logger.info(f"## Processing step: {step.type} ##")
-            # Fetch step details
             run_step = await client.beta.threads.runs.steps.retrieve(
                 thread_id=thread_id, run_id=run.id, step_id=step.id
             )
             step_details = run_step.step_details
-            logger.info(f"Step details {step_details}")
 
             if step_details.type == "message_creation":
-                # Retrieve message generated by the model.
                 thread_message = await client.beta.threads.messages.retrieve(
                     message_id=step_details.message_creation.message_id,
                     thread_id=thread_id,
                 )
-                processed_message = await thread_processor.process(thread_message)
-                if thread_processor.send_message:
-                    await processed_message.send()
-                else:
-                    await processed_message.update()
+                for content in thread_message.content:
+                    if hasattr(content, "text"):
+                        messages.append(content.text.value)
 
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
-                    if isinstance(tool_call, dict):
-                        tool_call = DictToObject(tool_call)
-
+                    tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "retrieval":
-                        logger.info("# Using RETRIEVAL #")
-                        cl_step = await tool_processor.process_tool_call(
-                            step=step,
-                            tool_call=tool_call,
-                            name=tool_call.type,
-                            t_input="Retrieving information",
-                            t_output="Retrieved information",
-                        )
-
-                        if tool_processor.update:
-                            await cl_step.update()
-                        else:
-                            await cl_step.send()
-
+                        tool_outputs[tool_call.id] = {
+                            "tool_call_id": tool_call.id,
+                            "output": "retrieval",
+                        }
                     elif tool_call.type == "function":
-                        cl_step = await handle_function_tool_call(
-                            tool_call=tool_call,
-                            step=step,
-                            tool_processor=tool_processor,
-                        )
+                        output = handle_function_tool_call(tool_call)
+                        if output is not None:
+                            tool_outputs[tool_call.id] = {
+                                "tool_call_id": tool_call.id,
+                                "output": output,
+                            }
 
-                        if cl_step is not None:
-                            if tool_processor.update:
-                                await cl_step.update()
-                            else:
-                                await cl_step.send()
+        if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
+            await submit_tool_outputs_with_backoff(
+                client,
+                thread_id=thread_id,
+                run_id=run.id,
+                tool_outputs=tool_outputs.values(),
+            )
 
-            if run.status == "requires_action" and run.required_action.type == "submit_tool_outputs":
-                logger.info(
-                    f"Submitting tool outputs for thread: {thread_id}, run: {run.id}, "
-                    f"outputs: {tool_processor.tool_outputs}"
-                )
-                result = await submit_tool_outputs_with_backoff(
-                    client,
-                    thread_id=thread_id,
-                    run_id=run.id,
-                    tool_outputs=tool_processor.tool_outputs.values(),
-                )
-                if result is None:
-                    break
-
-        await cl.sleep(2)  # Refresh every 2 seconds
         if run.status in ["cancelled", "failed", "completed", "expired"]:
             break
 
+        await asyncio.sleep(2)
 
-@cl.on_message
-async def on_message(message_from_ui: cl.Message):
-    thread = cl.user_session.get("thread")  # type: Thread
-    await run(thread_id=thread.id, human_query=message_from_ui.content)
+    return messages
+
+
+@app.get("/start")
+async def start() -> dict[str, str]:
+    """Start a new conversation and return the thread information."""
+    thread = await client.beta.threads.create()
+    logger.info("Starting new thread: %s", thread.id)
+    return {"thread_id": thread.id, "initial_message": engine_config.initial_message}
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest) -> ChatResponse:
+    """Process a user message and return assistant responses."""
+    if not request.thread_id:
+        raise HTTPException(status_code=400, detail="Missing thread_id")
+    responses = await process_run(request.thread_id, request.message)
+    return ChatResponse(responses=responses)

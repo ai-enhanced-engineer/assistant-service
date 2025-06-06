@@ -20,9 +20,7 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/assistant_engine /app/assistant_engine
 COPY --from=builder /app/botbrew_commons /app/botbrew_commons
-COPY --from=builder /app/.chainlit /app/.chainlit
-COPY --from=builder /app/chainlit.md /app/chainlit.md
 COPY --from=builder /app/.env /app/.env
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["uv", "run", "chainlit", "run", "/app/assistant_engine/main.py"]
+CMD ["uv", "run", "uvicorn", "assistant_engine.main:app", "--host", "0.0.0.0", "--port", "8000"]

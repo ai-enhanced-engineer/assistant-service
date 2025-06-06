@@ -12,13 +12,13 @@ Set the following environment variables before running the application:
 - `ASSISTANT_ID` - ID of the assistant to run
 
 ### Running locally
-After exporting the variables above, start the Chainlit app with:
+After exporting the variables above, start the FastAPI app with:
 
 ```bash
 make local-run
 ```
 
-This launches Chainlit on `http://localhost:8000` using the provided configuration.
+This launches the API on `http://localhost:8000` using the provided configuration.
 
 ## Development setup
 1. Create the virtual environment and install dependencies:
