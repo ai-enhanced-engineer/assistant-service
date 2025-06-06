@@ -71,7 +71,7 @@ format:  ## Format code
 ############################
 
 local-run:
-	$(UV) run uvicorn nowisthetime_legacy.main:app --reload
+  $(UV) run uvicorn assistant_engine.main:app --reload
 
 ############################
 ##### Build and deploy #####
