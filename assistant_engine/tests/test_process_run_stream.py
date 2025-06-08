@@ -77,6 +77,9 @@ class DummyClient:
     def __init__(self):
         self.beta = DummyBeta()
 
+    async def aclose(self):
+        pass
+
 
 async def dummy_submit(*_args, **kwargs):
     dummy_submit.called_with = list(kwargs["tool_outputs"])
