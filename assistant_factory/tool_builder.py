@@ -36,7 +36,7 @@ class ToolBuilder:
             final_tools.append(Retrieval().model_dump())
         if self.functions:
             for function_raw in self.functions:
-                if isinstance(self.functions[0], dict):
+                if isinstance(function_raw, dict):
                     function_model = Function(function=function_raw)
                 else:
                     function_model = Function(function=convert_to_openai_function(function_raw))
