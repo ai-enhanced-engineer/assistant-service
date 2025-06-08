@@ -64,13 +64,8 @@ class AssistantEngineAPI:
         logger.info("Application starting up...")
         created_client = False
         if self.client is None:
-            global client
-            if client is None:
-                self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
-                client = self.client
-                created_client = True
-            else:
-                self.client = client
+            self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
+            created_client = True
         try:
             yield
         finally:
