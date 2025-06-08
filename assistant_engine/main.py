@@ -2,7 +2,7 @@
 
 import json
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, List
+from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from openai import AsyncOpenAI
@@ -54,7 +54,7 @@ class AssistantEngineAPI:
         self.engine_config = build_engine_config(secret_repository, config_repository)
         logger.info("Booting with config: %s", self.engine_config)
 
-        self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
+        self.client: Optional[AsyncOpenAI] = None
 
         self.app = FastAPI(lifespan=self.lifespan)
         self.register_routes()
@@ -62,8 +62,21 @@ class AssistantEngineAPI:
     @asynccontextmanager
     async def lifespan(self, _app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Application starting up...")
-        yield
-        logger.info("Application shutting down...")
+        created_client = False
+        if self.client is None:
+            global client
+            if client is None:
+                self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
+                client = self.client
+                created_client = True
+            else:
+                self.client = client
+        try:
+            yield
+        finally:
+            logger.info("Application shutting down...")
+            if created_client:
+                await self.client.aclose()
 
     def register_routes(self) -> None:
         self.app.add_api_route("/start", self.start_endpoint, methods=["GET"])
