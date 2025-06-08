@@ -71,11 +71,11 @@ class AssistantEngineAPI:
 
     async def _process_run(self, thread_id: str, human_query: str) -> list[str]:
         """Run the assistant for the provided query and return responses."""
-        await client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
+        await self.client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
 
-        event_stream = await client.beta.threads.runs.create(
+        event_stream = await self.client.beta.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=engine_config.assistant_id,
+            assistant_id=self.engine_config.assistant_id,
             stream=True,
         )
 
@@ -91,7 +91,7 @@ class AssistantEngineAPI:
                 step_details = event.data.step_details
 
                 if step_details.type == "message_creation":
-                    thread_message = await client.beta.threads.messages.retrieve(
+                    thread_message = await self.client.beta.threads.messages.retrieve(
                         message_id=step_details.message_creation.message_id,
                         thread_id=thread_id,
                     )
@@ -125,7 +125,7 @@ class AssistantEngineAPI:
                 and run_id
             ):
                 await submit_tool_outputs_with_backoff(
-                    client,
+                    self.client,
                     thread_id=thread_id,
                     run_id=run_id,
                     tool_outputs=tool_outputs.values(),
@@ -143,15 +143,15 @@ class AssistantEngineAPI:
 
     async def start_endpoint(self) -> dict[str, str]:
         """Start a new conversation and return the thread information."""
-        thread = await client.beta.threads.create()
+        thread = await self.client.beta.threads.create()
         logger.info("Starting new thread: %s", thread.id)
-        return {"thread_id": thread.id, "initial_message": engine_config.initial_message}
+        return {"thread_id": thread.id, "initial_message": self.engine_config.initial_message}
 
     async def chat_endpoint(self, request: ChatRequest) -> ChatResponse:
         """Process a user message and return assistant responses."""
         if not request.thread_id:
             raise HTTPException(status_code=400, detail="Missing thread_id")
-        responses = await process_run(request.thread_id, request.message)
+        responses = await self._process_run(request.thread_id, request.message)
         return ChatResponse(responses=responses)
 
 
@@ -164,8 +164,6 @@ def get_app() -> FastAPI:
 
 api = AssistantEngineAPI()
 app = api.app
-client = api.client
-engine_config = api.engine_config
 
 
 async def process_run(thread_id: str, human_query: str) -> list[str]:
