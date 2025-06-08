@@ -2,6 +2,7 @@ import types
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from botbrew_commons import repositories as repos
 from botbrew_commons.data_models import EngineAssistantConfig
@@ -77,3 +78,22 @@ def test_chat_endpoint(monkeypatch, client):
     resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
     assert resp.status_code == 200
     assert resp.json() == {"responses": ["response"]}
+
+
+def test_stream_endpoint(monkeypatch, client):
+    import assistant_engine.main as main
+
+    async def dummy_stream(tid: str, msg: str):
+        assert tid == "thread123"
+        assert msg == "hello"
+        yield types.SimpleNamespace(model_dump_json=lambda: "event1")
+        yield types.SimpleNamespace(model_dump_json=lambda: "event2")
+
+    monkeypatch.setattr(main.api, "_process_run_stream", dummy_stream)
+
+    with client.websocket_connect("/stream") as websocket:
+        websocket.send_json({"thread_id": "thread123", "message": "hello"})
+        assert websocket.receive_text() == "event1"
+        assert websocket.receive_text() == "event2"
+        with pytest.raises(WebSocketDisconnect):
+            websocket.receive_text()
