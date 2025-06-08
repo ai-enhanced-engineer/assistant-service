@@ -62,15 +62,13 @@ class AssistantEngineAPI:
     @asynccontextmanager
     async def lifespan(self, _app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Application starting up...")
-        created_client = False
         if self.client is None:
             self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
-            created_client = True
         try:
             yield
         finally:
             logger.info("Application shutting down...")
-            if created_client:
+            if self.client is not None:
                 await self.client.aclose()
 
     def register_routes(self) -> None:

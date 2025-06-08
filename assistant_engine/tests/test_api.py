@@ -54,7 +54,14 @@ def client(monkeypatch):
         def __init__(self):
             self.threads = DummyThreads()
 
-    main.api.client = types.SimpleNamespace(beta=DummyBeta())
+    class DummyClient:
+        def __init__(self) -> None:
+            self.beta = DummyBeta()
+
+        async def aclose(self):
+            pass
+
+    main.api.client = DummyClient()
     monkeypatch.setattr(main.api, "engine_config", types.SimpleNamespace(initial_message="hi"))
     return TestClient(main.app)
 
