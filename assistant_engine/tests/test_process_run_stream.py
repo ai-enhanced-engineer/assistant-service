@@ -131,8 +131,8 @@ async def test_process_run_stream(monkeypatch):
     importlib.reload(main)
 
     dummy_client = DummyClient()
-    monkeypatch.setattr(main, "client", dummy_client)
-    monkeypatch.setattr(main, "engine_config", types.SimpleNamespace(assistant_id="aid"))
+    monkeypatch.setattr(main.api, "client", dummy_client)
+    monkeypatch.setattr(main.api, "engine_config", types.SimpleNamespace(assistant_id="aid"))
     monkeypatch.setattr(main, "submit_tool_outputs_with_backoff", dummy_submit)
     monkeypatch.setattr(main, "TOOL_MAP", {"func": lambda: "out"})
 

@@ -54,8 +54,8 @@ def client(monkeypatch):
         def __init__(self):
             self.threads = DummyThreads()
 
-    main.client = types.SimpleNamespace(beta=DummyBeta())
-    monkeypatch.setattr(main, "engine_config", types.SimpleNamespace(initial_message="hi"))
+    main.api.client = types.SimpleNamespace(beta=DummyBeta())
+    monkeypatch.setattr(main.api, "engine_config", types.SimpleNamespace(initial_message="hi"))
     return TestClient(main.app)
 
 
@@ -73,7 +73,7 @@ def test_chat_endpoint(monkeypatch, client):
         assert msg == "hello"
         return ["response"]
 
-    monkeypatch.setattr(main, "process_run", dummy_run)
+    monkeypatch.setattr(main.api, "_process_run", dummy_run)
     resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
     assert resp.status_code == 200
     assert resp.json() == {"responses": ["response"]}
