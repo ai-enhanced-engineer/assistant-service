@@ -73,6 +73,19 @@ def test_start_endpoint(client):
     assert resp.json() == {"thread_id": "thread123", "initial_message": "hi"}
 
 
+def test_start_endpoint_openai_error(monkeypatch, client):
+    from openai import OpenAIError
+
+    import assistant_engine.main as main
+
+    async def fail_create():
+        raise OpenAIError("boom")
+
+    monkeypatch.setattr(main.api.client.beta.threads, "create", fail_create)
+    resp = client.get("/start")
+    assert resp.status_code == 502
+
+
 def test_chat_endpoint(monkeypatch, client):
     import assistant_engine.main as main
 
@@ -85,6 +98,36 @@ def test_chat_endpoint(monkeypatch, client):
     resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
     assert resp.status_code == 200
     assert resp.json() == {"responses": ["response"]}
+
+
+def test_chat_endpoint_openai_error(monkeypatch, client):
+    from openai import OpenAIError
+
+    import assistant_engine.main as main
+
+    class FailMessages:
+        async def create(self, *_args, **_kwargs):
+            raise OpenAIError("boom")
+
+    class FailThreads:
+        def __init__(self) -> None:
+            self.messages = FailMessages()
+
+    class FailBeta:
+        def __init__(self) -> None:
+            self.threads = FailThreads()
+
+    class FailClient:
+        def __init__(self) -> None:
+            self.beta = FailBeta()
+
+        async def aclose(self):
+            pass
+
+    monkeypatch.setattr(main.api, "client", FailClient())
+
+    resp = client.post("/chat", json={"thread_id": "thread123", "message": "hi"})
+    assert resp.status_code == 502
 
 
 def test_stream_endpoint(monkeypatch, client):

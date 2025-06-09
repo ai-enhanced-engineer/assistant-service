@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel
 
 from botbrew_commons.data_models import BaseConfig
@@ -83,145 +83,167 @@ class AssistantEngineAPI:
 
     async def _process_run(self, thread_id: str, human_query: str) -> list[str]:
         """Run the assistant for the provided query and return responses."""
-        await self.client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
+        try:
+            await self.client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
 
-        event_stream = await self.client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=self.engine_config.assistant_id,
-            stream=True,
-        )
+            event_stream = await self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=self.engine_config.assistant_id,
+                stream=True,
+            )
 
-        messages: list[str] = []
-        tool_outputs: dict[str, dict[str, Any]] = {}
-        run_id = None
+            messages: list[str] = []
+            tool_outputs: dict[str, dict[str, Any]] = {}
+            run_id = None
 
-        async for event in event_stream:
-            if event.event == "thread.run.created":
-                run_id = event.data.id
+            async for event in event_stream:
+                if event.event == "thread.run.created":
+                    run_id = event.data.id
 
-            if event.event == "thread.run.step.completed":
-                step_details = event.data.step_details
+                if event.event == "thread.run.step.completed":
+                    step_details = event.data.step_details
 
-                if step_details.type == "message_creation":
-                    thread_message = await self.client.beta.threads.messages.retrieve(
-                        message_id=step_details.message_creation.message_id,
+                    if step_details.type == "message_creation":
+                        thread_message = await self.client.beta.threads.messages.retrieve(
+                            message_id=step_details.message_creation.message_id,
+                            thread_id=thread_id,
+                        )
+                        for content in thread_message.content:
+                            if hasattr(content, "text"):
+                                messages.append(content.text.value)
+
+                    if step_details.type == "tool_calls":
+                        for tool_call in step_details.tool_calls:
+                            tool_call = _dict_to_object(tool_call)
+                            if tool_call.type == "retrieval":
+                                tool_outputs[tool_call.id] = {
+                                    "tool_call_id": tool_call.id,
+                                    "output": "retrieval",
+                                }
+                            elif tool_call.type == "function":
+                                name = tool_call.function.name
+                                args = json.loads(tool_call.function.arguments or "{}")
+                                if name not in TOOL_MAP:
+                                    logger.error("Unknown function %s", name)
+                                    continue
+                                output = TOOL_MAP[name](**args)
+                                tool_outputs[tool_call.id] = {
+                                    "tool_call_id": tool_call.id,
+                                    "output": output,
+                                }
+
+                if (
+                    event.event == "thread.run.requires_action"
+                    and event.data.required_action.type == "submit_tool_outputs"
+                    and run_id
+                ):
+                    await submit_tool_outputs_with_backoff(
+                        self.client,
                         thread_id=thread_id,
+                        run_id=run_id,
+                        tool_outputs=tool_outputs.values(),
                     )
-                    for content in thread_message.content:
-                        if hasattr(content, "text"):
-                            messages.append(content.text.value)
 
-                if step_details.type == "tool_calls":
-                    for tool_call in step_details.tool_calls:
-                        tool_call = _dict_to_object(tool_call)
-                        if tool_call.type == "retrieval":
-                            tool_outputs[tool_call.id] = {
-                                "tool_call_id": tool_call.id,
-                                "output": "retrieval",
-                            }
-                        elif tool_call.type == "function":
-                            name = tool_call.function.name
-                            args = json.loads(tool_call.function.arguments or "{}")
-                            if name not in TOOL_MAP:
-                                logger.error("Unknown function %s", name)
-                                continue
-                            output = TOOL_MAP[name](**args)
-                            tool_outputs[tool_call.id] = {
-                                "tool_call_id": tool_call.id,
-                                "output": output,
-                            }
+                if event.event in [
+                    "thread.run.completed",
+                    "thread.run.failed",
+                    "thread.run.cancelled",
+                    "thread.run.expired",
+                ]:
+                    break
 
-            if (
-                event.event == "thread.run.requires_action"
-                and event.data.required_action.type == "submit_tool_outputs"
-                and run_id
-            ):
-                await submit_tool_outputs_with_backoff(
-                    self.client,
-                    thread_id=thread_id,
-                    run_id=run_id,
-                    tool_outputs=tool_outputs.values(),
-                )
-
-            if event.event in [
-                "thread.run.completed",
-                "thread.run.failed",
-                "thread.run.cancelled",
-                "thread.run.expired",
-            ]:
-                break
-
-        return messages
+            return messages
+        except OpenAIError as err:
+            logger.error("OpenAI error during run: %s", err)
+            raise HTTPException(status_code=502, detail="OpenAI request failed") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error during run: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
     async def _process_run_stream(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         """Yield events from the assistant run as they arrive."""
-        await self.client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=human_query,
-        )
+        try:
+            await self.client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=human_query,
+            )
 
-        event_stream = await self.client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=self.engine_config.assistant_id,
-            stream=True,
-        )
+            event_stream = await self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=self.engine_config.assistant_id,
+                stream=True,
+            )
 
-        tool_outputs: dict[str, dict[str, Any]] = {}
-        run_id = None
+            tool_outputs: dict[str, dict[str, Any]] = {}
+            run_id = None
 
-        async for event in event_stream:
-            yield event
+            async for event in event_stream:
+                yield event
 
-            if event.event == "thread.run.created":
-                run_id = event.data.id
+                if event.event == "thread.run.created":
+                    run_id = event.data.id
 
-            if event.event == "thread.run.step.completed":
-                step_details = event.data.step_details
+                if event.event == "thread.run.step.completed":
+                    step_details = event.data.step_details
 
-                if step_details.type == "tool_calls":
-                    for tool_call in step_details.tool_calls:
-                        tool_call = _dict_to_object(tool_call)
-                        if tool_call.type == "retrieval":
-                            tool_outputs[tool_call.id] = {
-                                "tool_call_id": tool_call.id,
-                                "output": "retrieval",
-                            }
-                        elif tool_call.type == "function":
-                            name = tool_call.function.name
-                            args = json.loads(tool_call.function.arguments or "{}")
-                            if name not in TOOL_MAP:
-                                logger.error("Unknown function %s", name)
-                                continue
-                            output = TOOL_MAP[name](**args)
-                            tool_outputs[tool_call.id] = {
-                                "tool_call_id": tool_call.id,
-                                "output": output,
-                            }
+                    if step_details.type == "tool_calls":
+                        for tool_call in step_details.tool_calls:
+                            tool_call = _dict_to_object(tool_call)
+                            if tool_call.type == "retrieval":
+                                tool_outputs[tool_call.id] = {
+                                    "tool_call_id": tool_call.id,
+                                    "output": "retrieval",
+                                }
+                            elif tool_call.type == "function":
+                                name = tool_call.function.name
+                                args = json.loads(tool_call.function.arguments or "{}")
+                                if name not in TOOL_MAP:
+                                    logger.error("Unknown function %s", name)
+                                    continue
+                                output = TOOL_MAP[name](**args)
+                                tool_outputs[tool_call.id] = {
+                                    "tool_call_id": tool_call.id,
+                                    "output": output,
+                                }
 
-            if (
-                event.event == "thread.run.requires_action"
-                and event.data.required_action.type == "submit_tool_outputs"
-                and run_id
-            ):
-                await submit_tool_outputs_with_backoff(
-                    self.client,
-                    thread_id=thread_id,
-                    run_id=run_id,
-                    tool_outputs=tool_outputs.values(),
-                )
+                if (
+                    event.event == "thread.run.requires_action"
+                    and event.data.required_action.type == "submit_tool_outputs"
+                    and run_id
+                ):
+                    await submit_tool_outputs_with_backoff(
+                        self.client,
+                        thread_id=thread_id,
+                        run_id=run_id,
+                        tool_outputs=tool_outputs.values(),
+                    )
 
-            if event.event in [
-                "thread.run.completed",
-                "thread.run.failed",
-                "thread.run.cancelled",
-                "thread.run.expired",
-            ]:
-                break
+                if event.event in [
+                    "thread.run.completed",
+                    "thread.run.failed",
+                    "thread.run.cancelled",
+                    "thread.run.expired",
+                ]:
+                    break
+
+        except OpenAIError as err:
+            logger.error("OpenAI error during streaming run: %s", err)
+            raise HTTPException(status_code=502, detail="OpenAI request failed") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error during streaming run: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
     async def start_endpoint(self) -> dict[str, str]:
         """Start a new conversation and return the thread information."""
-        thread = await self.client.beta.threads.create()
+        try:
+            thread = await self.client.beta.threads.create()
+        except OpenAIError as err:
+            logger.error("OpenAI error creating thread: %s", err)
+            raise HTTPException(status_code=502, detail="OpenAI request failed") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error creating thread: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
         logger.info("Starting new thread: %s", thread.id)
         return {"thread_id": thread.id, "initial_message": self.engine_config.initial_message}
 
