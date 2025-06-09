@@ -127,18 +127,16 @@ async def test_process_run_stream(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    import importlib
+    from assistant_engine import main
 
-    import assistant_engine.main as main
+    monkeypatch.setattr(main, "GCPSecretRepository", DummySecretRepo)
+    monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)
 
-    importlib.reload(main)
-
-    dummy_client = DummyClient()
-    monkeypatch.setattr(main.api, "client", dummy_client)
-    monkeypatch.setattr(main.api, "engine_config", types.SimpleNamespace(assistant_id="aid"))
+    api = main.AssistantEngineAPI()
+    api.client = DummyClient()
     monkeypatch.setattr(main, "submit_tool_outputs_with_backoff", dummy_submit)
     monkeypatch.setattr(main, "TOOL_MAP", {"func": lambda: "out"})
 
-    result = await main.process_run("thread", "hi")
+    result = await api._process_run("thread", "hi")
     assert result == ["hello"]
     assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]
