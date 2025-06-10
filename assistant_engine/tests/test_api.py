@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
+from openai import OpenAIError
 from starlette.websockets import WebSocketDisconnect
 
 from botbrew_commons import repositories as repos
@@ -118,4 +119,33 @@ def test_stream_endpoint(monkeypatch, api):
         assert websocket.receive_text() == "event2"
         with pytest.raises(WebSocketDisconnect):
             websocket.receive_text()
+    dummy_client.aclose.assert_awaited_once()
+
+
+def test_start_endpoint_openai_error(monkeypatch, api):
+    api_obj, dummy_client = api
+
+    async def err(*_args, **_kwargs):
+        raise OpenAIError("boom")
+
+    monkeypatch.setattr(dummy_client.beta.threads, "create", err)
+    with TestClient(api_obj.app) as client:
+        resp = client.get("/start")
+        assert resp.status_code == 502
+    dummy_client.aclose.assert_awaited_once()
+
+
+def test_chat_endpoint_openai_error(monkeypatch, api):
+    api_obj, dummy_client = api
+
+    class Messages:
+        async def create(self, *_args, **_kwargs):
+            raise OpenAIError("fail")
+
+    monkeypatch.setattr(dummy_client.beta.threads, "messages", Messages(), raising=False)
+    monkeypatch.setattr(dummy_client.beta.threads, "runs", types.SimpleNamespace(), raising=False)
+
+    with TestClient(api_obj.app) as client:
+        resp = client.post("/chat", json={"thread_id": "thread123", "message": "hi"})
+        assert resp.status_code == 502
     dummy_client.aclose.assert_awaited_once()
