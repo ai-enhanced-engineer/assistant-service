@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel
 
 from botbrew_commons.data_models import BaseConfig
@@ -83,13 +83,31 @@ class AssistantEngineAPI:
 
     async def _process_run(self, thread_id: str, human_query: str) -> list[str]:
         """Run the assistant for the provided query and return responses."""
-        await self.client.beta.threads.messages.create(thread_id=thread_id, role="user", content=human_query)
+        try:
+            await self.client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=human_query,
+            )
+        except OpenAIError as err:
+            logger.error("OpenAI message creation failed: %s", err)
+            raise HTTPException(status_code=502, detail="Failed to create message") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error creating message: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
-        event_stream = await self.client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=self.engine_config.assistant_id,
-            stream=True,
-        )
+        try:
+            event_stream = await self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=self.engine_config.assistant_id,
+                stream=True,
+            )
+        except OpenAIError as err:
+            logger.error("OpenAI run creation failed: %s", err)
+            raise HTTPException(status_code=502, detail="Failed to create run") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error creating run: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
         messages: list[str] = []
         tool_outputs: dict[str, dict[str, Any]] = {}
@@ -103,10 +121,17 @@ class AssistantEngineAPI:
                 step_details = event.data.step_details
 
                 if step_details.type == "message_creation":
-                    thread_message = await self.client.beta.threads.messages.retrieve(
-                        message_id=step_details.message_creation.message_id,
-                        thread_id=thread_id,
-                    )
+                    try:
+                        thread_message = await self.client.beta.threads.messages.retrieve(
+                            message_id=step_details.message_creation.message_id,
+                            thread_id=thread_id,
+                        )
+                    except OpenAIError as err:
+                        logger.error("OpenAI message retrieval failed: %s", err)
+                        raise HTTPException(status_code=502, detail="Failed to retrieve message") from err
+                    except Exception as err:  # noqa: BLE001
+                        logger.error("Unexpected error retrieving message: %s", err)
+                        raise HTTPException(status_code=500, detail="Internal server error") from err
                     for content in thread_message.content:
                         if hasattr(content, "text"):
                             messages.append(content.text.value)
@@ -155,17 +180,31 @@ class AssistantEngineAPI:
 
     async def _process_run_stream(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         """Yield events from the assistant run as they arrive."""
-        await self.client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=human_query,
-        )
+        try:
+            await self.client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=human_query,
+            )
+        except OpenAIError as err:
+            logger.error("OpenAI message creation failed: %s", err)
+            raise HTTPException(status_code=502, detail="Failed to create message") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error creating message: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
-        event_stream = await self.client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=self.engine_config.assistant_id,
-            stream=True,
-        )
+        try:
+            event_stream = await self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=self.engine_config.assistant_id,
+                stream=True,
+            )
+        except OpenAIError as err:
+            logger.error("OpenAI run creation failed: %s", err)
+            raise HTTPException(status_code=502, detail="Failed to create run") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error creating run: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
 
         tool_outputs: dict[str, dict[str, Any]] = {}
         run_id = None
@@ -221,7 +260,14 @@ class AssistantEngineAPI:
 
     async def start_endpoint(self) -> dict[str, str]:
         """Start a new conversation and return the thread information."""
-        thread = await self.client.beta.threads.create()
+        try:
+            thread = await self.client.beta.threads.create()
+        except OpenAIError as err:
+            logger.error("OpenAI thread creation failed: %s", err)
+            raise HTTPException(status_code=502, detail="Failed to start thread") from err
+        except Exception as err:  # noqa: BLE001
+            logger.error("Unexpected error starting thread: %s", err)
+            raise HTTPException(status_code=500, detail="Internal server error") from err
         logger.info("Starting new thread: %s", thread.id)
         return {"thread_id": thread.id, "initial_message": self.engine_config.initial_message}
 
