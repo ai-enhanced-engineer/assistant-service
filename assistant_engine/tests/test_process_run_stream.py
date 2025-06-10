@@ -89,7 +89,8 @@ async def dummy_function():
     return "out"
 
 
-async def test_process_run_stream(monkeypatch):
+@pytest.fixture()
+def api(monkeypatch):
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
     monkeypatch.setenv("CLIENT_ID", "c")
@@ -136,7 +137,22 @@ async def test_process_run_stream(monkeypatch):
     api.client = DummyClient()
     monkeypatch.setattr(main, "submit_tool_outputs_with_backoff", dummy_submit)
     monkeypatch.setattr(main, "TOOL_MAP", {"func": lambda: "out"})
+    return api
 
+
+async def test_process_run(api):
     result = await api._process_run("thread", "hi")
     assert result == ["hello"]
+    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]
+
+
+async def test_process_run_stream(api):
+    events = [event async for event in api._process_run_stream("thread", "hi")]
+    assert [e.event for e in events] == [
+        "thread.run.created",
+        "thread.run.step.completed",
+        "thread.run.step.completed",
+        "thread.run.requires_action",
+        "thread.run.completed",
+    ]
     assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]
