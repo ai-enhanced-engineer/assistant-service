@@ -154,10 +154,10 @@ def test_chat_endpoint_openai_error(monkeypatch, api):
 def test_validate_function_args_success(api):
     """Test successful function argument validation."""
     api_obj, _ = api
-    
+
     def test_func(required_param: str, optional_param: str = "default"):
         return f"{required_param}_{optional_param}"
-    
+
     # Valid arguments
     api_obj._validate_function_args(test_func, {"required_param": "value"}, "test_func")
     api_obj._validate_function_args(test_func, {"required_param": "value", "optional_param": "custom"}, "test_func")
@@ -166,10 +166,10 @@ def test_validate_function_args_success(api):
 def test_validate_function_args_missing_required(api):
     """Test validation fails when required parameter is missing."""
     api_obj, _ = api
-    
+
     def test_func(required_param: str, optional_param: str = "default"):
         return f"{required_param}_{optional_param}"
-    
+
     # Missing required parameter
     with pytest.raises(TypeError, match="Missing required parameter 'required_param'"):
         api_obj._validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
@@ -178,10 +178,10 @@ def test_validate_function_args_missing_required(api):
 def test_validate_function_args_unexpected_params(api, caplog):
     """Test warning when unexpected parameters are provided."""
     api_obj, _ = api
-    
+
     def test_func(required_param: str):
         return required_param
-    
+
     # Extra unexpected parameter
     api_obj._validate_function_args(test_func, {"required_param": "value", "unexpected": "param"}, "test_func")
     assert "received unexpected parameters" in caplog.text
@@ -191,51 +191,44 @@ def test_validate_function_args_unexpected_params(api, caplog):
 async def test_function_tool_call_invalid_function_name(api):
     """Test handling of invalid function names in tool calls."""
     api_obj, dummy_client = api
-    
+
     # Mock TOOL_MAP to be empty
-    with patch('assistant_engine.main.TOOL_MAP', {}):
+    with patch("assistant_engine.main.TOOL_MAP", {}):
         # Create a mock tool call event
         tool_call = types.SimpleNamespace(
             id="tool_123",
             type="function",
-            function=types.SimpleNamespace(
-                name="nonexistent_function",
-                arguments='{"param": "value"}'
-            )
+            function=types.SimpleNamespace(name="nonexistent_function", arguments='{"param": "value"}'),
         )
-        
-        step_details = types.SimpleNamespace(
-            type="tool_calls",
-            tool_calls=[tool_call]
-        )
-        
+
+        step_details = types.SimpleNamespace(type="tool_calls", tool_calls=[tool_call])
+
         event = types.SimpleNamespace(
-            event="thread.run.step.completed",
-            data=types.SimpleNamespace(
-                step_details=step_details
-            )
+            event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
         )
-        
+
         # Process the event
         tool_outputs = {}
-        
+
         # Simulate the logic from _iterate_run_events
         if event.event == "thread.run.step.completed":
             step_details = event.data.step_details
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
                     from assistant_engine.main import _dict_to_object
+
                     tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "function":
                         name = tool_call.function.name
-                        
+
                         from assistant_engine.main import TOOL_MAP
+
                         if name not in TOOL_MAP:
                             tool_outputs[tool_call.id] = {
                                 "tool_call_id": tool_call.id,
                                 "output": f"Error: Function '{name}' not available",
                             }
-        
+
         # Verify error output
         assert "tool_123" in tool_outputs
         assert "Error: Function 'nonexistent_function' not available" in tool_outputs["tool_123"]["output"]
@@ -245,49 +238,45 @@ async def test_function_tool_call_invalid_function_name(api):
 async def test_function_tool_call_invalid_arguments(api):
     """Test handling of invalid function arguments in tool calls."""
     api_obj, dummy_client = api
-    
+
     def test_function(required_param: str):
         return f"Result: {required_param}"
-    
+
     # Mock TOOL_MAP with our test function
-    with patch('assistant_engine.main.TOOL_MAP', {"test_function": test_function}):
+    with patch("assistant_engine.main.TOOL_MAP", {"test_function": test_function}):
         # Create a mock tool call event with missing required parameter
         tool_call = types.SimpleNamespace(
             id="tool_456",
-            type="function", 
+            type="function",
             function=types.SimpleNamespace(
                 name="test_function",
-                arguments='{"wrong_param": "value"}'  # Missing required_param
-            )
+                arguments='{"wrong_param": "value"}',  # Missing required_param
+            ),
         )
-        
-        step_details = types.SimpleNamespace(
-            type="tool_calls",
-            tool_calls=[tool_call]
-        )
-        
+
+        step_details = types.SimpleNamespace(type="tool_calls", tool_calls=[tool_call])
+
         event = types.SimpleNamespace(
-            event="thread.run.step.completed",
-            data=types.SimpleNamespace(
-                step_details=step_details
-            )
+            event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
         )
-        
+
         # Process the event
         tool_outputs = {}
-        
+
         # Simulate the enhanced logic from _iterate_run_events
         if event.event == "thread.run.step.completed":
             step_details = event.data.step_details
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
                     from assistant_engine.main import _dict_to_object
+
                     tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "function":
                         name = tool_call.function.name
                         args = {"wrong_param": "value"}
-                        
+
                         from assistant_engine.main import TOOL_MAP
+
                         if name in TOOL_MAP:
                             try:
                                 func = TOOL_MAP[name]
@@ -302,7 +291,7 @@ async def test_function_tool_call_invalid_arguments(api):
                                     "tool_call_id": tool_call.id,
                                     "output": f"Error: Invalid arguments for function '{name}': {err}",
                                 }
-        
+
         # Verify error output
         assert "tool_456" in tool_outputs
         assert "Error: Invalid arguments for function 'test_function'" in tool_outputs["tool_456"]["output"]

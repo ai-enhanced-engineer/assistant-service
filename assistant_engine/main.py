@@ -63,12 +63,12 @@ class AssistantEngineAPI:
     def _validate_function_args(self, func: callable, args: dict[str, Any], func_name: str) -> None:
         """Validate that required function parameters are provided."""
         sig = inspect.signature(func)
-        
+
         # Check for missing required parameters
         for param_name, param in sig.parameters.items():
             if param.default is inspect.Parameter.empty and param_name not in args:
                 raise TypeError(f"Missing required parameter '{param_name}'")
-        
+
         # Check for unexpected parameters
         unexpected_params = set(args.keys()) - set(sig.parameters.keys())
         if unexpected_params:
@@ -147,7 +147,7 @@ class AssistantEngineAPI:
                         elif tool_call.type == "function":
                             name = tool_call.function.name
                             args = json.loads(tool_call.function.arguments or "{}")
-                            
+
                             # Validate function exists in TOOL_MAP
                             if name not in TOOL_MAP:
                                 logger.error("Unknown function '%s' not found in TOOL_MAP", name)
@@ -156,12 +156,12 @@ class AssistantEngineAPI:
                                     "output": f"Error: Function '{name}' not available",
                                 }
                                 continue
-                            
+
                             try:
                                 # Validate function arguments
                                 func = TOOL_MAP[name]
                                 self._validate_function_args(func, args, name)
-                                
+
                                 # Execute function with validated arguments
                                 output = func(**args)
                                 tool_outputs[tool_call.id] = {
