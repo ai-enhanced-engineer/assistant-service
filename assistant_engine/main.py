@@ -12,12 +12,12 @@ from pydantic import BaseModel
 from botbrew_commons.data_models import BaseConfig
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
-from .bb_logging import get_logger
 from .config import build_engine_config
 from .functions import TOOL_MAP
+from .logging_config import get_component_logger
 from .openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
 
-logger = get_logger("MAIN")
+logger = get_component_logger("MAIN")
 
 
 class ChatRequest(BaseModel):
@@ -105,10 +105,12 @@ class AssistantEngineAPI:
                 content=human_query,
             )
         except OpenAIError as err:
-            logger.error("OpenAI message creation failed: %s", err)
+            logger.error("OpenAI message creation failed: %s", err, 
+                        thread_id=thread_id, error_type="OpenAIError")
             raise HTTPException(status_code=502, detail="Failed to create message") from err
         except Exception as err:  # noqa: BLE001
-            logger.error("Unexpected error creating message: %s", err)
+            logger.error("Unexpected error creating message: %s", err,
+                        thread_id=thread_id, error_type=type(err).__name__)
             raise HTTPException(status_code=500, detail="Internal server error") from err
 
         try:
@@ -118,10 +120,14 @@ class AssistantEngineAPI:
                 stream=True,
             )
         except OpenAIError as err:
-            logger.error("OpenAI run creation failed: %s", err)
+            logger.error("OpenAI run creation failed: %s", err,
+                        thread_id=thread_id, assistant_id=self.engine_config.assistant_id,
+                        error_type="OpenAIError")
             raise HTTPException(status_code=502, detail="Failed to create run") from err
         except Exception as err:  # noqa: BLE001
-            logger.error("Unexpected error creating run: %s", err)
+            logger.error("Unexpected error creating run: %s", err,
+                        thread_id=thread_id, assistant_id=self.engine_config.assistant_id,
+                        error_type=type(err).__name__)
             raise HTTPException(status_code=500, detail="Internal server error") from err
 
         tool_outputs: dict[str, dict[str, Any]] = {}
@@ -150,7 +156,9 @@ class AssistantEngineAPI:
 
                             # Validate function exists in TOOL_MAP
                             if name not in TOOL_MAP:
-                                logger.error("Unknown function '%s' not found in TOOL_MAP", name)
+                                logger.error("Unknown function '%s' not found in TOOL_MAP", name,
+                                           thread_id=thread_id, run_id=run_id, tool_call_id=tool_call.id,
+                                           function_name=name)
                                 tool_outputs[tool_call.id] = {
                                     "tool_call_id": tool_call.id,
                                     "output": f"Error: Function '{name}' not available",
@@ -158,6 +166,11 @@ class AssistantEngineAPI:
                                 continue
 
                             try:
+                                # Log function execution start
+                                logger.debug("Starting function execution: %s", name,
+                                           thread_id=thread_id, run_id=run_id, tool_call_id=tool_call.id,
+                                           function_name=name, args=args)
+                                
                                 # Validate function arguments
                                 func = TOOL_MAP[name]
                                 self._validate_function_args(func, args, name)
@@ -168,14 +181,24 @@ class AssistantEngineAPI:
                                     "tool_call_id": tool_call.id,
                                     "output": output,
                                 }
+                                
+                                # Log successful execution
+                                logger.info("Function executed successfully: %s", name,
+                                          thread_id=thread_id, run_id=run_id, tool_call_id=tool_call.id,
+                                          function_name=name)
+                                          
                             except TypeError as err:
-                                logger.error("Invalid arguments for function '%s': %s", name, err)
+                                logger.warning("Invalid arguments for function '%s': %s", name, err,
+                                             thread_id=thread_id, run_id=run_id, tool_call_id=tool_call.id,
+                                             function_name=name, error_type="TypeError")
                                 tool_outputs[tool_call.id] = {
                                     "tool_call_id": tool_call.id,
                                     "output": f"Error: Invalid arguments for function '{name}': {err}",
                                 }
                             except Exception as err:  # noqa: BLE001
-                                logger.error("Function '%s' execution failed: %s", name, err)
+                                logger.error("Function '%s' execution failed: %s", name, err,
+                                           thread_id=thread_id, run_id=run_id, tool_call_id=tool_call.id,
+                                           function_name=name, error_type=type(err).__name__)
                                 tool_outputs[tool_call.id] = {
                                     "tool_call_id": tool_call.id,
                                     "output": f"Error: Function '{name}' execution failed: {err}",
@@ -231,10 +254,14 @@ class AssistantEngineAPI:
                         thread_id=thread_id,
                     )
                 except OpenAIError as err:
-                    logger.error("OpenAI message retrieval failed: %s", err)
+                    logger.error("OpenAI message retrieval failed: %s", err,
+                               thread_id=thread_id, message_id=step_details.message_creation.message_id,
+                               error_type="OpenAIError")
                     raise HTTPException(status_code=502, detail="Failed to retrieve message") from err
                 except Exception as err:  # noqa: BLE001
-                    logger.error("Unexpected error retrieving message: %s", err)
+                    logger.error("Unexpected error retrieving message: %s", err,
+                               thread_id=thread_id, message_id=step_details.message_creation.message_id,
+                               error_type=type(err).__name__)
                     raise HTTPException(status_code=500, detail="Internal server error") from err
                 for content in thread_message.content:
                     if hasattr(content, "text"):
@@ -252,36 +279,61 @@ class AssistantEngineAPI:
         try:
             thread = await self.client.beta.threads.create()
         except OpenAIError as err:
-            logger.error("OpenAI thread creation failed: %s", err)
+            logger.error("OpenAI thread creation failed: %s", err, error_type="OpenAIError")
             raise HTTPException(status_code=502, detail="Failed to start thread") from err
         except Exception as err:  # noqa: BLE001
-            logger.error("Unexpected error starting thread: %s", err)
+            logger.error("Unexpected error starting thread: %s", err, error_type=type(err).__name__)
             raise HTTPException(status_code=500, detail="Internal server error") from err
-        logger.info("Starting new thread: %s", thread.id)
+        
+        logger.info("New thread created successfully", thread_id=thread.id)
         return {"thread_id": thread.id, "initial_message": self.engine_config.initial_message}
 
     async def chat_endpoint(self, request: ChatRequest) -> ChatResponse:
         """Process a user message and return assistant responses."""
         if not request.thread_id:
+            logger.warning("Chat request missing thread_id")
             raise HTTPException(status_code=400, detail="Missing thread_id")
+            
+        logger.info("Processing chat request", 
+                   thread_id=request.thread_id, message_length=len(request.message))
         responses = await self._process_run(request.thread_id, request.message)
+        logger.debug("Chat processing completed", 
+                    thread_id=request.thread_id, response_count=len(responses))
         return ChatResponse(responses=responses)
 
     async def stream_endpoint(self, websocket: WebSocket) -> None:
         """Forward run events directly through a WebSocket connection."""
         await websocket.accept()
-        data = await websocket.receive_json()
-        thread_id = data.get("thread_id")
-        message = data.get("message")
-        if not thread_id or not message:
-            await websocket.send_json({"error": "Missing thread_id or message"})
+        logger.info("WebSocket connection accepted")
+        
+        try:
+            data = await websocket.receive_json()
+            thread_id = data.get("thread_id")
+            message = data.get("message")
+            
+            if not thread_id or not message:
+                logger.warning("WebSocket request missing required fields",
+                             has_thread_id=bool(thread_id), has_message=bool(message))
+                await websocket.send_json({"error": "Missing thread_id or message"})
+                await websocket.close()
+                return
+
+            logger.info("Starting WebSocket stream", 
+                       thread_id=thread_id, message_length=len(message))
+
+            async for event in self._process_run_stream(thread_id, message):
+                await websocket.send_text(event.model_dump_json())
+
+            logger.debug("WebSocket stream completed", thread_id=thread_id)
+            
+        except Exception as err:  # noqa: BLE001
+            logger.error("WebSocket stream error: %s", err, error_type=type(err).__name__)
+            try:
+                await websocket.send_json({"error": "Stream error occurred"})
+            except Exception:
+                pass  # Connection might be closed
+        finally:
             await websocket.close()
-            return
-
-        async for event in self._process_run_stream(thread_id, message):
-            await websocket.send_text(event.model_dump_json())
-
-        await websocket.close()
 
 
 def get_app() -> FastAPI:
