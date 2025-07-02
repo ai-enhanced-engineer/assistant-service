@@ -168,6 +168,47 @@ export GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
 6. **Write tests** for both unit and integration scenarios
 7. **Follow existing patterns** for configuration and dependency injection
 
+## Pull Request Workflow
+
+**CRITICAL**: Before creating any pull request, you MUST run and pass these validation steps:
+
+### Pre-PR Validation Checklist
+```bash
+# 1. Run linting - MUST pass without errors
+make lint
+
+# 2. Run tests - MUST pass all tests
+python -m pytest
+
+# 3. Run formatting (if needed)
+make format
+
+# 4. Check types (if mypy is configured)
+mypy .
+```
+
+### Required Workflow
+1. **Create feature branch** from main: `git checkout -b feat/feature-name`
+2. **Implement changes** with proper error handling and tests
+3. **Run validation commands** and fix any issues:
+   - `make lint` - Fix all linting errors
+   - `python -m pytest` - Ensure all tests pass
+   - Add new tests for new functionality
+4. **Commit changes** with descriptive messages
+5. **Push branch** and create pull request
+6. **Include comprehensive PR description** with:
+   - Summary of changes
+   - Technical implementation details
+   - Test coverage information
+   - Benefits and impact
+
+### PR Quality Standards
+- **All linting must pass** - No exceptions
+- **All tests must pass** - Both existing and new tests
+- **Code coverage** - New functionality must include tests
+- **Documentation** - Update relevant documentation
+- **Backward compatibility** - Maintain existing API contracts
+
 ## Security Considerations
 
 - **Secrets management** via GCP Secret Manager in production
