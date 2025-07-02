@@ -228,7 +228,6 @@ async def test_function_tool_call_invalid_function_name(api):
                     tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "function":
                         name = tool_call.function.name
-                        args = {"param": "value"}
                         
                         from assistant_engine.main import TOOL_MAP
                         if name not in TOOL_MAP:
