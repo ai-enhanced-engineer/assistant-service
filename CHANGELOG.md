@@ -2,6 +2,31 @@
 
 <!-- version list -->
 
+## v1.0.3 (2025-07-02)
+
+### Bug Fixes
+
+- Enhance tool call validation with comprehensive error handling
+  ([#53](https://github.com/lkronecker13/assistant-service/pull/53),
+  [`937cf78`](https://github.com/lkronecker13/assistant-service/commit/937cf789d05f77b43f2e12b5d4a76bb4d72b2c73))
+
+- Remove unused variable in test to pass linting
+  ([#53](https://github.com/lkronecker13/assistant-service/pull/53),
+  [`937cf78`](https://github.com/lkronecker13/assistant-service/commit/937cf789d05f77b43f2e12b5d4a76bb4d72b2c73))
+
+### Code Style
+
+- Apply code formatting improvements
+  ([#53](https://github.com/lkronecker13/assistant-service/pull/53),
+  [`937cf78`](https://github.com/lkronecker13/assistant-service/commit/937cf789d05f77b43f2e12b5d4a76bb4d72b2c73))
+
+### Documentation
+
+- Add mandatory pre-PR validation workflow
+  ([#53](https://github.com/lkronecker13/assistant-service/pull/53),
+  [`937cf78`](https://github.com/lkronecker13/assistant-service/commit/937cf789d05f77b43f2e12b5d4a76bb4d72b2c73))
+
+
 ## v1.0.2 (2025-07-02)
 
 ### Bug Fixes
