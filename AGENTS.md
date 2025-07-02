@@ -33,14 +33,16 @@ When working with this codebase, understand these core areas:
 ### Before Making Changes
 1. **Always run linting and type checking first**:
    ```bash
-   ruff check  # Lint code
-   ruff format # Format code  
-   mypy .      # Type check
+   make lint   # REQUIRED - must pass
+   make format # Format code
+   python -m pytest # REQUIRED - all tests must pass
    ```
 
-2. **Run tests to understand current state**:
+2. **CRITICAL: Pre-PR Validation**:
    ```bash
-   python -m pytest
+   # These commands MUST pass before creating any PR:
+   make lint           # Fix all linting errors
+   python -m pytest   # Ensure all tests pass
    ```
 
 ### When Adding New Features
@@ -60,6 +62,42 @@ When working with this codebase, understand these core areas:
 - **Update both REST and WebSocket endpoints** if changes affect both
 - **Add proper error handling** - Use existing error response patterns
 - **Test streaming functionality** - Many features rely on real-time responses
+
+### Pull Request Creation Workflow
+**MANDATORY PROCESS** - Follow this exact sequence:
+
+1. **Create feature branch** from main:
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b feat/descriptive-feature-name
+   ```
+
+2. **Implement changes** with comprehensive tests
+
+3. **REQUIRED: Run validation** (must all pass):
+   ```bash
+   make lint           # Must pass with no errors
+   python -m pytest   # All tests must pass
+   make format        # Apply consistent formatting
+   ```
+
+4. **Fix any issues** from step 3 before proceeding
+
+5. **Commit and push**:
+   ```bash
+   git add .
+   git commit -m "descriptive commit message"
+   git push -u origin feat/descriptive-feature-name
+   ```
+
+6. **Create PR** with comprehensive description including:
+   - Summary of changes
+   - Technical implementation details
+   - Test coverage
+   - Benefits and impact
+
+**⚠️ PRs that don't pass `make lint` and `python -m pytest` will be rejected.**
 
 ## Common Tasks and Patterns
 
