@@ -170,6 +170,13 @@ export GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
 
 ## Pull Request Workflow
 
+### 🚨 CRITICAL AI AGENT RULE: ASK BEFORE CREATING PRS
+
+**NEVER CREATE PULL REQUESTS WITHOUT USER PERMISSION**
+- Always ask the user: "Should I create a pull request for these changes?"
+- Wait for explicit approval before using `gh pr create` or any PR creation commands
+- The user must give clear permission before any PR is created
+
 **CRITICAL**: Before creating any pull request, you MUST run and pass these validation steps:
 
 ### Pre-PR Validation Checklist
@@ -189,16 +196,20 @@ make format          # Apply formatting
 1. **Create feature branch** from main: `git checkout -b feat/feature-name`
 2. **Implement changes** with proper error handling and tests
 3. **Run validation commands** and fix any issues:
+   - `make validate-branch` - Comprehensive validation
    - `make lint` - Fix all linting errors
    - `python -m pytest` - Ensure all tests pass
    - Add new tests for new functionality
 4. **Commit changes** with descriptive messages
-5. **Push branch** and create pull request
-6. **Include comprehensive PR description** with:
+5. **Push branch** to remote repository
+6. **ASK USER PERMISSION** before creating any pull request
+7. **Create pull request** (only after user approval) with comprehensive description:
    - Summary of changes
    - Technical implementation details
    - Test coverage information
    - Benefits and impact
+
+**🚨 CRITICAL RULE: Never create pull requests without explicit user permission. Always ask first.**
 
 ### PR Quality Standards
 - **All linting must pass** - No exceptions

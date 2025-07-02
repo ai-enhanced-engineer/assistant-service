@@ -30,6 +30,13 @@ When working with this codebase, understand these core areas:
 
 ## Development Workflow for AI Agents
 
+### 🚨 CRITICAL AI AGENT RULES
+
+**NEVER CREATE PULL REQUESTS WITHOUT USER PERMISSION**
+- Always ask the user: "Should I create a pull request for these changes?"
+- Wait for explicit approval before using `gh pr create` or any PR creation commands
+- The user must give clear permission before any PR is created
+
 ### Before Making Changes
 1. **Always run linting and type checking first**:
    ```bash
@@ -100,11 +107,15 @@ When working with this codebase, understand these core areas:
    git push -u origin feat/descriptive-feature-name
    ```
 
-6. **Create PR** with comprehensive description including:
+6. **ASK USER BEFORE CREATING PR** - Never create PRs without explicit permission
+
+7. **Create PR** (only after user approval) with comprehensive description including:
    - Summary of changes
    - Technical implementation details
    - Test coverage
    - Benefits and impact
+
+**⚠️ CRITICAL: Always ask the user for permission before creating any pull request. Never create PRs automatically.**
 
 **⚠️ PRs that don't pass `make lint` and `python -m pytest` will be rejected.**
 
