@@ -2,6 +2,35 @@
 
 <!-- version list -->
 
+## v1.0.4 (2025-07-02)
+
+### Bug Fixes
+
+- Add pre-commit validation infrastructure
+  ([#54](https://github.com/lkronecker13/assistant-service/pull/54),
+  [`22709b0`](https://github.com/lkronecker13/assistant-service/commit/22709b08930913a7b2cf0af09b5c184d13d5a247))
+
+- Improve project structure and documentation
+  ([#54](https://github.com/lkronecker13/assistant-service/pull/54),
+  [`22709b0`](https://github.com/lkronecker13/assistant-service/commit/22709b08930913a7b2cf0af09b5c184d13d5a247))
+
+- Project structure improvements and pre-commit infrastructure
+  ([#54](https://github.com/lkronecker13/assistant-service/pull/54),
+  [`22709b0`](https://github.com/lkronecker13/assistant-service/commit/22709b08930913a7b2cf0af09b5c184d13d5a247))
+
+### Documentation
+
+- Add critical rule to never create PRs without user permission
+  ([#54](https://github.com/lkronecker13/assistant-service/pull/54),
+  [`22709b0`](https://github.com/lkronecker13/assistant-service/commit/22709b08930913a7b2cf0af09b5c184d13d5a247))
+
+### Refactoring
+
+- Modernize Makefile with enhanced structure and targets
+  ([#54](https://github.com/lkronecker13/assistant-service/pull/54),
+  [`22709b0`](https://github.com/lkronecker13/assistant-service/commit/22709b08930913a7b2cf0af09b5c184d13d5a247))
+
+
 ## v1.0.3 (2025-07-02)
 
 ### Bug Fixes
