@@ -36,7 +36,6 @@ include = [
     "assistant_engine*",
     "assistant_factory*",
     "botbrew_commons*",
-    "nowisthetime_legacy*",
 ]
 
 [tool.pytest.ini_options]
@@ -53,7 +52,7 @@ testpaths = [
 exclude = [
     ".bzr", ".direnv", ".eggs", ".git", ".hg", ".ipynb_checkpoints", ".mypy_cache",
     ".pytest_cache", ".ruff_cache", ".venv", ".vscode", "__pypackages__", "build",
-    "dist", "site-packages", "venv", "nowisthetime_legacy/prompts.py",
+    "dist", "site-packages", "venv", "nowisthetime_legacy",
 ]
 fix = true
 line-length = 120
