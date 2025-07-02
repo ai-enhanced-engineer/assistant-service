@@ -174,18 +174,16 @@ export GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
 
 ### Pre-PR Validation Checklist
 ```bash
-# 1. Run linting - MUST pass without errors
-make lint
+# 1. Run comprehensive validation - MUST pass without errors
+make validate-branch  # Runs linting + tests automatically
 
-# 2. Run tests - MUST pass all tests
-python -m pytest
-
-# 3. Run formatting (if needed)
-make format
-
-# 4. Check types (if mypy is configured)
-mypy .
+# Alternative: Run individual commands
+make lint             # Check linting only
+python -m pytest     # Run tests only
+make format          # Apply formatting
 ```
+
+**Note**: Pre-commit hooks are configured to automatically run `make validate-branch` before each commit, ensuring code quality.
 
 ### Required Workflow
 1. **Create feature branch** from main: `git checkout -b feat/feature-name`

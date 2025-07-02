@@ -40,10 +40,15 @@ When working with this codebase, understand these core areas:
 
 2. **CRITICAL: Pre-PR Validation**:
    ```bash
-   # These commands MUST pass before creating any PR:
+   # Comprehensive validation (recommended):
+   make validate-branch  # Runs linting + tests automatically
+   
+   # Or individual commands:
    make lint           # Fix all linting errors
    python -m pytest   # Ensure all tests pass
    ```
+
+   **Automated Protection**: Pre-commit hooks automatically run validation before commits.
 
 ### When Adding New Features
 1. **Follow existing patterns** - Look at similar implementations before writing new code
@@ -77,10 +82,14 @@ When working with this codebase, understand these core areas:
 
 3. **REQUIRED: Run validation** (must all pass):
    ```bash
+   make validate-branch  # Comprehensive validation (recommended)
+   # OR individual commands:
    make lint           # Must pass with no errors
    python -m pytest   # All tests must pass
    make format        # Apply consistent formatting
    ```
+   
+   **Note**: Pre-commit hooks will automatically run validation, preventing commits that fail quality checks.
 
 4. **Fix any issues** from step 3 before proceeding
 
