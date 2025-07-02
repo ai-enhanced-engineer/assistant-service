@@ -52,7 +52,7 @@ testpaths = [
 exclude = [
     ".bzr", ".direnv", ".eggs", ".git", ".hg", ".ipynb_checkpoints", ".mypy_cache",
     ".pytest_cache", ".ruff_cache", ".venv", ".vscode", "__pypackages__", "build",
-    "dist", "site-packages", "venv", "nowisthetime_legacy",
+    "dist", "site-packages", "venv",
 ]
 fix = true
 line-length = 120
