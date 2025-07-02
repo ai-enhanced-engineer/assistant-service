@@ -82,7 +82,13 @@ def test_start_endpoint(api):
     with TestClient(api_obj.app) as client:
         resp = client.get("/start")
         assert resp.status_code == 200
-        assert resp.json() == {"thread_id": "thread123", "initial_message": "hi"}
+        data = resp.json()
+        assert data["thread_id"] == "thread123"
+        assert data["initial_message"] == "hi"
+        assert "correlation_id" in data
+        # Correlation ID should be a valid UUID
+        from uuid import UUID
+        UUID(data["correlation_id"])
     dummy_client.aclose.assert_awaited_once()
 
 
