@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: make-validate-branch
+        name: Run Makefile validate-branch
+        entry: make validate-branch
+        language: system
+        stages: [pre-commit]
+        verbose: true

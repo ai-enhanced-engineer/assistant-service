@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 
 # Define phony targets
-.PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format test local-run
+.PHONY: install help environment-create environment-sync environment-delete environment-list lint lint-fix format validate-branch test local-run
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -65,6 +65,16 @@ lint-fix:  ## Check and fix code issues.
 
 format:  ## Format code
 	$(UV) run ruff format .
+
+validate-branch:  ## Validate branch for PR - run linting and tests
+	@echo "🔍 Running validation checks..."
+	@echo "📝 Running linting..."
+	$(UV) run ruff check .
+	@echo "✅ Linting passed!"
+	@echo "🧪 Running tests..."
+	$(UV) run python -m pytest
+	@echo "✅ All tests passed!"
+	@echo "🎉 Branch validation successful - ready for PR!"
 
 ############################
 ######## Local runs ########
