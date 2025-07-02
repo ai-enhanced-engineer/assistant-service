@@ -1,3 +1,6 @@
+from langchain_core.utils.function_calling import convert_to_openai_function
+from pydantic import BaseModel
+
 from assistant_factory.tool_builder import ToolBuilder
 
 
@@ -164,3 +167,70 @@ def test__tool_builder_does_not_add_code_interpreter_if_not_passed():
     tool_builder = ToolBuilder(retrieval=True, functions=[weather_search])
     final_tools = tool_builder.build_tools()
     assert test_tools_all == final_tools
+
+
+class Multiply(BaseModel):
+    x: int
+    y: int
+
+
+def test__tool_builder_handles_mixed_function_input_first_model():
+    weather_search = {
+        "name": "get_current_weather",
+        "description": "Get the current weather",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city and state, e.g. San Francisco, CA",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["celsius", "fahrenheit"],
+                    "description": "The temperature unit to use. Infer this from the users location.",
+                },
+            },
+            "required": ["location", "format"],
+        },
+    }
+
+    expected_tools = [
+        {"type": "retrieval"},
+        {"type": "function", "function": convert_to_openai_function(Multiply)},
+        {"type": "function", "function": weather_search},
+    ]
+
+    tool_builder = ToolBuilder(retrieval=True, functions=[Multiply, weather_search])
+    assert tool_builder.build_tools() == expected_tools
+
+
+def test__tool_builder_handles_mixed_function_input_first_dict():
+    weather_search = {
+        "name": "get_current_weather",
+        "description": "Get the current weather",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city and state, e.g. San Francisco, CA",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["celsius", "fahrenheit"],
+                    "description": "The temperature unit to use. Infer this from the users location.",
+                },
+            },
+            "required": ["location", "format"],
+        },
+    }
+
+    expected_tools = [
+        {"type": "retrieval"},
+        {"type": "function", "function": weather_search},
+        {"type": "function", "function": convert_to_openai_function(Multiply)},
+    ]
+
+    tool_builder = ToolBuilder(retrieval=True, functions=[weather_search, Multiply])
+    assert tool_builder.build_tools() == expected_tools
