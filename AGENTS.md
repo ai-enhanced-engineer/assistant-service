@@ -30,6 +30,13 @@ When working with this codebase, understand these core areas:
 
 ## Development Workflow for AI Agents
 
+### 🚨 CRITICAL AI AGENT RULES
+
+**NEVER CREATE PULL REQUESTS WITHOUT USER PERMISSION**
+- Always ask the user: "Should I create a pull request for these changes?"
+- Wait for explicit approval before using `gh pr create` or any PR creation commands
+- The user must give clear permission before any PR is created
+
 ### Before Making Changes
 1. **Always run linting and type checking first**:
    ```bash
@@ -40,10 +47,15 @@ When working with this codebase, understand these core areas:
 
 2. **CRITICAL: Pre-PR Validation**:
    ```bash
-   # These commands MUST pass before creating any PR:
+   # Comprehensive validation (recommended):
+   make validate-branch  # Runs linting + tests automatically
+   
+   # Or individual commands:
    make lint           # Fix all linting errors
    python -m pytest   # Ensure all tests pass
    ```
+
+   **Automated Protection**: Pre-commit hooks automatically run validation before commits.
 
 ### When Adding New Features
 1. **Follow existing patterns** - Look at similar implementations before writing new code
@@ -77,10 +89,14 @@ When working with this codebase, understand these core areas:
 
 3. **REQUIRED: Run validation** (must all pass):
    ```bash
+   make validate-branch  # Comprehensive validation (recommended)
+   # OR individual commands:
    make lint           # Must pass with no errors
    python -m pytest   # All tests must pass
    make format        # Apply consistent formatting
    ```
+   
+   **Note**: Pre-commit hooks will automatically run validation, preventing commits that fail quality checks.
 
 4. **Fix any issues** from step 3 before proceeding
 
@@ -91,11 +107,15 @@ When working with this codebase, understand these core areas:
    git push -u origin feat/descriptive-feature-name
    ```
 
-6. **Create PR** with comprehensive description including:
+6. **ASK USER BEFORE CREATING PR** - Never create PRs without explicit permission
+
+7. **Create PR** (only after user approval) with comprehensive description including:
    - Summary of changes
    - Technical implementation details
    - Test coverage
    - Benefits and impact
+
+**⚠️ CRITICAL: Always ask the user for permission before creating any pull request. Never create PRs automatically.**
 
 **⚠️ PRs that don't pass `make lint` and `python -m pytest` will be rejected.**
 
