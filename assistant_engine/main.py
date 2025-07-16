@@ -302,38 +302,119 @@ class AssistantEngineAPI:
         return ChatResponse(responses=responses)
 
     async def stream_endpoint(self, websocket: WebSocket) -> None:
-        """Forward run events directly through a WebSocket connection."""
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")
+        """Forward run events directly through a WebSocket connection with robust error handling."""
+        connection_id = id(websocket)
         
         try:
-            data = await websocket.receive_json()
+            await websocket.accept()
+            logger.info("WebSocket connection accepted", connection_id=connection_id)
+        except Exception as err:  # noqa: BLE001
+            logger.error("WebSocket accept failed: %s", err, 
+                        connection_id=connection_id, error_type=type(err).__name__)
+            return
+        
+        try:
+            # Receive and validate request data
+            try:
+                data = await websocket.receive_json()
+            except json.JSONDecodeError as err:
+                logger.warning("WebSocket JSON parsing error: %s", err,
+                             connection_id=connection_id, error_type="JSONDecodeError")
+                await self._send_websocket_error(websocket, "JSON parsing error", "invalid_json")
+                return
+            except Exception as err:  # noqa: BLE001
+                logger.error("WebSocket receive error: %s", err,
+                           connection_id=connection_id, error_type=type(err).__name__)
+                await self._send_websocket_error(websocket, "Failed to receive request", "receive_error")
+                return
+            
+            # Validate request fields
             thread_id = data.get("thread_id")
             message = data.get("message")
             
             if not thread_id or not message:
                 logger.warning("WebSocket request missing required fields",
-                             has_thread_id=bool(thread_id), has_message=bool(message))
-                await websocket.send_json({"error": "Missing thread_id or message"})
-                await websocket.close()
+                             connection_id=connection_id, has_thread_id=bool(thread_id), 
+                             has_message=bool(message))
+                await self._send_websocket_error(websocket, "Missing thread_id or message", "missing_fields")
                 return
 
             logger.info("Starting WebSocket stream", 
-                       thread_id=thread_id, message_length=len(message))
+                       connection_id=connection_id, thread_id=thread_id, message_length=len(message))
 
-            async for event in self._process_run_stream(thread_id, message):
-                await websocket.send_text(event.model_dump_json())
-
-            logger.debug("WebSocket stream completed", thread_id=thread_id)
+            # Stream events with error handling
+            try:
+                async for event in self._process_run_stream(thread_id, message):
+                    try:
+                        await websocket.send_text(event.model_dump_json())
+                    except Exception as err:  # noqa: BLE001
+                        if self._is_websocket_disconnect(err):
+                            logger.info("WebSocket client disconnected during stream",
+                                      connection_id=connection_id, thread_id=thread_id)
+                            return
+                        else:
+                            logger.error("WebSocket send error: %s", err,
+                                       connection_id=connection_id, thread_id=thread_id, 
+                                       error_type=type(err).__name__)
+                            await self._send_websocket_error(websocket, "Failed to send event", "send_error")
+                            return
+                            
+                logger.debug("WebSocket stream completed successfully", 
+                           connection_id=connection_id, thread_id=thread_id)
+                           
+            except OpenAIError as err:
+                logger.error("OpenAI error during WebSocket stream: %s", err,
+                           connection_id=connection_id, thread_id=thread_id, error_type="OpenAIError")
+                await self._send_websocket_error(websocket, f"OpenAI service error: {err}", "openai_error")
+                return
+            except Exception as err:  # noqa: BLE001
+                logger.error("Unexpected error during WebSocket stream: %s", err,
+                           connection_id=connection_id, thread_id=thread_id, 
+                           error_type=type(err).__name__)
+                await self._send_websocket_error(websocket, "Internal processing error", "processing_error")
+                return
             
         except Exception as err:  # noqa: BLE001
-            logger.error("WebSocket stream error: %s", err, error_type=type(err).__name__)
-            try:
-                await websocket.send_json({"error": "Stream error occurred"})
-            except Exception:
-                pass  # Connection might be closed
+            logger.error("Critical WebSocket error: %s", err, 
+                        connection_id=connection_id, error_type=type(err).__name__)
+            # Don't attempt to send error message as connection state is unknown
         finally:
-            await websocket.close()
+            try:
+                await websocket.close()
+                logger.debug("WebSocket connection closed", connection_id=connection_id)
+            except Exception as err:  # noqa: BLE001
+                logger.debug("WebSocket close error (expected if already closed): %s", err,
+                           connection_id=connection_id, error_type=type(err).__name__)
+                
+    async def _send_websocket_error(self, websocket: WebSocket, message: str, error_code: str) -> None:
+        """Send error message to WebSocket client with proper error handling."""
+        try:
+            await websocket.send_json({
+                "error": message,
+                "error_code": error_code,
+                "timestamp": json.dumps({"timestamp": "now"})  # Simple timestamp placeholder
+            })
+        except Exception as err:  # noqa: BLE001
+            logger.debug("Failed to send WebSocket error message: %s", err, 
+                        error_message=message, error_code=error_code, 
+                        error_type=type(err).__name__)
+            
+    def _is_websocket_disconnect(self, error: Exception) -> bool:
+        """Check if error indicates WebSocket disconnect."""
+        error_name = type(error).__name__
+        error_message = str(error).lower()
+        
+        # Check for common WebSocket disconnect patterns
+        disconnect_patterns = [
+            "websocketdisconnect",
+            "connection closed",
+            "connection lost",
+            "broken pipe",
+            "connection reset"
+        ]
+        
+        return (error_name == "WebSocketDisconnect" or 
+                any(pattern in error_message for pattern in disconnect_patterns))
 
 
 def get_app() -> FastAPI:
