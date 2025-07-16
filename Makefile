@@ -80,7 +80,7 @@ type-check: ## Perform static type checks using mypy
 
 unit-test: ## Run unit tests with pytest
 	@echo "Running UNIT tests with pytest..."
-	uv run python -m pytest -m unit -vv --verbose -s $(TEST_DIR)
+	uv run python -m pytest -vv --verbose -s $(TEST_DIR)
 
 functional-test: ## Run functional tests with pytest
 	@echo "Running FUNCTIONAL tests with pytest..."
