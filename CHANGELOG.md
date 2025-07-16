@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.0.6 (2025-07-16)
+
+### Bug Fixes
+
+- Add comprehensive correlation IDs and enhanced error context
+  ([#56](https://github.com/lkronecker13/assistant-service/pull/56),
+  [`8a2d7c9`](https://github.com/lkronecker13/assistant-service/commit/8a2d7c9410d54301305da9da2bdaf6568f6403d5))
+
+- Remove nonexistent unit test marker from Makefile
+  ([#56](https://github.com/lkronecker13/assistant-service/pull/56),
+  [`8a2d7c9`](https://github.com/lkronecker13/assistant-service/commit/8a2d7c9410d54301305da9da2bdaf6568f6403d5))
+
+
 ## v1.0.5 (2025-07-02)
 
 ### Bug Fixes
