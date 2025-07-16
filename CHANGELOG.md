@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.5 (2025-07-02)
+
+### Bug Fixes
+
+- Implement comprehensive tool output error recovery
+  ([#55](https://github.com/lkronecker13/assistant-service/pull/55),
+  [`c637347`](https://github.com/lkronecker13/assistant-service/commit/c63734738b6edb8525143c17ee42343d8554e60d))
+
+
 ## v1.0.4 (2025-07-02)
 
 ### Bug Fixes

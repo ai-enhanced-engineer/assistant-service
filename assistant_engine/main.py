@@ -17,7 +17,7 @@ from .bb_logging import get_logger, log_with_context
 from .config import build_engine_config
 from .correlation import CorrelationContext, get_or_create_correlation_id
 from .functions import TOOL_MAP
-from .openai_helpers import submit_tool_outputs_with_backoff
+from .openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
 
 logger = get_logger("MAIN")
 
@@ -280,12 +280,29 @@ class AssistantEngineAPI:
                 and event.data.required_action.type == "submit_tool_outputs"
                 and run_id
             ):
-                await submit_tool_outputs_with_backoff(
+                submission_result = await submit_tool_outputs_with_backoff(
                     self.client,
                     thread_id=thread_id,
                     run_id=run_id,
                     tool_outputs=tool_outputs.values(),
                 )
+                
+                if submission_result is None:
+                    logger.error(
+                        "Tool output submission failed permanently for run_id=%s, thread_id=%s. "
+                        "Attempting to cancel run to prevent hanging state.",
+                        run_id,
+                        thread_id,
+                    )
+                    cancel_success = await cancel_run_safely(self.client, thread_id, run_id)
+                    if not cancel_success:
+                        logger.error(
+                            "Critical error: Unable to submit tool outputs or cancel run_id=%s. "
+                            "Run may be in an inconsistent state.",
+                            run_id,
+                        )
+                    # Break the event loop to prevent infinite waiting
+                    break
 
             if event.event in [
                 "thread.run.completed",

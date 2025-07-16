@@ -83,6 +83,7 @@ class DummyClient:
 
 async def dummy_submit(*_args, **kwargs):
     dummy_submit.called_with = list(kwargs["tool_outputs"])
+    return "success"  # Return success instead of None
 
 
 async def dummy_function():

@@ -67,7 +67,11 @@ async def submit_tool_outputs_with_backoff(
     retries: int = 3,
     backoff: int = 2,
 ) -> Optional[Any]:
-    """Submit tool outputs with retries and exponential backoff."""
+    """Submit tool outputs with retries and exponential backoff.
+    
+    Returns:
+        The submission result on success, None on permanent failure.
+    """
     correlation_id = get_or_create_correlation_id()
     tool_outputs_list = list(tool_outputs) if not isinstance(tool_outputs, list) else tool_outputs
     tool_count = len(tool_outputs_list)
@@ -126,3 +130,43 @@ async def submit_tool_outputs_with_backoff(
                 return None
             await asyncio.sleep(wait_time)
     return None
+
+
+async def cancel_run_safely(client: Any, thread_id: str, run_id: str) -> bool:
+    """Safely cancel a run, returning True if successful or already in terminal state."""
+    correlation_id = get_or_create_correlation_id()
+    try:
+        # First check if run is already in a terminal state
+        run_status = await retrieve_run(client, thread_id, run_id)
+        if run_status and run_status.status in ["completed", "failed", "cancelled", "expired"]:
+            log_with_context(
+                logger, logging.INFO, 
+                f"Run already in terminal state: {run_status.status}", 
+                thread_id=thread_id, 
+                run_id=run_id,
+                correlation_id=correlation_id,
+                status=run_status.status
+            )
+            return True
+            
+        # Attempt to cancel the run
+        await client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
+        log_with_context(
+            logger, logging.INFO, 
+            "Successfully cancelled run", 
+            thread_id=thread_id, 
+            run_id=run_id,
+            correlation_id=correlation_id
+        )
+        return True
+        
+    except Exception as err:  # noqa: BLE001
+        log_with_context(
+            logger, logging.ERROR, 
+            f"Failed to cancel run: {err}", 
+            thread_id=thread_id, 
+            run_id=run_id,
+            correlation_id=correlation_id,
+            error_type=type(err).__name__
+        )
+        return False
