@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any, Optional
 
 from assistant_factory.client_spec.leogv.assistants import ClientAssistantConfig
 from assistant_factory.create_assistant import create_assistant, upload_files_for_retrieval
@@ -10,29 +11,29 @@ BUCKET_ID = "botbrewers"
 PROJECT_ID = "botbrewers"
 
 
-def build_tools(assistant_config: ClientAssistantConfig):
+def build_tools(assistant_config: ClientAssistantConfig) -> list[dict[str, Any]]:
     """Build tool definitions from a ClientAssistantConfig.
 
     assistant_config: ClientAssistantConfig.
     Returns list[dict].
     """
-    tool_builder = ToolBuilder(code_interpreter=True, retrieval=True, functions=assistant_config.functions)
+    tool_builder = ToolBuilder(code_interpreter=True, retrieval=True, functions=assistant_config.functions)  # type: ignore[arg-type]
     return tool_builder.build_tools()
 
 
-def upload_files(assistant_config: ClientAssistantConfig, retrieval: bool):
+def upload_files(assistant_config: ClientAssistantConfig, retrieval: bool) -> Optional[str]:
     """Upload retrieval files when retrieval is True.
 
     assistant_config: ClientAssistantConfig, retrieval: bool.
     Returns file ID or None.
     """
     file_id = None
-    if retrieval:
+    if retrieval and assistant_config.file_paths:
         file_id = asyncio.run(upload_files_for_retrieval(path_to_file=assistant_config.file_paths[0]))
     return file_id
 
 
-def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a_tools: list[dict]):
+def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a_tools: list[dict[str, Any]]) -> str:
     """Create an assistant with provided tools and uploaded file.
 
     assistant_config: ClientAssistantConfig, fileid: str, a_tools: list[dict].
@@ -54,18 +55,22 @@ def create_new_assistant(assistant_config: ClientAssistantConfig, fileid: str, a
     return assistant.id
 
 
-def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str):
+def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str) -> None:
     """Persist assistant configuration to storage.
 
     assistant_config: ClientAssistantConfig, assistant_id: str. Returns None.
     """
+    function_names = []
+    if assistant_config.functions:
+        function_names = [function["name"] for function in assistant_config.functions]
+    
     as_config = EngineAssistantConfig(
         assistant_id=assistant_id,
         assistant_name=assistant_config.assistant_name,
         initial_message=assistant_config.initial_message,
         code_interpreter=assistant_config.code_interpreter,
         retrieval=assistant_config.retrieval,
-        function_names=[function["name"] for function in assistant_config.functions],
+        function_names=function_names,
     )
 
     config_repo = GCPConfigRepository(

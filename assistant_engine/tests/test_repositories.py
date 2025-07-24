@@ -1,9 +1,11 @@
+from typing import Any
+
 from botbrew_commons.data_models import EngineAssistantConfig
 from botbrew_commons.repositories.configs import LocalConfigRepository
 from botbrew_commons.repositories.secrets import LocalSecretRepository
 
 
-def test_local_config_repository_roundtrip():
+def test_local_config_repository_roundtrip() -> None:
     repo = LocalConfigRepository()
     config = EngineAssistantConfig(
         assistant_id="a1",
@@ -14,7 +16,7 @@ def test_local_config_repository_roundtrip():
     assert repo.read_config() is config
 
 
-def test_local_secret_repository_writes_and_reads(capsys):
+def test_local_secret_repository_writes_and_reads(capsys: Any) -> None:
     repo = LocalSecretRepository(client_id="cid", project_id="pid")
     repo.write_secret("sfx")
     secret = repo.access_secret("foo")

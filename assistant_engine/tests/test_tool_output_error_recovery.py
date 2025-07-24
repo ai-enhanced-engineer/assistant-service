@@ -140,6 +140,11 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
+    # Also patch in the main module where they're imported
+    import assistant_engine.main as main_module
+    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
+    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    
     from assistant_engine.main import AssistantEngineAPI
     
     api = AssistantEngineAPI()

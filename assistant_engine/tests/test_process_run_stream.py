@@ -1,4 +1,5 @@
 import types
+from typing import Any, AsyncIterator
 
 import pytest
 
@@ -6,10 +7,10 @@ pytestmark = pytest.mark.asyncio
 
 
 class DummyMessages:
-    async def create(self, thread_id: str, role: str, content: str):
+    async def create(self, thread_id: str, role: str, content: str) -> None:
         self.created = (thread_id, role, content)
 
-    async def retrieve(self, thread_id: str, message_id: str):
+    async def retrieve(self, thread_id: str, message_id: str) -> Any:
         assert thread_id == "thread"
         assert message_id == "msg1"
         return types.SimpleNamespace(content=[types.SimpleNamespace(text=types.SimpleNamespace(value="hello"))])
@@ -19,13 +20,13 @@ class DummyRuns:
     def __init__(self):
         self.created_kwargs = None
 
-    async def create(self, thread_id: str, assistant_id: str, stream: bool):
+    async def create(self, thread_id: str, assistant_id: str, stream: bool) -> AsyncIterator[Any]:
         assert thread_id == "thread"
         assert assistant_id == "aid"
         assert stream is True
         self.created_kwargs = stream
 
-        async def gen():
+        async def gen() -> AsyncIterator[Any]:
             yield types.SimpleNamespace(event="thread.run.created", data=types.SimpleNamespace(id="run1"))
             yield types.SimpleNamespace(
                 event="thread.run.step.completed",
@@ -81,12 +82,12 @@ class DummyClient:
         pass
 
 
-async def dummy_submit(client, thread_id, run_id, tool_outputs, *args, **kwargs):
-    dummy_submit.called_with = list(tool_outputs)
+async def dummy_submit(client: Any, thread_id: str, run_id: str, tool_outputs: Any, *args: Any, **kwargs: Any) -> str:
+    dummy_submit.called_with = list(tool_outputs)  # type: ignore[attr-defined]
     return "success"  # Return success instead of None
 
 
-async def dummy_function():
+async def dummy_function() -> str:
     return "out"
 
 
@@ -138,7 +139,7 @@ def api(monkeypatch):
     monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)
 
     api = main.AssistantEngineAPI()
-    api.client = DummyClient()
+    api.client = DummyClient()  # type: ignore[assignment]
     monkeypatch.setattr(main, "submit_tool_outputs_with_backoff", dummy_submit)
     monkeypatch.setattr(main, "TOOL_MAP", {"func": lambda: "out"})
     return api
@@ -147,7 +148,7 @@ def api(monkeypatch):
 async def test_process_run(api):
     result = await api._process_run("thread", "hi")
     assert result == ["hello"]
-    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]
+    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]
 
 
 async def test_process_run_stream(api):
@@ -159,4 +160,4 @@ async def test_process_run_stream(api):
         "thread.run.requires_action",
         "thread.run.completed",
     ]
-    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]
+    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]

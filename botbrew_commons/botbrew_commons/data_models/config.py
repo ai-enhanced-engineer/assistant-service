@@ -16,6 +16,6 @@ class EngineAssistantConfig(BaseModel):
     initial_message: str
     code_interpreter: bool = Field(default=False)
     retrieval: bool = Field(default=False)
-    function_names: list[str] = Field(default=None)
+    function_names: list[str] = Field(default_factory=list)
     # Secrets
     openai_apikey: Optional[str] = Field(default=None)

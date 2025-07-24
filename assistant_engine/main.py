@@ -5,7 +5,6 @@ interacting with OpenAI assistants.
 """
 
 import json
-import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -16,17 +15,14 @@ from pydantic import BaseModel
 
 from botbrew_commons.repositories import GCPConfigRepository, GCPSecretRepository
 
-from .bb_logging import get_logger, log_with_context
 from .config import build_engine_config
 from .correlation import CorrelationContext, get_or_create_correlation_id
 from .functions import TOOL_MAP
-from .logging_config import get_component_logger
 from .openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
+from .structured_logging import configure_structlog, get_logger
 
-# Use bb_logging for structured logging with correlation IDs
-bb_logger = get_logger("MAIN")
-# Keep component logger for non-structured logging
-logger = get_component_logger("MAIN")
+# Use new structured logger
+logger = get_logger("MAIN")
 
 
 class ChatRequest(BaseModel):
@@ -42,7 +38,7 @@ class ChatResponse(BaseModel):
     responses: list[str]
 
 
-def create_lifespan(api_instance: "AssistantEngineAPI"):
+def create_lifespan(api_instance: "AssistantEngineAPI") -> Any:
     """Create a lifespan context manager for the API instance."""
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -51,7 +47,7 @@ def create_lifespan(api_instance: "AssistantEngineAPI"):
         yield
         logger.info("Application shutting down...")
         if api_instance.client:
-            await api_instance.client.aclose()
+            await api_instance.client.close()
     return lifespan
 
 
@@ -75,15 +71,14 @@ class AssistantEngineAPI:
 
         # Log configuration (without sensitive data)
         logger.info(
-            "Booting with config: assistant_id=%r assistant_name=%r initial_message=%r "
-            "code_interpreter=%r retrieval=%r function_names=%r openai_apikey=%r",
-            self.engine_config.assistant_id,
-            self.engine_config.assistant_name,
-            self.engine_config.initial_message,
-            self.engine_config.code_interpreter,
-            self.engine_config.retrieval,
-            self.engine_config.function_names,
-            "sk" if self.engine_config.openai_apikey else None,
+            "Booting with config",
+            assistant_id=self.engine_config.assistant_id,
+            assistant_name=self.engine_config.assistant_name,
+            initial_message=self.engine_config.initial_message,
+            code_interpreter=self.engine_config.code_interpreter,
+            retrieval=self.engine_config.retrieval,
+            function_names=self.engine_config.function_names,
+            openai_apikey="sk" if self.engine_config.openai_apikey else None,
         )
 
         # Create FastAPI app
@@ -120,16 +115,16 @@ class AssistantEngineAPI:
         unexpected_params = set(args.keys()) - valid_params
         if unexpected_params:
             logger.warning(
-                "Function '%s' received unexpected parameters: %s",
-                name, unexpected_params
+                "Function received unexpected parameters",
+                function_name=name,
+                unexpected_params=unexpected_params
             )
 
     async def _iterate_run_events(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         """Process a run and return streaming events."""
         correlation_id = get_or_create_correlation_id()
         
-        log_with_context(
-            bb_logger, logging.INFO, 
+        logger.info(
             "Starting run processing", 
             thread_id=thread_id, 
             correlation_id=correlation_id
@@ -141,31 +136,30 @@ class AssistantEngineAPI:
                 role="user",
                 content=human_query,
             )
-            log_with_context(
-                bb_logger, logging.INFO, 
+            logger.info(
                 "Message created successfully", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id
             )
         except OpenAIError as err:
-            log_with_context(
-                bb_logger, logging.ERROR, 
-                f"OpenAI message creation failed: {err}", 
+            logger.error(
+                "OpenAI message creation failed", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id,
-                error_type="OpenAIError"
+                error_type="OpenAIError",
+                error=str(err)
             )
             raise HTTPException(
                 status_code=502, 
                 detail=f"Failed to create message (correlation_id: {correlation_id[:8]})"
             ) from err
         except Exception as err:  # noqa: BLE001
-            log_with_context(
-                bb_logger, logging.ERROR, 
-                f"Unexpected error creating message: {err}", 
+            logger.error(
+                "Unexpected error creating message", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id,
-                error_type=type(err).__name__
+                error_type=type(err).__name__,
+                error=str(err)
             )
             raise HTTPException(
                 status_code=500, 
@@ -178,34 +172,33 @@ class AssistantEngineAPI:
                 assistant_id=self.engine_config.assistant_id,
                 stream=True,
             )
-            log_with_context(
-                bb_logger, logging.INFO, 
+            logger.info(
                 "Run stream created successfully", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id,
                 assistant_id=self.engine_config.assistant_id
             )
         except OpenAIError as err:
-            log_with_context(
-                bb_logger, logging.ERROR, 
-                f"OpenAI run creation failed: {err}", 
+            logger.error(
+                "OpenAI run creation failed", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id,
                 error_type="OpenAIError",
-                assistant_id=self.engine_config.assistant_id
+                assistant_id=self.engine_config.assistant_id,
+                error=str(err)
             )
             raise HTTPException(
                 status_code=502, 
                 detail=f"Failed to create run (correlation_id: {correlation_id[:8]})"
             ) from err
         except Exception as err:  # noqa: BLE001
-            log_with_context(
-                bb_logger, logging.ERROR, 
-                f"Unexpected error creating run: {err}", 
+            logger.error(
+                "Unexpected error creating run", 
                 thread_id=thread_id, 
                 correlation_id=correlation_id,
                 error_type=type(err).__name__,
-                assistant_id=self.engine_config.assistant_id
+                assistant_id=self.engine_config.assistant_id,
+                error=str(err)
             )
             raise HTTPException(
                 status_code=500, 
@@ -233,9 +226,8 @@ class AssistantEngineAPI:
 
                         # Validate function exists in TOOL_MAP
                         if name not in TOOL_MAP:
-                            log_with_context(
-                                bb_logger, logging.ERROR, 
-                                f"Unknown function '{name}' not found in TOOL_MAP", 
+                            logger.error(
+                                "Unknown function not found in TOOL_MAP", 
                                 thread_id=thread_id, 
                                 run_id=run_id,
                                 tool_call_id=tool_call.id,
@@ -253,22 +245,21 @@ class AssistantEngineAPI:
                             self._validate_function_args(func, args, name)
 
                             # Execute function with validated arguments
-                            log_with_context(
-                                bb_logger, logging.DEBUG, 
-                                f"Executing function '{name}' with args: {args}", 
+                            logger.debug(
+                                "Executing function with args", 
                                 thread_id=thread_id, 
                                 run_id=run_id,
                                 tool_call_id=tool_call.id,
-                                function_name=name
+                                function_name=name,
+                                args=args
                             )
                             output = func(**args)
                             tool_outputs[tool_call.id] = {
                                 "tool_call_id": tool_call.id,
                                 "output": output,
                             }
-                            log_with_context(
-                                bb_logger, logging.INFO, 
-                                f"Function '{name}' executed successfully", 
+                            logger.info(
+                                "Function executed successfully", 
                                 thread_id=thread_id, 
                                 run_id=run_id,
                                 tool_call_id=tool_call.id,
@@ -276,28 +267,28 @@ class AssistantEngineAPI:
                             )
                                       
                         except TypeError as err:
-                            log_with_context(
-                                bb_logger, logging.ERROR, 
-                                f"Invalid arguments for function '{name}': {err}", 
+                            logger.error(
+                                "Invalid arguments for function", 
                                 thread_id=thread_id, 
                                 run_id=run_id,
                                 tool_call_id=tool_call.id,
                                 function_name=name,
-                                error_type="TypeError"
+                                error_type="TypeError",
+                                error=str(err)
                             )
                             tool_outputs[tool_call.id] = {
                                 "tool_call_id": tool_call.id,
                                 "output": f"Error: Invalid arguments for function '{name}': {err} (correlation_id: {correlation_id[:8]})",
                             }
                         except Exception as err:  # noqa: BLE001
-                            log_with_context(
-                                bb_logger, logging.ERROR, 
-                                f"Function '{name}' execution failed: {err}", 
+                            logger.error(
+                                "Function execution failed", 
                                 thread_id=thread_id, 
                                 run_id=run_id,
                                 tool_call_id=tool_call.id,
                                 function_name=name,
-                                error_type=type(err).__name__
+                                error_type=type(err).__name__,
+                                error=str(err)
                             )
                             tool_outputs[tool_call.id] = {
                                 "tool_call_id": tool_call.id,
@@ -307,7 +298,7 @@ class AssistantEngineAPI:
             # Note: Function calls are now handled in step.completed events above
             # This section only handles non-function tool types if they come from required_action
             if event.event == "thread.run.requires_action":
-                if event.data.required_action.type == "submit_tool_outputs":
+                if event.data.required_action and event.data.required_action.type == "submit_tool_outputs":
                     # Handle the case where submit_tool_outputs might not exist or be a SimpleNamespace
                     submit_tool_outputs = getattr(event.data.required_action, 'submit_tool_outputs', None)
                     if submit_tool_outputs and hasattr(submit_tool_outputs, 'tool_calls'):
@@ -326,8 +317,7 @@ class AssistantEngineAPI:
                                 }
                     else:
                         # If submit_tool_outputs is not available, we should have collected tool_calls from step events
-                        log_with_context(
-                            bb_logger, logging.DEBUG,
+                        logger.debug(
                             "submit_tool_outputs not found in required_action, relying on step event tool outputs",
                             thread_id=thread_id,
                             run_id=run_id,
@@ -336,6 +326,7 @@ class AssistantEngineAPI:
 
             if (
                 event.event == "thread.run.requires_action"
+                and event.data.required_action
                 and event.data.required_action.type == "submit_tool_outputs"
                 and tool_outputs
                 and run_id
@@ -363,8 +354,7 @@ class AssistantEngineAPI:
         """Process a run and return the final messages."""
         correlation_id = get_or_create_correlation_id()
         
-        log_with_context(
-            bb_logger, logging.INFO, 
+        logger.info(
             "Processing chat request", 
             thread_id=thread_id, 
             correlation_id=correlation_id,
@@ -383,34 +373,33 @@ class AssistantEngineAPI:
                     thread_message = await self.client.beta.threads.messages.retrieve(
                         thread_id=thread_id, message_id=message_id
                     )
-                    log_with_context(
-                        bb_logger, logging.DEBUG, 
+                    logger.debug(
                         "Message retrieved successfully", 
                         thread_id=thread_id, 
                         correlation_id=correlation_id,
                         message_id=message_id
                     )
                 except OpenAIError as err:
-                    log_with_context(
-                        bb_logger, logging.ERROR, 
-                        f"OpenAI message retrieval failed: {err}", 
+                    logger.error(
+                        "OpenAI message retrieval failed", 
                         thread_id=thread_id, 
                         correlation_id=correlation_id,
                         message_id=message_id,
-                        error_type="OpenAIError"
+                        error_type="OpenAIError",
+                        error=str(err)
                     )
                     raise HTTPException(
                         status_code=502, 
                         detail=f"Failed to retrieve message (correlation_id: {correlation_id[:8]})"
                     ) from err
                 except Exception as err:  # noqa: BLE001
-                    log_with_context(
-                        bb_logger, logging.ERROR, 
-                        f"Unexpected error retrieving message: {err}", 
+                    logger.error(
+                        "Unexpected error retrieving message", 
                         thread_id=thread_id, 
                         correlation_id=correlation_id,
                         message_id=message_id,
-                        error_type=type(err).__name__
+                        error_type=type(err).__name__,
+                        error=str(err)
                     )
                     raise HTTPException(
                         status_code=500, 
@@ -421,9 +410,8 @@ class AssistantEngineAPI:
                     if hasattr(content, "text"):
                         messages.append(content.text.value)
 
-        log_with_context(
-            bb_logger, logging.INFO, 
-            f"Run processing completed with {len(messages)} messages", 
+        logger.info(
+            "Run processing completed", 
             thread_id=thread_id, 
             correlation_id=correlation_id,
             message_count=len(messages)
@@ -440,8 +428,7 @@ class AssistantEngineAPI:
         with CorrelationContext() as correlation_id:
             try:
                 thread = await self.client.beta.threads.create()
-                log_with_context(
-                    bb_logger, logging.INFO, 
+                logger.info(
                     "New thread created successfully", 
                     thread_id=thread.id, 
                     correlation_id=correlation_id
@@ -452,22 +439,22 @@ class AssistantEngineAPI:
                     "correlation_id": correlation_id
                 }
             except OpenAIError as err:
-                log_with_context(
-                    bb_logger, logging.ERROR, 
-                    f"OpenAI thread creation failed: {err}", 
+                logger.error(
+                    "OpenAI thread creation failed", 
                     correlation_id=correlation_id,
-                    error_type="OpenAIError"
+                    error_type="OpenAIError",
+                    error=str(err)
                 )
                 raise HTTPException(
                     status_code=502, 
                     detail=f"Failed to start thread (correlation_id: {correlation_id[:8]})"
                 ) from err
             except Exception as err:  # noqa: BLE001
-                log_with_context(
-                    bb_logger, logging.ERROR, 
-                    f"Unexpected error starting thread: {err}", 
+                logger.error(
+                    "Unexpected error starting thread", 
                     correlation_id=correlation_id,
-                    error_type=type(err).__name__
+                    error_type=type(err).__name__,
+                    error=str(err)
                 )
                 raise HTTPException(
                     status_code=500, 
@@ -478,8 +465,7 @@ class AssistantEngineAPI:
         """Process a user message and return assistant responses."""
         with CorrelationContext() as correlation_id:
             if not request.thread_id:
-                log_with_context(
-                    bb_logger, logging.ERROR, 
+                logger.error(
                     "Missing thread_id in chat request", 
                     correlation_id=correlation_id
                 )
@@ -502,8 +488,8 @@ class AssistantEngineAPI:
                 await websocket.accept()
                 logger.info("WebSocket connection accepted", connection_id=connection_id)
             except Exception as err:  # noqa: BLE001
-                logger.error("WebSocket accept failed: %s", err, 
-                            connection_id=connection_id, error_type=type(err).__name__)
+                logger.error("WebSocket accept failed", 
+                            connection_id=connection_id, error_type=type(err).__name__, error=str(err))
                 return
             
             try:
@@ -511,13 +497,13 @@ class AssistantEngineAPI:
                 try:
                     data = await websocket.receive_json()
                 except json.JSONDecodeError as err:
-                    logger.warning("WebSocket JSON parsing error: %s", err,
-                                 connection_id=connection_id, error_type="JSONDecodeError")
+                    logger.warning("WebSocket JSON parsing error",
+                                 connection_id=connection_id, error_type="JSONDecodeError", error=str(err))
                     await self._send_websocket_error(websocket, "JSON parsing error", "invalid_json")
                     return
                 except Exception as err:  # noqa: BLE001
-                    logger.error("WebSocket receive error: %s", err,
-                               connection_id=connection_id, error_type=type(err).__name__)
+                    logger.error("WebSocket receive error",
+                               connection_id=connection_id, error_type=type(err).__name__, error=str(err))
                     await self._send_websocket_error(websocket, "Failed to receive request", "receive_error")
                     return
                 
@@ -532,8 +518,7 @@ class AssistantEngineAPI:
                     await self._send_websocket_error(websocket, "Missing thread_id or message", "missing_fields")
                     return
 
-                log_with_context(
-                    bb_logger, logging.INFO, 
+                logger.info(
                     "Starting WebSocket stream", 
                     thread_id=thread_id, 
                     correlation_id=correlation_id,
@@ -551,39 +536,38 @@ class AssistantEngineAPI:
                                           connection_id=connection_id, thread_id=thread_id)
                                 return
                             else:
-                                logger.error("WebSocket send error: %s", err,
+                                logger.error("WebSocket send error",
                                            connection_id=connection_id, thread_id=thread_id, 
-                                           error_type=type(err).__name__)
+                                           error_type=type(err).__name__, error=str(err))
                                 await self._send_websocket_error(websocket, "Failed to send event", "send_error")
                                 return
                                 
-                    log_with_context(
-                        bb_logger, logging.INFO, 
+                    logger.info(
                         "WebSocket stream completed", 
                         thread_id=thread_id, 
                         correlation_id=correlation_id
                     )
                                
                 except OpenAIError as err:
-                    logger.error("OpenAI error during WebSocket stream: %s", err,
-                               connection_id=connection_id, thread_id=thread_id, error_type="OpenAIError")
+                    logger.error("OpenAI error during WebSocket stream",
+                               connection_id=connection_id, thread_id=thread_id, error_type="OpenAIError", error=str(err))
                     await self._send_websocket_error(websocket, f"OpenAI service error: {err}", "openai_error")
                     return
                 except Exception as err:  # noqa: BLE001
-                    log_with_context(
-                        bb_logger, logging.ERROR, 
-                        f"Unexpected error during WebSocket stream: {err}", 
+                    logger.error(
+                        "Unexpected error during WebSocket stream", 
                         thread_id=thread_id, 
                         correlation_id=correlation_id,
-                        error_type=type(err).__name__
+                        error_type=type(err).__name__,
+                        error=str(err)
                     )
                     await websocket.send_json({
                         "error": f"Stream error (correlation_id: {correlation_id[:8]})"
                     })
                 
             except Exception as err:  # noqa: BLE001
-                logger.error("Critical WebSocket error: %s", err, 
-                            connection_id=connection_id, error_type=type(err).__name__)
+                logger.error("Critical WebSocket error", 
+                            connection_id=connection_id, error_type=type(err).__name__, error=str(err))
                 # Don't attempt to send error message as connection state is unknown
             finally:
                 await websocket.close()
@@ -597,9 +581,9 @@ class AssistantEngineAPI:
                 "timestamp": json.dumps({"timestamp": "now"})  # Simple timestamp placeholder
             })
         except Exception as err:  # noqa: BLE001
-            logger.debug("Failed to send WebSocket error message: %s", err, 
+            logger.debug("Failed to send WebSocket error message", 
                         error_message=message, error_code=error_code, 
-                        error_type=type(err).__name__)
+                        error_type=type(err).__name__, error=str(err))
             
     def _is_websocket_disconnect(self, error: Exception) -> bool:
         """Check if error indicates WebSocket disconnect."""
@@ -621,6 +605,12 @@ class AssistantEngineAPI:
 
 def get_app() -> FastAPI:
     """Return a fully configured FastAPI application."""
-
+    # Configure structured logging
+    configure_structlog()
+    
     api = AssistantEngineAPI()
     return api.app
+
+
+# Export TOOL_MAP for tests
+__all__ = ["get_app", "AssistantEngineAPI", "TOOL_MAP"]

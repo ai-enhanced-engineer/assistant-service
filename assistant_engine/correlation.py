@@ -1,8 +1,8 @@
 """Correlation ID utilities for request tracing and error context."""
 
 import uuid
-from contextvars import ContextVar
-from typing import Optional
+from contextvars import ContextVar, Token
+from typing import Any, Optional
 
 # Context variable to store correlation ID across async calls
 _correlation_id: ContextVar[Optional[str]] = ContextVar('correlation_id', default=None)
@@ -37,12 +37,12 @@ class CorrelationContext:
     
     def __init__(self, correlation_id: Optional[str] = None):
         self.correlation_id = correlation_id or generate_correlation_id()
-        self.token = None
+        self.token: Optional[Token[Optional[str]]] = None
     
     def __enter__(self) -> str:
         self.token = _correlation_id.set(self.correlation_id)
         return self.correlation_id
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if self.token is not None:
             _correlation_id.reset(self.token)

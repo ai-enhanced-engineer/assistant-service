@@ -1,7 +1,8 @@
 import abc
 import json
+from typing import Optional
 
-from google.cloud import storage
+from google.cloud import storage  # type: ignore[attr-defined]
 
 from botbrew_commons.data_models import EngineAssistantConfig
 
@@ -17,8 +18,8 @@ class BaseConfigRepository(abc.ABC):
 
 
 class LocalConfigRepository(BaseConfigRepository):
-    def __init__(self):
-        self._config = None
+    def __init__(self) -> None:
+        self._config: Optional[EngineAssistantConfig] = None
 
     def write_config(self, config: EngineAssistantConfig) -> None:
         self._config = config

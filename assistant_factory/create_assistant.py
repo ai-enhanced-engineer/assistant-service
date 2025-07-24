@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI, OpenAIError
@@ -26,7 +26,7 @@ def get_client() -> AsyncOpenAI:
     return _client
 
 
-async def create_assistant(name: str, instructions: str, a_tools: list[dict], model: str, file_ids: list) -> Assistant:
+async def create_assistant(name: str, instructions: str, a_tools: list[dict[str, Any]], model: str, file_ids: list[str]) -> Assistant:
     """Create a new assistant using the OpenAI API."""
 
     print("Creating assistant!")
@@ -34,13 +34,12 @@ async def create_assistant(name: str, instructions: str, a_tools: list[dict], mo
     return await client.beta.assistants.create(
         name=name,
         instructions=instructions,
-        tools=a_tools,
+        tools=a_tools,  # type: ignore[arg-type]
         model=model,
-        file_ids=file_ids,
     )
 
 
-async def upload_files_for_retrieval(path_to_file: str):
+async def upload_files_for_retrieval(path_to_file: str) -> str:
     """Upload a file for retrieval."""
 
     client = get_client()

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ class ClientAssistantConfig(BaseModel):
     model: str
     # Tools
     code_interpreter: Optional[bool] = False
-    functions: Optional[list[dict]]
+    functions: Optional[list[dict[str, Any]]]
     retrieval: Optional[bool]
     file_paths: Optional[list[str]]
 

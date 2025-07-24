@@ -5,6 +5,6 @@ is used as a string key and the value is a programmatic reference to the functio
 'assistant_factory/client_spec/{CLIENT_ID}/functions.py'
 """
 
-from types import FunctionType
+from typing import Any, Callable
 
-TOOL_MAP: dict[str:FunctionType] = {}
+TOOL_MAP: dict[str, Callable[..., Any]] = {}
