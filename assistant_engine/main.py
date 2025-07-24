@@ -81,7 +81,7 @@ class AssistantEngineAPI:
         )
         self.app.add_api_websocket_route("/stream", self.stream_endpoint)
 
-    async def _iterate_run_events(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
+    async def iterate_run_events(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         """Yield events while managing tool calls and submissions."""
         try:
             await self.client.beta.threads.messages.create(
@@ -165,7 +165,7 @@ class AssistantEngineAPI:
         """Run the assistant for the provided query and return responses."""
         messages: list[str] = []
 
-        async for event in self._iterate_run_events(thread_id, human_query):
+        async for event in self.iterate_run_events(thread_id, human_query):
             if event.event == "thread.run.step.completed" and event.data.step_details.type == "message_creation":
                 step_details = event.data.step_details
                 try:
@@ -187,7 +187,7 @@ class AssistantEngineAPI:
 
     async def _process_run_stream(self, thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         """Yield events from the assistant run as they arrive."""
-        async for event in self._iterate_run_events(thread_id, human_query):
+        async for event in self.iterate_run_events(thread_id, human_query):
             yield event
 
     async def start_endpoint(self) -> dict[str, str]:
