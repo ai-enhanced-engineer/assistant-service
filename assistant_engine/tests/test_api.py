@@ -82,7 +82,13 @@ def test_start_endpoint(api):
     with TestClient(api_obj.app) as client:
         resp = client.get("/start")
         assert resp.status_code == 200
-        assert resp.json() == {"thread_id": "thread123", "initial_message": "hi"}
+        data = resp.json()
+        assert data["thread_id"] == "thread123"
+        assert data["initial_message"] == "hi"
+        assert "correlation_id" in data
+        # Correlation ID should be a valid UUID
+        from uuid import UUID
+        UUID(data["correlation_id"])
     dummy_client.aclose.assert_awaited_once()
 
 
@@ -171,7 +177,7 @@ def test_validate_function_args_missing_required(api):
         return f"{required_param}_{optional_param}"
 
     # Missing required parameter
-    with pytest.raises(TypeError, match="Missing required parameter 'required_param'"):
+    with pytest.raises(TypeError, match="Missing required arguments: required_param"):
         api_obj._validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
 
 
@@ -207,7 +213,7 @@ async def test_function_tool_call_invalid_function_name(api):
             event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
         )
 
-        # Process the event
+        # Process the event using the actual logic (no _dict_to_object needed)
         tool_outputs = {}
 
         # Simulate the logic from _iterate_run_events
@@ -215,9 +221,6 @@ async def test_function_tool_call_invalid_function_name(api):
             step_details = event.data.step_details
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
-                    from assistant_engine.main import _dict_to_object
-
-                    tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "function":
                         name = tool_call.function.name
 
@@ -268,9 +271,6 @@ async def test_function_tool_call_invalid_arguments(api):
             step_details = event.data.step_details
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
-                    from assistant_engine.main import _dict_to_object
-
-                    tool_call = _dict_to_object(tool_call)
                     if tool_call.type == "function":
                         name = tool_call.function.name
                         args = {"wrong_param": "value"}
@@ -295,4 +295,4 @@ async def test_function_tool_call_invalid_arguments(api):
         # Verify error output
         assert "tool_456" in tool_outputs
         assert "Error: Invalid arguments for function 'test_function'" in tool_outputs["tool_456"]["output"]
-        assert "Missing required parameter 'required_param'" in tool_outputs["tool_456"]["output"]
+        assert "Missing required arguments: required_param" in tool_outputs["tool_456"]["output"]

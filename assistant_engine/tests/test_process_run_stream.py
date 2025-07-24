@@ -81,8 +81,8 @@ class DummyClient:
         pass
 
 
-async def dummy_submit(*_args, **kwargs):
-    dummy_submit.called_with = list(kwargs["tool_outputs"])
+async def dummy_submit(client, thread_id, run_id, tool_outputs, *args, **kwargs):
+    dummy_submit.called_with = list(tool_outputs)
     return "success"  # Return success instead of None
 
 
@@ -124,6 +124,9 @@ def api(monkeypatch):
                 assistant_id="aid",
                 assistant_name="name",
                 initial_message="hi",
+                code_interpreter=False,
+                retrieval=False,
+                function_names=None,
             )
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)

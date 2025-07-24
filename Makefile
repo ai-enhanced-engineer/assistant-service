@@ -80,7 +80,7 @@ type-check: ## Perform static type checks using mypy
 
 unit-test: ## Run unit tests with pytest
 	@echo "Running UNIT tests with pytest..."
-	uv run python -m pytest -m unit -vv --verbose -s $(TEST_DIR)
+	uv run python -m pytest -vv --verbose -s $(TEST_DIR)
 
 functional-test: ## Run functional tests with pytest
 	@echo "Running FUNCTIONAL tests with pytest..."
@@ -104,7 +104,7 @@ all-test: ## Run all tests with coverage report
 # Branch Validation
 # ----------------------------
 
-validate-branch: ## Run formatting, linting, and tests (equivalent to old behavior)
+validate-branch: ## Run linting and basic tests
 	@echo "🔍 Running validation checks..."
 	@echo "📝 Running linting..."
 	uv run ruff check .
@@ -120,8 +120,10 @@ validate-branch-strict: ## Run formatting, linting, type checks, and tests
 	$(MAKE) lint
 	$(MAKE) type-check
 
-test-validate-branch: ## Validate branch and run unit tests
-	$(MAKE) validate-branch
+test-validate-branch: ## Run linting and detailed unit tests
+	@echo "🔍 Running validation checks..."
+	$(MAKE) lint
+	@echo "🧪 Running detailed unit tests..."
 	$(MAKE) unit-test
 	$(MAKE) clean-project
 
