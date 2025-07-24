@@ -182,11 +182,11 @@ export GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
 ### Pre-PR Validation Checklist
 ```bash
 # 1. Run comprehensive validation - MUST pass without errors
-make validate-branch  # Runs linting + tests automatically
+make all-test-validate-branch  # Runs linting + tests automatically
 
 # Alternative: Run individual commands
 make lint             # Check linting only
-python -m pytest     # Run tests only
+make unit test     # Run tests only
 make format          # Apply formatting
 ```
 
