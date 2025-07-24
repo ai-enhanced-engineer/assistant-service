@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v1.1.0 (2025-07-24)
+
+### Bug Fixes
+
+- Implement consistent logging levels with structured context
+  ([#57](https://github.com/lkronecker13/assistant-service/pull/57),
+  [`201093b`](https://github.com/lkronecker13/assistant-service/commit/201093b551a23ad539e402909aa12ba77b9d8ea9))
+
+### Features
+
+- Comprehensive WebSocket error handling and enhanced structured logging
+  ([#57](https://github.com/lkronecker13/assistant-service/pull/57),
+  [`201093b`](https://github.com/lkronecker13/assistant-service/commit/201093b551a23ad539e402909aa12ba77b9d8ea9))
+
+
 ## v1.0.6 (2025-07-16)
 
 ### Bug Fixes
