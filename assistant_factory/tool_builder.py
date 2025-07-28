@@ -1,4 +1,4 @@
-from typing import Type, Union
+from typing import Any, Optional, Type, Union
 
 from langchain_core.utils.function_calling import convert_to_openai_function
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ class Retrieval(BaseModel):
 
 class Function(BaseModel):
     type: str = "function"
-    function: dict
+    function: dict[str, Any]
 
 
 class ToolBuilder:
@@ -22,13 +22,13 @@ class ToolBuilder:
         self,
         code_interpreter: bool = False,
         retrieval: bool = False,
-        functions: Union[list[dict] | list[Type[BaseModel]]] = None,
+        functions: Optional[list[Union[dict[str, Any], Type[BaseModel]]]] = None,
     ):
         self.code_interpreter = code_interpreter
         self.retrieval = retrieval
         self.functions = functions
 
-    def build_tools(self) -> list[dict]:
+    def build_tools(self) -> list[dict[str, Any]]:
         final_tools = []
         if self.code_interpreter:
             final_tools.append(CodeInterpreter().model_dump())
