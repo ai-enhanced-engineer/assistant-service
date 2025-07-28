@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WebSocket client for interacting with the assistant-service streaming endpoint."""
+"""WebSocket-based streaming chat client for the assistant-service API."""
 
 import argparse
 import asyncio
@@ -124,7 +124,7 @@ async def chat_session(base_url: str, thread_id: Optional[str] = None):
 
 def main():
     """Main entry point for the WebSocket client."""
-    parser = argparse.ArgumentParser(description="WebSocket client for streaming chat with assistant-service")
+    parser = argparse.ArgumentParser(description="WebSocket-based streaming chat client for assistant-service")
     parser.add_argument(
         "--base-url",
         type=str,

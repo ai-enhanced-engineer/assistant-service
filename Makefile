@@ -1,5 +1,5 @@
 # Makefile for Assistant Service
-.PHONY: default help clean-project environment-create environment-sync environment-delete environment-list sync-env format lint type-check unit-test functional-test integration-test all-test validate-branch validate-branch-strict test-validate-branch all-test-validate-branch api-run api-kill api-docs chat-ws chat-http service-build service-start service-stop service-quick-start service-validate auth-gcloud
+.PHONY: default help clean-project environment-create environment-sync environment-delete environment-list sync-env format lint type-check unit-test functional-test integration-test all-test validate-branch validate-branch-strict test-validate-branch all-test-validate-branch api-run api-kill api-docs chat-ws chat service-build service-start service-stop service-quick-start service-validate auth-gcloud
 
 # ==============================================================================
 # USAGE EXAMPLES
@@ -202,7 +202,9 @@ api-run: environment-sync ## Start API server in dev mode. Example: OPENAI_API_K
 
 api-kill: ## Kill running API development server
 	@echo "🛑 Stopping API development server..."
-	@pkill -f "scripts/isolation/api_layer.py" && echo "✅ API server stopped successfully" || echo "ℹ️  No API server process found"
+	@pkill -f "api_layer.py" && echo "✅ API server stopped successfully" || echo "ℹ️  No API server process found"
+	@pkill -f "uvicorn.*assistant_service" 2>/dev/null || true
+	@lsof -ti:$(API_PORT) | xargs kill -9 2>/dev/null && echo "✅ Freed port $(API_PORT)" || true
 	$(GREEN_LINE)
 
 api-docs: environment-sync ## Open Swagger UI documentation (starts API if not running)
@@ -216,47 +218,35 @@ api-docs: environment-sync ## Open Swagger UI documentation (starts API if not r
 	uv run python $(SCRIPTS_DIR)/isolation/api_layer.py --host $(API_HOST) --port $(API_PORT) --reload
 	$(GREEN_LINE)
 
+api-layer-isolate: ## Isolate the API layer locally for testing and debugging 
+	uv run python -m scripts.isolation.api_layer
+
 # ----------------------------
 # Local Development - Chat
 # ----------------------------
 
-chat-ws: ## Start WebSocket chat client (requires running API server)
-	@echo "💬 Starting WebSocket chat client..."
+chat-ws: ## Start WebSocket streaming chat (requires running API server)
+	@echo "🌊 Starting WebSocket streaming chat..."
 	@echo "🔌 Connecting to: $(WS_BASE_URL)"
+	@echo "📝 Real-time streaming responses"
 	@echo ""
 	@if ! curl -s -f $(API_BASE_URL)/ > /dev/null 2>&1; then \
 		echo "❌ API server not running. Start it first with: make api-run"; \
 		exit 1; \
 	fi
-	uv run python $(SCRIPTS_DIR)/conversation/websocket_client.py --base-url $(WS_BASE_URL)
+	uv run python $(SCRIPTS_DIR)/conversation/websocket.py --base-url $(WS_BASE_URL)
 	$(GREEN_LINE)
 
-chat-http: ## Start HTTP chat client (requires running API server)
+chat: ## Start HTTP chat client (requires running API server)
 	@echo "💬 Starting HTTP chat client..."
 	@echo "🔌 Connecting to: $(API_BASE_URL)"
+	@echo "📝 Sequential request/response conversation"
 	@echo ""
 	@if ! curl -s -f $(API_BASE_URL)/ > /dev/null 2>&1; then \
 		echo "❌ API server not running. Start it first with: make api-run"; \
 		exit 1; \
 	fi
-	uv run python $(SCRIPTS_DIR)/conversation/http_client.py --base-url $(API_BASE_URL)
-	$(GREEN_LINE)
-
-chat-test: ## Test chat with a sample message (requires running API server)
-	@echo "🧪 Testing chat functionality..."
-	@if ! curl -s -f $(API_BASE_URL)/ > /dev/null 2>&1; then \
-		echo "❌ API server not running. Start it first with: make api-run"; \
-		exit 1; \
-	fi
-	@echo "1. Starting new conversation..."
-	@THREAD_ID=$$(curl -s -X GET "$(API_BASE_URL)/start" | python3 -c "import sys, json; print(json.load(sys.stdin)['thread_id'])"); \
-	echo "   Thread ID: $$THREAD_ID"; \
-	echo ""; \
-	echo "2. Sending test message..."; \
-	curl -s -X POST "$(API_BASE_URL)/chat" \
-		-H "Content-Type: application/json" \
-		-d "{\"thread_id\": \"$$THREAD_ID\", \"message\": \"Hello! What can you help me with?\"}" | \
-		python3 -m json.tool
+	uv run python $(SCRIPTS_DIR)/conversation/http_chat.py --base-url $(API_BASE_URL)
 	$(GREEN_LINE)
 
 # ----------------------------

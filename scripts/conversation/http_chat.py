@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""HTTP-based chat client for the assistant-service API."""
+
+import argparse
+import asyncio
+import json
+import sys
+from pathlib import Path
+from typing import Optional
+
+import httpx
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from assistant_service.structured_logging import get_logger  # noqa: E402
+
+logger = get_logger("http_client")
+
+
+async def process_streaming_response(response: httpx.Response) -> str:
+    """Process a streaming response and return the final message."""
+    chunks = []
+    buffer = ""
+
+    logger.info("Processing streaming response")
+
+    async for chunk in response.aiter_bytes(chunk_size=1024):
+        if not chunk:
+            continue
+
+        try:
+            # Try to decode the chunk
+            buffer += chunk.decode("utf-8")
+        except UnicodeDecodeError as e:
+            logger.warning("Partial UTF-8 sequence encountered", error=str(e))
+            continue  # Wait for next chunk to complete the sequence
+
+        # Process complete lines from the buffer
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+
+            logger.debug("Processing line", line=line)
+
+            try:
+                # Parse the JSON event
+                data = json.loads(line)
+
+                # Extract message content based on event type
+                if "event" in data and data.get("event") == "thread.message.delta":
+                    # Extract text delta from streaming events
+                    if hasattr(data.get("data", {}), "delta") and hasattr(data["data"].delta, "content"):
+                        for content_item in data["data"].delta.content:
+                            if hasattr(content_item, "text") and hasattr(content_item.text, "value"):
+                                chunks.append(content_item.text.value)
+                                print(content_item.text.value, end="", flush=True)
+
+                elif "responses" in data:
+                    # Handle non-streaming response format
+                    for response_text in data["responses"]:
+                        chunks.append(response_text)
+
+            except json.JSONDecodeError as e:
+                logger.error("JSON decode error", error=str(e), line=line)
+                continue
+
+    # Process any remaining data in buffer
+    if buffer.strip():
+        try:
+            data = json.loads(buffer)
+            if "responses" in data:
+                for response_text in data["responses"]:
+                    chunks.append(response_text)
+        except json.JSONDecodeError:
+            pass
+
+    return "".join(chunks)
+
+
+async def start_conversation(base_url: str, thread_id: Optional[str] = None):
+    """Run a sequential async chat session with the assistant."""
+    async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
+        try:
+            # Get or create a thread
+            if not thread_id:
+                response = await client.get("/start")
+                if response.status_code == 200:
+                    data = response.json()
+                    thread_id = data["thread_id"]
+                    initial_message = data.get("initial_message", "")
+                    correlation_id = data.get("correlation_id", "")
+
+                    print(f"\n{'=' * 60}")
+                    print("New conversation started!")
+                    print(f"Thread ID: {thread_id}")
+                    print(f"Correlation ID: {correlation_id}")
+                    if initial_message:
+                        print(f"\nAssistant: {initial_message}")
+                    print(f"{'=' * 60}\n")
+                else:
+                    logger.error("Failed to start conversation", status_code=response.status_code)
+                    print(f"Failed to start conversation: {response.status_code}")
+                    return
+            else:
+                print(f"\n{'=' * 60}")
+                print(f"Continuing conversation with thread: {thread_id}")
+                print(f"{'=' * 60}\n")
+
+            print("Type 'exit' or 'quit' to end the conversation.")
+            print("Type 'curl' to see the equivalent curl command.\n")
+
+            while True:
+                user_input = input("\nYou: ")
+                if user_input.strip().lower() in {"exit", "quit"}:
+                    logger.info("Ending conversation")
+                    break
+
+                # Prepare the payload
+                payload = {"thread_id": thread_id, "message": user_input}
+
+                # Show curl command if requested
+                if user_input.strip().lower() == "curl":
+                    curl_cmd = f'''curl -X POST "{base_url}/chat" \\
+  -H "Content-Type: application/json" \\
+  -d '{json.dumps(payload, indent=2)}'
+'''
+                    print(f"\nEquivalent curl command:\n{curl_cmd}")
+                    continue
+
+                try:
+                    # Send message with streaming
+                    logger.info("Sending message", thread_id=thread_id, message=user_input)
+
+                    print("\nAssistant: ", end="", flush=True)
+
+                    # Send chat request
+                    response = await client.post(
+                        "/chat", json=payload, headers={"Accept": "text/event-stream"}, timeout=httpx.Timeout(60.0)
+                    )
+
+                    if response.status_code == 200:
+                        # Check if response is streaming
+                        content_type = response.headers.get("content-type", "")
+
+                        if "stream" in content_type or "event-stream" in content_type:
+                            # Process streaming response
+                            final_message = await process_streaming_response(response)
+                            if not final_message:
+                                print("[No response generated]")
+                        else:
+                            # Process regular JSON response
+                            data = response.json()
+                            responses = data.get("responses", [])
+                            for resp in responses:
+                                print(resp)
+                            logger.info("Received responses", count=len(responses))
+                    else:
+                        print(f"\n[Error: {response.status_code}]")
+                        logger.error("HTTP error", status_code=response.status_code, response=response.text)
+
+                    print()  # New line after response
+
+                except httpx.TimeoutException:
+                    print("\n[Error: Request timed out]")
+                    logger.error("Request timeout")
+                except Exception as e:
+                    print(f"\n[Error: {str(e)}]")
+                    logger.error("Unexpected error", error=str(e))
+
+        except KeyboardInterrupt:
+            print("\n\nConversation interrupted.")
+
+
+def main():
+    """Main entry point for the async chat client."""
+    parser = argparse.ArgumentParser(description="HTTP-based chat client for assistant-service")
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        default="http://localhost:8000",
+        help="Base HTTP URL (default: http://localhost:8000)",
+    )
+    parser.add_argument(
+        "--thread-id",
+        type=str,
+        default=None,
+        help="Existing thread ID to continue conversation (optional)",
+    )
+
+    args = parser.parse_args()
+
+    # Run the async conversation
+    asyncio.run(start_conversation(args.base_url, args.thread_id))
+
+
+if __name__ == "__main__":
+    main()
