@@ -4,8 +4,8 @@
 
 GREEN_LINE=@echo "\033[0;32m--------------------------------------------------\033[0m"
 
-SOURCE_DIR = assistant_engine/ assistant_factory/ botbrew_commons/
-TEST_DIR = assistant_engine/tests/ assistant_factory/tests/ tests/
+SOURCE_DIR = assistant_engine/ assistant_factory/
+TEST_DIR = assistant_engine/tests/ assistant_factory/tests/
 PROJECT_VERSION := $(shell awk '/^\[project\]/ {flag=1; next} /^\[/{flag=0} flag && /^version/ {gsub(/"/, "", $$2); print $$2}' pyproject.toml)
 PYTHON_VERSION := 3.10
 CLIENT_ID = leogv
@@ -95,7 +95,6 @@ all-test: ## Run all tests with coverage report
 	uv run python -m pytest -m "not integration" -vv -s $(TEST_DIR) \
 		--cov=assistant_engine \
 		--cov=assistant_factory \
-		--cov=botbrew_commons \
 		--cov-config=pyproject.toml \
 		--cov-fail-under=80 \
 		--cov-report=term-missing

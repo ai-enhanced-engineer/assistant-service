@@ -114,8 +114,8 @@ async def test_cancel_run_safely_failure():
 @pytest.mark.asyncio
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
-    from botbrew_commons import repositories as repos
-    from botbrew_commons.data_models import EngineAssistantConfig
+    from assistant_engine import repositories as repos
+    from assistant_engine.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")

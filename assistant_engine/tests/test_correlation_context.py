@@ -76,8 +76,8 @@ def test_set_and_get_correlation_id():
 @pytest.mark.asyncio
 async def test_api_endpoints_include_correlation_ids(monkeypatch):
     """Test that API endpoints include correlation IDs in responses and logs."""
-    from botbrew_commons import repositories as repos
-    from botbrew_commons.data_models import EngineAssistantConfig
+    from assistant_engine import repositories as repos
+    from assistant_engine.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -143,8 +143,8 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
 @pytest.mark.asyncio
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
-    from botbrew_commons import repositories as repos
-    from botbrew_commons.data_models import EngineAssistantConfig
+    from assistant_engine import repositories as repos
+    from assistant_engine.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -210,8 +210,8 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 @pytest.mark.asyncio 
 async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     """Test chat endpoint validation includes correlation ID in error."""
-    from botbrew_commons import repositories as repos
-    from botbrew_commons.data_models import EngineAssistantConfig
+    from assistant_engine import repositories as repos
+    from assistant_engine.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")

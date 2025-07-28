@@ -1,16 +1,13 @@
+"""Configuration models for the assistant engine."""
+
 from typing import Optional
 
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
-
-
-class BaseConfig(BaseSettings):
-    project_id: str = Field(json_schema_extra={"environ": True})
-    bucket_id: str = Field(json_schema_extra={"environ": True})
-    client_id: str = Field(json_schema_extra={"environ": True})
 
 
 class EngineAssistantConfig(BaseModel):
+    """Configuration for an OpenAI assistant instance."""
+    
     assistant_id: str
     assistant_name: str
     initial_message: str

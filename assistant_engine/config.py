@@ -1,10 +1,12 @@
-from botbrew_commons.data_models import EngineAssistantConfig
-from botbrew_commons.repositories import BaseConfigRepository, BaseSecretRepository
+from assistant_engine.models import EngineAssistantConfig
+from assistant_engine.repositories import BaseConfigRepository, BaseSecretRepository
 
 
 def build_engine_config(
     secret_repository: BaseSecretRepository, config_repository: BaseConfigRepository
 ) -> EngineAssistantConfig:
-    assistant_config = config_repository.read_config()
-    assistant_config.openai_apikey = secret_repository.access_secret("openai-api-key")
-    return assistant_config
+    config = config_repository.read_config()
+    if not isinstance(config, EngineAssistantConfig):
+        raise TypeError("Config repository returned invalid type")
+    config.openai_apikey = secret_repository.access_secret("openai-api-key")
+    return config

@@ -3,9 +3,9 @@ from typing import Any, Optional
 
 from assistant_factory.client_spec.leogv.assistants import ClientAssistantConfig
 from assistant_factory.create_assistant import create_assistant, upload_files_for_retrieval
+from assistant_factory.models import EngineAssistantConfig
+from assistant_factory.storage import GCPConfigWriter
 from assistant_factory.tool_builder import ToolBuilder
-from botbrew_commons.data_models import EngineAssistantConfig
-from botbrew_commons.repositories import GCPConfigRepository
 
 BUCKET_ID = "botbrewers"
 PROJECT_ID = "botbrewers"
@@ -73,12 +73,12 @@ def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str) -
         function_names=function_names,
     )
 
-    config_repo = GCPConfigRepository(
+    config_writer = GCPConfigWriter(
         client_id=assistant_config.client_id,
         project_id=PROJECT_ID,
         bucket_name=BUCKET_ID,
     )
-    config_repo.write_config(as_config)
+    config_writer.write_config(as_config)
 
 
 if __name__ == "__main__":

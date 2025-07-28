@@ -1,8 +1,7 @@
 from typing import Any
 
-from botbrew_commons.data_models import EngineAssistantConfig
-from botbrew_commons.repositories.configs import LocalConfigRepository
-from botbrew_commons.repositories.secrets import LocalSecretRepository
+from assistant_engine.models import EngineAssistantConfig
+from assistant_engine.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test_local_config_repository_roundtrip() -> None:
