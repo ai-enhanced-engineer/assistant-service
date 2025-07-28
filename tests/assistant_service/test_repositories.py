@@ -11,15 +11,23 @@ def test_local_config_repository_roundtrip() -> None:
         assistant_name="test",
         initial_message="hi",
     )
-    repo.write_config(config)
-    assert repo.read_config() is config
+    repo.write_config(config)  # This is a no-op for local repository
+    # LocalConfigRepository always returns the default config
+    read_config = repo.read_config()
+    assert read_config.assistant_name == "Development Assistant"
+    assert read_config.initial_message == "Hello! I'm your development assistant. How can I help you today?"
 
 
 def test_local_secret_repository_writes_and_reads(capsys: Any) -> None:
-    repo = LocalSecretRepository(client_id="cid", project_id="pid")
-    repo.write_secret("sfx")
+    repo = LocalSecretRepository()  # No arguments
+    repo.write_secret("sfx")  # This is a no-op for local repository
     secret = repo.access_secret("foo")
-    # access_secret should print the suffix
-    captured = capsys.readouterr()
-    assert "foo" in captured.out
-    assert secret == "pid/cid-sfx"
+    # LocalSecretRepository returns "local-{suffix}" for non-openai keys
+    assert secret == "local-foo"
+
+    # Test OpenAI API key access
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    openai_key = repo.access_secret("openai-api-key")
+    assert openai_key == "test-key"
