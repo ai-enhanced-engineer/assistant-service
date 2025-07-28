@@ -616,8 +616,9 @@ def get_app() -> FastAPI:
     # Configure structured logging
     configure_structlog()
     
-    api = AssistantEngineAPI()
-    return api.app
+    # Use the singleton pattern to avoid re-initialization
+    api_instance = _ensure_api_initialized()
+    return api_instance.app
 
 
 # Create a singleton instance for backward compatibility
