@@ -7,7 +7,7 @@ interacting with OpenAI assistants.
 import json
 import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket
 from openai import AsyncOpenAI, OpenAIError
@@ -44,9 +44,13 @@ def create_lifespan(api_instance: "AssistantEngineAPI") -> Any:
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Manage application startup and shutdown."""
         logger.info("Application starting up...")
+        created_client = False
+        if api_instance.client is None:
+            api_instance.client = AsyncOpenAI(api_key=api_instance.engine_config.openai_apikey)
+            created_client = True
         yield
         logger.info("Application shutting down...")
-        if api_instance.client:
+        if created_client and api_instance.client:
             await api_instance.client.close()
     return lifespan
 
@@ -67,7 +71,7 @@ class AssistantEngineAPI:
         )
         
         self.engine_config = build_engine_config(secret_repository, config_repository)
-        self.client = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
+        self.client: Optional[AsyncOpenAI] = None
 
         # Log configuration (without sensitive data)
         logger.info(
@@ -131,6 +135,7 @@ class AssistantEngineAPI:
         )
 
         try:
+            assert self.client is not None, "Client not initialized"
             await self.client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
@@ -167,6 +172,7 @@ class AssistantEngineAPI:
             ) from err
 
         try:
+            assert self.client is not None, "Client not initialized"
             event_stream = await self.client.beta.threads.runs.create(
                 thread_id=thread_id,
                 assistant_id=self.engine_config.assistant_id,
@@ -370,6 +376,7 @@ class AssistantEngineAPI:
             ):
                 message_id = event.data.step_details.message_creation.message_id
                 try:
+                    assert self.client is not None, "Client not initialized"
                     thread_message = await self.client.beta.threads.messages.retrieve(
                         thread_id=thread_id, message_id=message_id
                     )
@@ -427,6 +434,7 @@ class AssistantEngineAPI:
         """Start a new conversation and return the thread information."""
         with CorrelationContext() as correlation_id:
             try:
+                assert self.client is not None, "Client not initialized"
                 thread = await self.client.beta.threads.create()
                 logger.info(
                     "New thread created successfully", 
@@ -608,9 +616,38 @@ def get_app() -> FastAPI:
     # Configure structured logging
     configure_structlog()
     
-    api = AssistantEngineAPI()
-    return api.app
+    # Use the singleton pattern to avoid re-initialization
+    api_instance = _ensure_api_initialized()
+    return api_instance.app
+
+
+# Create a singleton instance for backward compatibility
+# Note: Instantiation is deferred to avoid initialization errors during imports
+api: Optional[AssistantEngineAPI] = None
+app: Optional[FastAPI] = None
+
+
+def _ensure_api_initialized() -> AssistantEngineAPI:
+    """Ensure the API singleton is initialized."""
+    global api, app
+    if api is None:
+        api = AssistantEngineAPI()
+        app = api.app
+    return api
+
+
+async def process_run(thread_id: str, human_query: str) -> list[str]:
+    """Proxy to the API instance for backward compatibility."""
+    api_instance = _ensure_api_initialized()
+    return await api_instance._process_run(thread_id, human_query)
+
+
+async def process_run_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
+    """Proxy streaming run for backward compatibility."""
+    api_instance = _ensure_api_initialized()
+    async for event in api_instance._process_run_stream(thread_id, human_query):
+        yield event
 
 
 # Export TOOL_MAP for tests
-__all__ = ["get_app", "AssistantEngineAPI", "TOOL_MAP"]
+__all__ = ["get_app", "AssistantEngineAPI", "TOOL_MAP", "process_run", "process_run_stream"]
