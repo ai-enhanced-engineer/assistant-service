@@ -1,6 +1,6 @@
 from assistant_engine.config import build_engine_config
-from botbrew_commons.data_models import BaseConfig, EngineAssistantConfig
-from botbrew_commons.repositories import LocalConfigRepository, LocalSecretRepository
+from assistant_engine.models import EngineAssistantConfig
+from assistant_engine.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test__build_engine_config(monkeypatch):
@@ -12,8 +12,7 @@ def test__build_engine_config(monkeypatch):
         # Change this
         mp.setenv("ASSISTANT_ID", "test-assistant-id")
 
-        base_config = BaseConfig()
-        local_secrets = LocalSecretRepository(base_config.client_id, base_config.project_id)
+        local_secrets = LocalSecretRepository("test-client", "test-project")
         local_secrets.write_secret("test-secret")
 
         local_config = LocalConfigRepository()

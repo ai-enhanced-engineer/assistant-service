@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from openai import OpenAIError
 from starlette.websockets import WebSocketDisconnect
 
+from assistant_engine import repositories as repos
 from assistant_engine.main import AssistantEngineAPI
-from botbrew_commons import repositories as repos
-from botbrew_commons.data_models import EngineAssistantConfig
+from assistant_engine.models import EngineAssistantConfig
 
 
 @pytest.fixture()
@@ -92,7 +92,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     import assistant_engine.main as main_module
-    from botbrew_commons import repositories as repos
+    from assistant_engine import repositories as repos
     
     class DummySecretRepo:
         def __init__(self, project_id: str, client_id: str):
@@ -104,7 +104,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
         def __init__(self, client_id: str, project_id: str, bucket_name: str):
             pass
         def read_config(self):
-            from botbrew_commons.data_models import EngineAssistantConfig
+            from assistant_engine.models import EngineAssistantConfig
             return EngineAssistantConfig(
                 assistant_id="a",
                 assistant_name="name",

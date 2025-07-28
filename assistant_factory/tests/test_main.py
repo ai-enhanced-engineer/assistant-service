@@ -1,6 +1,6 @@
 from assistant_factory.client_spec.leogv.assistants import ClientAssistantConfig
 from assistant_factory.main import persist_config
-from botbrew_commons.data_models import EngineAssistantConfig
+from assistant_factory.models import EngineAssistantConfig
 
 
 def test__persist_config_independent(mocker):
@@ -27,7 +27,7 @@ def test__persist_config_independent(mocker):
         def write_config(self, config):
             self.written_config = config
 
-    mocker.patch("assistant_factory.main.GCPConfigRepository", DummyRepo)
+    mocker.patch("assistant_factory.main.GCPConfigWriter", DummyRepo)
 
     persist_config(assistant_config, assistant_id)
 

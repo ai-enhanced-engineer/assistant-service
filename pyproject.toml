@@ -36,15 +36,13 @@ dev = [
     "python-semantic-release>=9.15.0",
 ]
 
-[tool.uv.sources]
-botbrew_commons = { path = "./botbrew_commons" }
+# [tool.uv.sources] - No local sources needed anymore
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
     "assistant_engine*",
     "assistant_factory*",
-    "botbrew_commons*",
 ]
 
 [tool.ruff]
