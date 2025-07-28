@@ -16,6 +16,8 @@ dependencies = [
     "google-cloud-secret-manager>=2.24.0",
     "httpx>=0.27",
     "structlog>=25.4.0",
+    "websockets>=12.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -41,8 +43,7 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "assistant_engine*",
-    "assistant_factory*",
+    "assistant_service*",
 ]
 
 [tool.ruff]
@@ -91,7 +92,7 @@ log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)s] %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 norecursedirs = ["examples", "lib", "local", "src", "research", "scripts"]
-testpaths = ["assistant_factory/tests", "assistant_engine/tests"]
+testpaths = ["tests"]
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: marks tests as unit tests (deselect with '-m \"not unit\"')",
