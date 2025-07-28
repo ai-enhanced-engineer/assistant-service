@@ -72,6 +72,13 @@ def api(monkeypatch):
     dummy_client = DummyClient()
     api.client = dummy_client  # type: ignore[assignment]
 
+    # Initialize components with the dummy client
+    from assistant_service.api.endpoints import APIEndpoints
+    from assistant_service.core.run_processor import RunProcessor
+
+    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
+    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)
+
     return api, dummy_client
 
 
@@ -119,14 +126,19 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
 
-    # Mock AsyncOpenAI
+    # Mock OpenAIClientFactory
     close_mock = AsyncMock()
 
     class MockAsyncOpenAI:
-        def __init__(self, api_key: str):
+        def __init__(self, api_key: str = None):
             self.close = close_mock
 
-    monkeypatch.setattr(main_module, "AsyncOpenAI", MockAsyncOpenAI)
+    def mock_create_from_config(config):
+        return MockAsyncOpenAI()
+
+    from assistant_service.infrastructure import openai_client
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
 
     api = AssistantEngineAPI()
     assert api.client is None  # Client not created yet
@@ -164,7 +176,7 @@ def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) ->
         assert msg == "hello"
         return ["response"]
 
-    monkeypatch.setattr(api_obj, "_process_run", dummy_run)
+    monkeypatch.setattr(api_obj.run_processor, "process_run", dummy_run)
     with TestClient(api_obj.app) as client:
         resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
         assert resp.status_code == 200
@@ -182,7 +194,7 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) 
         yield types.SimpleNamespace(model_dump_json=lambda: "event1")
         yield types.SimpleNamespace(model_dump_json=lambda: "event2")
 
-    monkeypatch.setattr(api_obj, "_process_run_stream", dummy_stream)
+    monkeypatch.setattr(api_obj.run_processor, "process_run_stream", dummy_stream)
 
     with TestClient(api_obj.app) as client, client.websocket_connect("/stream") as websocket:
         websocket.send_json({"thread_id": "thread123", "message": "hello"})
@@ -233,8 +245,10 @@ def test_validate_function_args_success(api: tuple[AssistantEngineAPI, Any]) -> 
         return f"{required_param}_{optional_param}"
 
     # Valid arguments
-    api_obj._validate_function_args(test_func, {"required_param": "value"}, "test_func")
-    api_obj._validate_function_args(test_func, {"required_param": "value", "optional_param": "custom"}, "test_func")
+    api_obj.tool_executor.validate_function_args(test_func, {"required_param": "value"}, "test_func")
+    api_obj.tool_executor.validate_function_args(
+        test_func, {"required_param": "value", "optional_param": "custom"}, "test_func"
+    )
 
 
 def test_validate_function_args_missing_required(api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -246,7 +260,7 @@ def test_validate_function_args_missing_required(api: tuple[AssistantEngineAPI, 
 
     # Missing required parameter
     with pytest.raises(TypeError, match="Missing required arguments: required_param"):
-        api_obj._validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
+        api_obj.tool_executor.validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
 
 
 def test_validate_function_args_unexpected_params(api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -259,8 +273,10 @@ def test_validate_function_args_unexpected_params(api: tuple[AssistantEngineAPI,
     # Since we're using structured logging, we can't easily test log output in unit tests
     # Instead, we just verify that the function doesn't raise an error with unexpected params
     # and that it still works correctly
-    api_obj._validate_function_args(test_func, {"required_param": "value", "unexpected": "param"}, "test_func")
-    # _validate_function_args doesn't return anything, just verify it runs without error
+    api_obj.tool_executor.validate_function_args(
+        test_func, {"required_param": "value", "unexpected": "param"}, "test_func"
+    )
+    # validate_function_args doesn't return anything, just verify it runs without error
 
 
 @pytest.mark.asyncio
@@ -269,7 +285,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
     api_obj, dummy_client = api
 
     # Mock TOOL_MAP to be empty
-    with patch("assistant_service.main.TOOL_MAP", {}):
+    with patch("assistant_service.functions.TOOL_MAP", {}):
         # Create a mock tool call event
         tool_call = types.SimpleNamespace(
             id="tool_123",
@@ -294,7 +310,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
                     if tool_call.type == "function":
                         name = tool_call.function.name
 
-                        from assistant_service.main import TOOL_MAP
+                        from assistant_service.functions import TOOL_MAP
 
                         if name not in TOOL_MAP:
                             tool_outputs[tool_call.id] = {
@@ -316,7 +332,11 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
         return f"Result: {required_param}"
 
     # Mock TOOL_MAP with our test function
-    with patch("assistant_service.main.TOOL_MAP", {"test_function": test_function}):
+    # Patch the tool_map on the actual tool_executor instance
+    original_tool_map = api_obj.tool_executor.tool_map
+    api_obj.tool_executor.tool_map = {"test_function": test_function}
+
+    try:
         # Create a mock tool call event with missing required parameter
         tool_call = types.SimpleNamespace(
             id="tool_456",
@@ -333,7 +353,7 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
             event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
         )
 
-        # Process the event
+        # Process the event using the actual tool executor
         tool_outputs = {}
 
         # Simulate the enhanced logic from _iterate_run_events
@@ -342,27 +362,17 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
             if step_details.type == "tool_calls":
                 for tool_call in step_details.tool_calls:
                     if tool_call.type == "function":
-                        name = tool_call.function.name
-                        args = {"wrong_param": "value"}
-
-                        from assistant_service.main import TOOL_MAP
-
-                        if name in TOOL_MAP:
-                            try:
-                                func = TOOL_MAP[name]
-                                api_obj._validate_function_args(func, args, name)
-                                output = func(**args)
-                                tool_outputs[tool_call.id] = {
-                                    "tool_call_id": tool_call.id,
-                                    "output": output,
-                                }
-                            except TypeError as err:
-                                tool_outputs[tool_call.id] = {
-                                    "tool_call_id": tool_call.id,
-                                    "output": f"Error: Invalid arguments for function '{name}': {err}",
-                                }
+                        # Use the tool executor directly
+                        context = {"tool_call_id": tool_call.id, "thread_id": "test", "correlation_id": "test"}
+                        result = api_obj.tool_executor.execute_tool(
+                            tool_name=tool_call.function.name, tool_args=tool_call.function.arguments, context=context
+                        )
+                        tool_outputs[tool_call.id] = result
 
         # Verify error output
         assert "tool_456" in tool_outputs
         assert "Error: Invalid arguments for function 'test_function'" in tool_outputs["tool_456"]["output"]
         assert "Missing required arguments: required_param" in tool_outputs["tool_456"]["output"]
+    finally:
+        # Restore original tool map
+        api_obj.tool_executor.tool_map = original_tool_map

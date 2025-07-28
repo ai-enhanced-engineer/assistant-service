@@ -141,44 +141,75 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     mock_client = AsyncMock()
     api.client = mock_client
 
-    # Mock failed tool output submission
-    with patch("assistant_service.main.submit_tool_outputs_with_backoff", return_value=None):
-        with patch("assistant_service.main.cancel_run_safely", return_value=True) as mock_cancel:
-            # Create mock events
-            async def mock_events():
-                # Run created event (to set run_id)
-                yield types.SimpleNamespace(event="thread.run.created", data=types.SimpleNamespace(id="run_123"))
+    # Initialize components that would normally be initialized in lifespan
+    from assistant_service.api.endpoints import APIEndpoints
+    from assistant_service.core.run_processor import RunProcessor
 
-                # Tool call event
-                tool_call = types.SimpleNamespace(
-                    id="tool_123",
-                    type="function",
-                    function=types.SimpleNamespace(name="test_func", arguments='{"param": "value"}'),
-                )
-                step_details = types.SimpleNamespace(type="tool_calls", tool_calls=[tool_call])
-                yield types.SimpleNamespace(
-                    event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
-                )
+    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
+    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)
 
-                # Requires action event
-                required_action = types.SimpleNamespace(type="submit_tool_outputs")
-                yield types.SimpleNamespace(
-                    event="thread.run.requires_action", data=types.SimpleNamespace(required_action=required_action)
-                )
+    # Mock failed tool output submission - use AsyncMock to properly return None
+    mock_submit = AsyncMock(return_value=None)
+    mock_cancel = AsyncMock(return_value=True)
 
-            # Mock event stream creation
-            mock_client.beta.threads.messages.create.return_value = None
-            mock_client.beta.threads.runs.create.return_value = mock_events()
+    # Patch in both locations
+    from assistant_service.core import run_processor as run_processor_module
 
-            # Mock TOOL_MAP with test function
-            with patch("assistant_service.main.TOOL_MAP", {"test_func": lambda param: "result"}):
-                events = []
-                try:
-                    async for event in api._iterate_run_events("thread_123", "test message"):
-                        events.append(event)
-                        # The function should break itself when error recovery triggers
-                except StopAsyncIteration:
-                    pass
+    with patch("assistant_service.openai_helpers.submit_tool_outputs_with_backoff", mock_submit):
+        with patch("assistant_service.openai_helpers.cancel_run_safely", mock_cancel):
+            # Also patch in the module that imports these functions
+            with patch.object(run_processor_module, "submit_tool_outputs_with_backoff", mock_submit):
+                with patch.object(run_processor_module, "cancel_run_safely", mock_cancel):
+                    # Create mock events
+                    async def mock_events():
+                        # Run created event (to set run_id)
+                        yield types.SimpleNamespace(
+                            event="thread.run.created", data=types.SimpleNamespace(id="run_123")
+                        )
 
-                # Verify cancellation was called
-                mock_cancel.assert_called_once_with(mock_client, "thread_123", "run_123")
+                        # Tool call event
+                        tool_call = types.SimpleNamespace(
+                            id="tool_123",
+                            type="function",
+                            function=types.SimpleNamespace(name="test_func", arguments='{"param": "value"}'),
+                        )
+                        step_details = types.SimpleNamespace(type="tool_calls", tool_calls=[tool_call])
+                        yield types.SimpleNamespace(
+                            event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
+                        )
+
+                        # Requires action event - with proper structure
+                        required_action = types.SimpleNamespace(
+                            type="submit_tool_outputs",
+                            submit_tool_outputs=types.SimpleNamespace(
+                                tool_calls=[]
+                            ),  # Empty since we already processed them
+                        )
+                        yield types.SimpleNamespace(
+                            event="thread.run.requires_action",
+                            data=types.SimpleNamespace(id="run_123", required_action=required_action),
+                        )
+
+                    # Mock event stream creation
+                    mock_client.beta.threads.messages.create.return_value = None
+                    mock_client.beta.threads.runs.create.return_value = mock_events()
+
+                    # Mock TOOL_MAP with test function by patching the tool_map on the instance
+                    test_tool_map = {"test_func": lambda param: "result"}
+                    original_tool_map = api.tool_executor.tool_map
+                    api.tool_executor.tool_map = test_tool_map
+
+                    try:
+                        events = []
+                        try:
+                            async for event in api.run_processor.iterate_run_events("thread_123", "test message"):
+                                events.append(event)
+                                # The function should break itself when error recovery triggers
+                        except StopAsyncIteration:
+                            pass
+
+                        # Verify cancellation was called
+                        mock_cancel.assert_called_once_with(mock_client, "thread_123", "run_123")
+                    finally:
+                        # Restore original tool map
+                        api.tool_executor.tool_map = original_tool_map

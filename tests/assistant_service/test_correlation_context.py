@@ -128,6 +128,13 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     api = AssistantEngineAPI()
     api.client = DummyClient()  # type: ignore[assignment]
 
+    # Initialize components that would normally be initialized in lifespan
+    from assistant_service.api.endpoints import APIEndpoints
+    from assistant_service.core.run_processor import RunProcessor
+
+    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
+    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
+
     with TestClient(api.app) as client:
         # Test start endpoint includes correlation_id
         resp = client.get("/start")
@@ -198,6 +205,13 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     api = AssistantEngineAPI()
     api.client = DummyClient()  # type: ignore[assignment]
 
+    # Initialize components that would normally be initialized in lifespan
+    from assistant_service.api.endpoints import APIEndpoints
+    from assistant_service.core.run_processor import RunProcessor
+
+    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
+    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
+
     with TestClient(api.app) as client:
         # Test error response includes correlation_id
         resp = client.get("/start")
@@ -248,6 +262,13 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
 
     api = AssistantEngineAPI()
     api.client = AsyncMock()
+
+    # Initialize components that would normally be initialized in lifespan
+    from assistant_service.api.endpoints import APIEndpoints
+    from assistant_service.core.run_processor import RunProcessor
+
+    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
+    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
 
     with TestClient(api.app) as client:
         # Test missing thread_id includes correlation_id
