@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.1.1 (2025-07-28)
+
+### Bug Fixes
+
+- Migrate to structured logging and fix all type errors
+  ([#58](https://github.com/lkronecker13/assistant-service/pull/58),
+  [`8727499`](https://github.com/lkronecker13/assistant-service/commit/8727499c82c73369512bb9c599d8d40f775ed15c))
+
+
 ## v1.1.0 (2025-07-24)
 
 ### Bug Fixes
