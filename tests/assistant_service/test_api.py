@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from openai import OpenAIError
 from starlette.websockets import WebSocketDisconnect
 
-from assistant_engine import repositories as repos
-from assistant_engine.main import AssistantEngineAPI
-from assistant_engine.models import EngineAssistantConfig
+from assistant_service import repositories as repos
+from assistant_service.main import AssistantEngineAPI
+from assistant_service.models import EngineAssistantConfig
 
 
 @pytest.fixture()
@@ -50,7 +50,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
     # Also patch in the main module where they're imported
-    import assistant_engine.main as main_module
+    import assistant_service.main as main_module
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
@@ -91,8 +91,8 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
-    import assistant_engine.main as main_module
-    from assistant_engine import repositories as repos
+    import assistant_service.main as main_module
+    from assistant_service import repositories as repos
     
     class DummySecretRepo:
         def __init__(self, project_id: str, client_id: str):
@@ -104,7 +104,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
         def __init__(self, client_id: str, project_id: str, bucket_name: str):
             pass
         def read_config(self):
-            from assistant_engine.models import EngineAssistantConfig
+            from assistant_service.models import EngineAssistantConfig
             return EngineAssistantConfig(
                 assistant_id="a",
                 assistant_name="name",
@@ -265,7 +265,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
     api_obj, dummy_client = api
 
     # Mock TOOL_MAP to be empty
-    with patch("assistant_engine.main.TOOL_MAP", {}):
+    with patch("assistant_service.main.TOOL_MAP", {}):
         # Create a mock tool call event
         tool_call = types.SimpleNamespace(
             id="tool_123",
@@ -290,7 +290,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
                     if tool_call.type == "function":
                         name = tool_call.function.name
 
-                        from assistant_engine.main import TOOL_MAP
+                        from assistant_service.main import TOOL_MAP
 
                         if name not in TOOL_MAP:
                             tool_outputs[tool_call.id] = {
@@ -312,7 +312,7 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
         return f"Result: {required_param}"
 
     # Mock TOOL_MAP with our test function
-    with patch("assistant_engine.main.TOOL_MAP", {"test_function": test_function}):
+    with patch("assistant_service.main.TOOL_MAP", {"test_function": test_function}):
         # Create a mock tool call event with missing required parameter
         tool_call = types.SimpleNamespace(
             id="tool_456",
@@ -341,7 +341,7 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
                         name = tool_call.function.name
                         args = {"wrong_param": "value"}
 
-                        from assistant_engine.main import TOOL_MAP
+                        from assistant_service.main import TOOL_MAP
 
                         if name in TOOL_MAP:
                             try:

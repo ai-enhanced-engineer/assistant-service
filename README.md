@@ -57,7 +57,7 @@ A production-ready Python service for deploying customized AI assistants with cl
 
 3. **Run the service:**
    ```bash
-   python -m assistant_engine.main
+   python -m assistant_service.main
    # or
    make local-run
    ```
@@ -100,7 +100,7 @@ ws.send(JSON.stringify({thread_id: "thread_abc123", message: "Hello!"}));
 
 ```
 assistant-service/
-├── assistant_engine/          # Main runtime service
+├── assistant_service/          # Main runtime service
 │   ├── main.py               # FastAPI application
 │   ├── processors.py         # Message and tool processing
 │   └── openai_helpers.py     # OpenAI API integration
@@ -197,7 +197,7 @@ ruff format     # Format
 mypy .          # Type check
 
 # Run service locally
-python -m assistant_engine.main
+python -m assistant_service.main
 ```
 
 ### Testing
@@ -206,11 +206,11 @@ python -m assistant_engine.main
 python -m pytest
 
 # Run specific test modules
-python -m pytest assistant_engine/tests/
+python -m pytest assistant_service/tests/
 python -m pytest assistant_factory/tests/
 
 # Run with coverage
-python -m pytest --cov=assistant_engine --cov=assistant_factory
+python -m pytest --cov=assistant_service --cov=assistant_factory
 ```
 
 ## Deployment

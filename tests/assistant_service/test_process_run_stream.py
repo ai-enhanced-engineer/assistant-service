@@ -98,7 +98,7 @@ def api(monkeypatch):
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "aid")
 
-    from assistant_engine import repositories as repos
+    from assistant_service import repositories as repos
 
     class DummySecretRepo:
         def __init__(self, project_id: str, client_id: str):
@@ -121,7 +121,7 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_engine.models import EngineAssistantConfig
+            from assistant_service.models import EngineAssistantConfig
             return EngineAssistantConfig(
                 assistant_id="aid",
                 assistant_name="name",
@@ -134,7 +134,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_engine import main
+    from assistant_service import main
 
     monkeypatch.setattr(main, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)

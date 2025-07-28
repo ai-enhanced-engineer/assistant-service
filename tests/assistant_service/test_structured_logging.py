@@ -5,7 +5,7 @@ import pytest
 from pytest import LogCaptureFixture, MonkeyPatch
 from structlog.stdlib import BoundLogger
 
-from assistant_engine.structured_logging import (
+from assistant_service.structured_logging import (
     LoggingContext,
     clear_context_fields,
     configure_structlog,
@@ -223,7 +223,7 @@ def test__get_logger__uses_module_name_when_empty(caplog: LogCaptureFixture) -> 
     logger.info("Test empty name")
 
     log_output: str = caplog.records[0].message
-    assert '"logger": "assistant_engine.structured_logging"' in log_output
+    assert '"logger": "assistant_service.structured_logging"' in log_output
 
 
 @pytest.mark.unit
@@ -233,7 +233,7 @@ def test__get_logger__default_name_fallback(caplog: LogCaptureFixture) -> None:
     logger.info("Test default name")
 
     log_output: str = caplog.records[0].message
-    assert '"logger": "assistant_engine.structured_logging"' in log_output
+    assert '"logger": "assistant_service.structured_logging"' in log_output
 
 
 @pytest.mark.unit

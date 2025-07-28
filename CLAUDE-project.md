@@ -10,17 +10,17 @@ This project is a **multi-tenant Python assistant service** that integrates with
 
 The system follows a **modular, layered architecture** with clear separation of concerns:
 
-- **HTTP API Layer** (`assistant_engine/main.py`) - FastAPI-based REST and WebSocket endpoints
-- **Business Logic Layer** (`assistant_engine/processors.py`) - Run processing and message handling  
-- **Integration Layer** (`assistant_engine/openai_helpers.py`) - OpenAI API interactions with retry logic
+- **HTTP API Layer** (`assistant_service/main.py`) - FastAPI-based REST and WebSocket endpoints
+- **Business Logic Layer** (`assistant_service/processors.py`) - Run processing and message handling  
+- **Integration Layer** (`assistant_service/openai_helpers.py`) - OpenAI API interactions with retry logic
 - **Configuration Layer** (`botbrew_commons/`) - Shared data models and repository patterns
 - **Factory Layer** (`assistant_factory/`) - Assistant creation and tool building
-- **Logging Layer** (`assistant_engine/structured_logging.py`) - Structured logging with correlation IDs
+- **Logging Layer** (`assistant_service/structured_logging.py`) - Structured logging with correlation IDs
 
 ## Project Structure
 
 ### Core Components
-- `assistant_engine/` - **Main application engine**
+- `assistant_service/` - **Main application engine**
   - `main.py` - FastAPI application with `/start`, `/chat`, `/stream` endpoints
   - `processors.py` - Tool and message processing logic
   - `openai_helpers.py` - OpenAI API integration with error handling
@@ -173,7 +173,7 @@ The project avoids `unittest.mock` in favor of:
 ### Adding a New Client
 1. Create directory: `assistant_factory/client_spec/{client_id}/`
 2. Add `functions.py` with custom tools
-3. Update `TOOL_MAP` in `assistant_engine/functions.py`
+3. Update `TOOL_MAP` in `assistant_service/functions.py`
 4. Configure assistant in GCP or local config
 5. Test with `CLIENT_ID={client_id} make local-run`
 

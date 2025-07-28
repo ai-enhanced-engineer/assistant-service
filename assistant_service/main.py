@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, WebSocket
 from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel
 
-from assistant_engine.repositories import GCPConfigRepository, GCPSecretRepository
+from assistant_service.repositories import GCPConfigRepository, GCPSecretRepository
 
 from .config import build_engine_config
 from .correlation import CorrelationContext, get_or_create_correlation_id

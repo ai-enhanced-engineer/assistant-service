@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from assistant_engine.processors import ToolProcessor
+from assistant_service.processors import ToolProcessor
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,5 @@
-from assistant_engine.models import EngineAssistantConfig
-from assistant_engine.repositories import BaseConfigRepository, BaseSecretRepository
+from assistant_service.models import EngineAssistantConfig
+from assistant_service.repositories import BaseConfigRepository, BaseSecretRepository
 
 
 def build_engine_config(

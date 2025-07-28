@@ -1,6 +1,6 @@
-from assistant_engine.config import build_engine_config
-from assistant_engine.models import EngineAssistantConfig
-from assistant_engine.repositories import LocalConfigRepository, LocalSecretRepository
+from assistant_service.config import build_engine_config
+from assistant_service.models import EngineAssistantConfig
+from assistant_service.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test__build_engine_config(monkeypatch):

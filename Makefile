@@ -4,8 +4,8 @@
 
 GREEN_LINE=@echo "\033[0;32m--------------------------------------------------\033[0m"
 
-SOURCE_DIR = assistant_engine/ assistant_factory/
-TEST_DIR = tests/assistant_engine/ assistant_factory/tests/
+SOURCE_DIR = assistant_service/ assistant_factory/
+TEST_DIR = tests/
 PROJECT_VERSION := $(shell awk '/^\[project\]/ {flag=1; next} /^\[/{flag=0} flag && /^version/ {gsub(/"/, "", $$2); print $$2}' pyproject.toml)
 PYTHON_VERSION := 3.10
 CLIENT_ID = leogv
@@ -93,7 +93,7 @@ integration-test: ## Run integration tests with pytest
 all-test: ## Run all tests with coverage report
 	@echo "Running ALL tests with pytest..."
 	uv run python -m pytest -m "not integration" -vv -s $(TEST_DIR) \
-		--cov=assistant_engine \
+		--cov=assistant_service \
 		--cov=assistant_factory \
 		--cov-config=pyproject.toml \
 		--cov-fail-under=80 \
@@ -137,7 +137,7 @@ all-test-validate-branch: ## Validate branch and run all tests
 
 local-run: ## Run the assistant service locally with auto-reload
 	@echo "Starting assistant service locally..."
-	uv run uvicorn assistant_engine.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn assistant_service.main:app --reload --host 0.0.0.0 --port 8000
 	$(GREEN_LINE)
 
 # ----------------------------
@@ -146,7 +146,7 @@ local-run: ## Run the assistant service locally with auto-reload
 
 build-engine: ## Build Docker image for the assistant engine
 	@echo "Building docker for client: $(CLIENT_ID)"
-	cp assistant_factory/client_spec/$(CLIENT_ID)/functions.py assistant_engine/functions.py
+	cp assistant_factory/client_spec/$(CLIENT_ID)/functions.py assistant_service/functions.py
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-engine:latest
 	$(GREEN_LINE)
 

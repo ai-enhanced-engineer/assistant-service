@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant_engine.correlation import (
+from assistant_service.correlation import (
     CorrelationContext,
     generate_correlation_id,
     get_correlation_id,
@@ -76,8 +76,8 @@ def test_set_and_get_correlation_id():
 @pytest.mark.asyncio
 async def test_api_endpoints_include_correlation_ids(monkeypatch):
     """Test that API endpoints include correlation IDs in responses and logs."""
-    from assistant_engine import repositories as repos
-    from assistant_engine.models import EngineAssistantConfig
+    from assistant_service import repositories as repos
+    from assistant_service.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -103,11 +103,11 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
     # Also patch in the main module where they're imported
-    import assistant_engine.main as main_module
+    import assistant_service.main as main_module
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
-    from assistant_engine.main import AssistantEngineAPI
+    from assistant_service.main import AssistantEngineAPI
     
     # Mock client
     class DummyThreads:
@@ -143,8 +143,8 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
 @pytest.mark.asyncio
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
-    from assistant_engine import repositories as repos
-    from assistant_engine.models import EngineAssistantConfig
+    from assistant_service import repositories as repos
+    from assistant_service.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -170,13 +170,13 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
     # Also patch in the main module where they're imported
-    import assistant_engine.main as main_module
+    import assistant_service.main as main_module
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
     from openai import OpenAIError
 
-    from assistant_engine.main import AssistantEngineAPI
+    from assistant_service.main import AssistantEngineAPI
     
     # Mock client that raises error
     class DummyThreads:
@@ -210,8 +210,8 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 @pytest.mark.asyncio 
 async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     """Test chat endpoint validation includes correlation ID in error."""
-    from assistant_engine import repositories as repos
-    from assistant_engine.models import EngineAssistantConfig
+    from assistant_service import repositories as repos
+    from assistant_service.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -237,11 +237,11 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
     # Also patch in the main module where they're imported
-    import assistant_engine.main as main_module
+    import assistant_service.main as main_module
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
-    from assistant_engine.main import AssistantEngineAPI
+    from assistant_service.main import AssistantEngineAPI
     
     api = AssistantEngineAPI() 
     api.client = AsyncMock()

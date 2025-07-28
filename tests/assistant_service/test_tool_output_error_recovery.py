@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from assistant_engine.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
+from assistant_service.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
 
 
 @pytest.mark.asyncio
@@ -114,8 +114,8 @@ async def test_cancel_run_safely_failure():
 @pytest.mark.asyncio
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
-    from assistant_engine import repositories as repos
-    from assistant_engine.models import EngineAssistantConfig
+    from assistant_service import repositories as repos
+    from assistant_service.models import EngineAssistantConfig
     
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -141,19 +141,19 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
     # Also patch in the main module where they're imported
-    import assistant_engine.main as main_module
+    import assistant_service.main as main_module
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
-    from assistant_engine.main import AssistantEngineAPI
+    from assistant_service.main import AssistantEngineAPI
     
     api = AssistantEngineAPI()
     mock_client = AsyncMock()
     api.client = mock_client
     
     # Mock failed tool output submission
-    with patch("assistant_engine.main.submit_tool_outputs_with_backoff", return_value=None):
-        with patch("assistant_engine.main.cancel_run_safely", return_value=True) as mock_cancel:
+    with patch("assistant_service.main.submit_tool_outputs_with_backoff", return_value=None):
+        with patch("assistant_service.main.cancel_run_safely", return_value=True) as mock_cancel:
             
             # Create mock events
             async def mock_events():
@@ -187,7 +187,7 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
             mock_client.beta.threads.runs.create.return_value = mock_events()
             
             # Mock TOOL_MAP with test function
-            with patch("assistant_engine.main.TOOL_MAP", {"test_func": lambda param: "result"}):
+            with patch("assistant_service.main.TOOL_MAP", {"test_func": lambda param: "result"}):
                 events = []
                 try:
                     async for event in api._iterate_run_events("thread_123", "test message"):
