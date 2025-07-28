@@ -6,7 +6,7 @@ from typing import Any
 
 class BaseSecretRepository(abc.ABC):
     """Abstract base class for secret repository implementations."""
-    
+
     @abc.abstractmethod
     def write_secret(self, secret_suffix: str) -> None:
         raise NotImplementedError
@@ -18,7 +18,7 @@ class BaseSecretRepository(abc.ABC):
 
 class BaseConfigRepository(abc.ABC):
     """Abstract base class for configuration repository implementations."""
-    
+
     @abc.abstractmethod
     def write_config(self, config: Any) -> None:
         raise NotImplementedError

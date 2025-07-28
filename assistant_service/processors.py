@@ -109,7 +109,7 @@ class ThreadMessageProcessor:
             return None
 
         first_content = thread_message.content[0]
-        if hasattr(first_content, 'text') and first_content.text != "":
+        if hasattr(first_content, "text") and first_content.text != "":
             log_message = f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
         else:
             log_message = "Message has not been generated yet..."
@@ -133,5 +133,5 @@ class ThreadMessageProcessor:
                     return self._message_references[message_id]
             else:
                 logger.warning("unknown message type", type(content_message))
-        
+
         return None

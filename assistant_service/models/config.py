@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class EngineAssistantConfig(BaseModel):
     """Configuration for an OpenAI assistant instance."""
-    
+
     assistant_id: str
     assistant_name: str
     initial_message: str

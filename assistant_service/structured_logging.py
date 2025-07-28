@@ -77,7 +77,7 @@ def _process_log_fields(logger: WrappedLogger, log_method: str, event_dict: Even
     # Rename "event" to "message" or set it to an empty string if not present
     event_dict["message"] = event_dict.pop("event", "")
     event_dict["context"] = structlog.contextvars.get_contextvars().get("context", "default")
-    
+
     # Add correlation_id if available
     correlation_id = get_correlation_id()
     if correlation_id:

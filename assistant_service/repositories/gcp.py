@@ -3,9 +3,9 @@
 import json
 from typing import Any
 
-from google.cloud import (
+from google.cloud import (  # type: ignore[attr-defined]
     secretmanager,
-    storage,  # type: ignore[attr-defined]
+    storage,
 )
 
 from .base import BaseConfigRepository, BaseSecretRepository
@@ -13,7 +13,7 @@ from .base import BaseConfigRepository, BaseSecretRepository
 
 class GCPSecretRepository(BaseSecretRepository):
     """GCP Secret Manager implementation."""
-    
+
     def __init__(self, client_id: str, project_id: str):
         self._client = secretmanager.SecretManagerServiceClient()
         self._project_id = project_id
@@ -37,7 +37,7 @@ class GCPSecretRepository(BaseSecretRepository):
 
 class GCPConfigRepository(BaseConfigRepository):
     """GCP Storage implementation for configuration management."""
-    
+
     def __init__(self, client_id: str, project_id: str, bucket_name: str):
         client = storage.Client(project=project_id)
         self._blob = client.bucket(bucket_name).blob("configs/" + client_id)
@@ -49,6 +49,6 @@ class GCPConfigRepository(BaseConfigRepository):
     def read_config(self) -> Any:
         # Importing here to avoid circular import
         from assistant_service.models import EngineAssistantConfig
-        
+
         with self._blob.open("r") as f:
             return EngineAssistantConfig(**json.loads(f.read()))

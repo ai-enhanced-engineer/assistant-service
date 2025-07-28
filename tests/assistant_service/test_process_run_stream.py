@@ -122,6 +122,7 @@ def api(monkeypatch):
 
         def read_config(self):
             from assistant_service.models import EngineAssistantConfig
+
             return EngineAssistantConfig(
                 assistant_id="aid",
                 assistant_name="name",

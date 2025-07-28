@@ -16,6 +16,8 @@ dependencies = [
     "google-cloud-secret-manager>=2.24.0",
     "httpx>=0.27",
     "structlog>=25.4.0",
+    "websockets>=12.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]

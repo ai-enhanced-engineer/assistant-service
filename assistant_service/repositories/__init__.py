@@ -6,7 +6,7 @@ from .local import LocalConfigRepository, LocalSecretRepository
 
 __all__ = [
     "BaseConfigRepository",
-    "BaseSecretRepository", 
+    "BaseSecretRepository",
     "GCPConfigRepository",
     "GCPSecretRepository",
     "LocalConfigRepository",

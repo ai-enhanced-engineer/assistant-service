@@ -48,12 +48,13 @@ def api(monkeypatch):
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-    
+
     # Also patch in the main module where they're imported
     import assistant_service.main as main_module
+
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
-    
+
     class DummyThreads:
         async def create(self):
             return types.SimpleNamespace(id="thread123")
@@ -93,18 +94,21 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
 
     import assistant_service.main as main_module
     from assistant_service import repositories as repos
-    
+
     class DummySecretRepo:
         def __init__(self, project_id: str, client_id: str):
             pass
+
         def access_secret(self, name: str) -> str:
             return "dummy_secret"
 
     class DummyConfigRepo:
         def __init__(self, client_id: str, project_id: str, bucket_name: str):
             pass
+
         def read_config(self):
             from assistant_service.models import EngineAssistantConfig
+
             return EngineAssistantConfig(
                 assistant_id="a",
                 assistant_name="name",
@@ -115,23 +119,23 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
-    
+
     # Mock AsyncOpenAI
     close_mock = AsyncMock()
-    
+
     class MockAsyncOpenAI:
         def __init__(self, api_key: str):
             self.close = close_mock
-            
+
     monkeypatch.setattr(main_module, "AsyncOpenAI", MockAsyncOpenAI)
-    
+
     api = AssistantEngineAPI()
     assert api.client is None  # Client not created yet
-    
+
     with TestClient(api.app):
         assert api.client is not None  # Client created by lifespan
         close_mock.assert_not_awaited()
-    
+
     # Client should be closed after lifespan
     close_mock.assert_awaited_once()
 
@@ -147,6 +151,7 @@ def test_start_endpoint(api: tuple[AssistantEngineAPI, Any]) -> None:
         assert "correlation_id" in data
         # Correlation ID should be a valid UUID
         from uuid import UUID
+
         UUID(data["correlation_id"])
     # Since client was injected (not created by lifespan), it shouldn't be closed
     dummy_client.close.assert_not_awaited()

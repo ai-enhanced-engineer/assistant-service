@@ -63,7 +63,7 @@ def persist_config(assistant_config: ClientAssistantConfig, assistant_id: str) -
     function_names = []
     if assistant_config.functions:
         function_names = [function["name"] for function in assistant_config.functions]
-    
+
     as_config = EngineAssistantConfig(
         assistant_id=assistant_id,
         assistant_name=assistant_config.assistant_name,

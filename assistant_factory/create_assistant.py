@@ -26,7 +26,9 @@ def get_client() -> AsyncOpenAI:
     return _client
 
 
-async def create_assistant(name: str, instructions: str, a_tools: list[dict[str, Any]], model: str, file_ids: list[str]) -> Assistant:
+async def create_assistant(
+    name: str, instructions: str, a_tools: list[dict[str, Any]], model: str, file_ids: list[str]
+) -> Assistant:
     """Create a new assistant using the OpenAI API."""
 
     print("Creating assistant!")

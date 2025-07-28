@@ -9,11 +9,11 @@ from assistant_factory.models import EngineAssistantConfig
 
 class GCPConfigWriter:
     """Writes assistant configurations to GCP Storage.
-    
+
     This is a minimal implementation that only supports writing configs,
     as that's all the factory needs.
     """
-    
+
     def __init__(self, client_id: str, project_id: str, bucket_name: str):
         client = storage.Client(project=project_id)
         self._blob = client.bucket(bucket_name).blob("configs/" + client_id)

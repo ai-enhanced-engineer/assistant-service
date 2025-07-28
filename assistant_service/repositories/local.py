@@ -1,36 +1,55 @@
 """Local implementations of repositories for testing."""
 
-from typing import Any, Optional
+import os
+from typing import Any
+
+from assistant_service.models import EngineAssistantConfig
 
 from .base import BaseConfigRepository, BaseSecretRepository
 
 
 class LocalSecretRepository(BaseSecretRepository):
-    """Local implementation of secret repository for testing."""
-    
-    def __init__(self, client_id: str, project_id: str):
-        self._project_id = project_id
-        self._client_id = client_id
-        self._secret: Optional[str] = None
+    """Local implementation of secret repository for development."""
+
+    def __init__(self) -> None:
+        """Initialize with environment variables."""
+        pass
 
     def write_secret(self, secret_suffix: str) -> None:
-        self._secret = self._project_id + "/" + self._client_id + "-" + secret_suffix
+        """Not needed for local development."""
+        pass
 
     def access_secret(self, secret_suffix: str) -> str:
-        print(secret_suffix)  # Silence warning
-        if self._secret is None:
-            raise ValueError("No secret has been written yet")
-        return self._secret
+        """Return OpenAI API key from environment or prompt user."""
+        if secret_suffix == "openai-api-key":
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                # Return a placeholder that will be caught later
+                return "OPENAI_API_KEY_NOT_SET"
+            return api_key
+        return f"local-{secret_suffix}"
 
 
 class LocalConfigRepository(BaseConfigRepository):
-    """Local implementation of config repository for testing."""
-    
+    """Local implementation of config repository for development."""
+
     def __init__(self) -> None:
-        self._config: Optional[Any] = None
+        """Initialize with default development configuration."""
+        pass
 
     def write_config(self, config: Any) -> None:
-        self._config = config
+        """Not needed for local development."""
+        pass
 
-    def read_config(self) -> Any:
-        return self._config
+    def read_config(self) -> EngineAssistantConfig:
+        """Return default development configuration."""
+        assistant_id = os.getenv("ASSISTANT_ID", "asst_dev_default")
+
+        return EngineAssistantConfig(
+            assistant_id=assistant_id,
+            assistant_name="Development Assistant",
+            initial_message="Hello! I'm your development assistant. How can I help you today?",
+            code_interpreter=True,
+            retrieval=False,
+            function_names=[],
+        )
