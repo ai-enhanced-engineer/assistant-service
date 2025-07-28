@@ -1,20 +1,13 @@
-# ruff: noqa: E402
-import sys
-import types
 
 import pytest
 from openai.types.beta.threads import Message, TextContentBlock
 from openai.types.beta.threads.text import Text
 
-sys.modules.setdefault("chainlit", types.ModuleType("chainlit"))
-sys.modules["chainlit"].Message = object
-sys.modules["chainlit"].Step = object
-sys.modules["chainlit"].context = types.SimpleNamespace(current_step=types.SimpleNamespace(id="parent"))
 from assistant_engine.processors import ThreadMessageProcessor
 
 
 @pytest.mark.asyncio
-async def test__processor_updates_message_if_already_in_message_references():
+async def test__processor_updates_message_if_already_in_message_references() -> None:
     processor = ThreadMessageProcessor()
 
     thread_message = Message(
@@ -32,6 +25,7 @@ async def test__processor_updates_message_if_already_in_message_references():
     # First time this message is seen, so we should send the message to the UI for the first time.
     assert processor.send_message is True
     # Save message id to make sure it is preserved and use it below to assert.
+    assert msg_returned_once is not None
     msg_returned_once_id = msg_returned_once.id
 
     msg_returned_twice = await processor.process(thread_message=thread_message)

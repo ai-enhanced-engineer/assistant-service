@@ -1,9 +1,8 @@
 import asyncio
-import logging
 from typing import Any, Iterable, Optional
 
-from .bb_logging import get_logger, log_with_context
 from .correlation import get_or_create_correlation_id
+from .structured_logging import get_logger
 
 logger = get_logger("OPENAI_HELPERS")
 
@@ -13,8 +12,7 @@ async def retrieve_run(client: Any, thread_id: str, run_id: str) -> Optional[Any
     correlation_id = get_or_create_correlation_id()
     try:
         result = await client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
-        log_with_context(
-            logger, logging.DEBUG, 
+        logger.debug(
             "Run retrieved successfully", 
             thread_id=thread_id, 
             run_id=run_id,
@@ -22,9 +20,9 @@ async def retrieve_run(client: Any, thread_id: str, run_id: str) -> Optional[Any
         )
         return result
     except Exception as err:  # noqa: BLE001
-        log_with_context(
-            logger, logging.ERROR, 
-            f"Failed to retrieve run: {err}", 
+        logger.error(
+            "Failed to retrieve run", 
+            error=str(err),
             thread_id=thread_id, 
             run_id=run_id,
             correlation_id=correlation_id,
@@ -38,8 +36,7 @@ async def list_run_steps(client: Any, thread_id: str, run_id: str) -> Optional[A
     correlation_id = get_or_create_correlation_id()
     try:
         result = await client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run_id, order="asc")
-        log_with_context(
-            logger, logging.DEBUG, 
+        logger.debug(
             "Run steps listed successfully", 
             thread_id=thread_id, 
             run_id=run_id,
@@ -48,9 +45,9 @@ async def list_run_steps(client: Any, thread_id: str, run_id: str) -> Optional[A
         )
         return result
     except Exception as err:  # noqa: BLE001
-        log_with_context(
-            logger, logging.ERROR, 
-            f"Failed to list run steps: {err}", 
+        logger.error(
+            "Failed to list run steps", 
+            error=str(err),
             thread_id=thread_id, 
             run_id=run_id,
             correlation_id=correlation_id,
@@ -76,8 +73,7 @@ async def submit_tool_outputs_with_backoff(
     tool_outputs_list = list(tool_outputs) if not isinstance(tool_outputs, list) else tool_outputs
     tool_count = len(tool_outputs_list)
     
-    log_with_context(
-        logger, logging.INFO, 
+    logger.info(
         f"Submitting {tool_count} tool outputs", 
         thread_id=thread_id, 
         run_id=run_id,
@@ -92,8 +88,7 @@ async def submit_tool_outputs_with_backoff(
                 run_id=run_id,
                 tool_outputs=tool_outputs_list,
             )
-            log_with_context(
-                logger, logging.INFO, 
+            logger.info(
                 f"Successfully submitted {tool_count} tool outputs", 
                 thread_id=thread_id, 
                 run_id=run_id,
@@ -105,9 +100,9 @@ async def submit_tool_outputs_with_backoff(
             return result
         except Exception as err:  # noqa: BLE001
             wait_time = backoff ** attempt
-            log_with_context(
-                logger, logging.ERROR, 
-                f"Tool output submission failed: {err}", 
+            logger.error(
+                "Tool output submission failed", 
+                error=str(err),
                 thread_id=thread_id, 
                 run_id=run_id,
                 correlation_id=correlation_id,
@@ -118,8 +113,7 @@ async def submit_tool_outputs_with_backoff(
                 wait_time=wait_time if attempt < retries - 1 else 0
             )
             if attempt == retries - 1:
-                log_with_context(
-                    logger, logging.ERROR, 
+                logger.error(
                     f"Permanent failure: Unable to submit {tool_count} tool outputs after {retries} attempts", 
                     thread_id=thread_id, 
                     run_id=run_id,
@@ -139,8 +133,7 @@ async def cancel_run_safely(client: Any, thread_id: str, run_id: str) -> bool:
         # First check if run is already in a terminal state
         run_status = await retrieve_run(client, thread_id, run_id)
         if run_status and run_status.status in ["completed", "failed", "cancelled", "expired"]:
-            log_with_context(
-                logger, logging.INFO, 
+            logger.info(
                 f"Run already in terminal state: {run_status.status}", 
                 thread_id=thread_id, 
                 run_id=run_id,
@@ -151,8 +144,7 @@ async def cancel_run_safely(client: Any, thread_id: str, run_id: str) -> bool:
             
         # Attempt to cancel the run
         await client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
-        log_with_context(
-            logger, logging.INFO, 
+        logger.info(
             "Successfully cancelled run", 
             thread_id=thread_id, 
             run_id=run_id,
@@ -161,9 +153,9 @@ async def cancel_run_safely(client: Any, thread_id: str, run_id: str) -> bool:
         return True
         
     except Exception as err:  # noqa: BLE001
-        log_with_context(
-            logger, logging.ERROR, 
-            f"Failed to cancel run: {err}", 
+        logger.error(
+            "Failed to cancel run", 
+            error=str(err),
             thread_id=thread_id, 
             run_id=run_id,
             correlation_id=correlation_id,

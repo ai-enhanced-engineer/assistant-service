@@ -6,7 +6,7 @@ from openai.types.beta.threads import TextContentBlock
 from openai.types.beta.threads.message import Message
 from openai.types.beta.threads.runs import RunStep, ToolCall
 
-from .bb_logging import get_logger
+from .structured_logging import get_logger
 
 logger = get_logger("PROCESSORS")
 
@@ -54,10 +54,10 @@ class MessageData:
 class ToolProcessor:
     """Track and update tool call steps during a run."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.step_references: dict[str, StepData] = {}
         self.update = False
-        self.tool_outputs: dict = {}
+        self.tool_outputs: dict[str, Any] = {}
 
     async def process_tool_call(
         self,
@@ -66,8 +66,8 @@ class ToolProcessor:
         name: str,
         t_input: Any,
         t_output: Any,
-        show_input: Union[bool, str] = None,
-    ):
+        show_input: Optional[Union[bool, str]] = None,
+    ) -> StepData:
         step_data = None
         if tool_call.id not in self.step_references:
             step_data = StepData(
@@ -96,7 +96,7 @@ class ToolProcessor:
 class ThreadMessageProcessor:
     """Process thread message."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._message_references: dict[str, MessageData] = {}
         self.send_message = True
 
@@ -108,7 +108,8 @@ class ThreadMessageProcessor:
             logger.info("Received thread message with no content. Skipping Chainlit message creation")
             return None
 
-        if thread_message.content[0].text != "":
+        first_content = thread_message.content[0]
+        if hasattr(first_content, 'text') and first_content.text != "":
             log_message = f"Processing thread message: {thread_message.id} with content: {thread_message.content}"
         else:
             log_message = "Message has not been generated yet..."
@@ -132,3 +133,5 @@ class ThreadMessageProcessor:
                     return self._message_references[message_id]
             else:
                 logger.warning("unknown message type", type(content_message))
+        
+        return None

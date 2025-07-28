@@ -102,6 +102,11 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
+    # Also patch in the main module where they're imported
+    import assistant_engine.main as main_module
+    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
+    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    
     from assistant_engine.main import AssistantEngineAPI
     
     # Mock client
@@ -117,9 +122,10 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
         def __init__(self) -> None:
             self.beta = DummyBeta()
             self.aclose = AsyncMock()
+            self.close = AsyncMock()
 
     api = AssistantEngineAPI()
-    api.client = DummyClient()
+    api.client = DummyClient()  # type: ignore[assignment]
     
     with TestClient(api.app) as client:
         # Test start endpoint includes correlation_id
@@ -163,6 +169,11 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
     
+    # Also patch in the main module where they're imported
+    import assistant_engine.main as main_module
+    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
+    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    
     from openai import OpenAIError
 
     from assistant_engine.main import AssistantEngineAPI
@@ -180,9 +191,10 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
         def __init__(self) -> None:
             self.beta = DummyBeta()
             self.aclose = AsyncMock()
+            self.close = AsyncMock()
 
     api = AssistantEngineAPI()
-    api.client = DummyClient()
+    api.client = DummyClient()  # type: ignore[assignment]
     
     with TestClient(api.app) as client:
         # Test error response includes correlation_id
@@ -223,6 +235,11 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
+    
+    # Also patch in the main module where they're imported
+    import assistant_engine.main as main_module
+    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
+    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
     
     from assistant_engine.main import AssistantEngineAPI
     

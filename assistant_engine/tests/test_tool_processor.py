@@ -1,11 +1,4 @@
-# ruff: noqa: E402
-import sys
 import types
-
-sys.modules.setdefault("chainlit", types.ModuleType("chainlit"))
-sys.modules["chainlit"].Message = object
-sys.modules["chainlit"].Step = object
-sys.modules["chainlit"].context = types.SimpleNamespace(current_step=types.SimpleNamespace(id="parent"))
 from datetime import datetime
 
 import pytest
@@ -14,15 +7,15 @@ from assistant_engine.processors import ToolProcessor
 
 
 @pytest.mark.asyncio
-async def test_process_tool_call_creates_and_updates():
+async def test_process_tool_call_creates_and_updates() -> None:
     processor = ToolProcessor()
     run_step = types.SimpleNamespace(created_at=1000, completed_at=1010)
     tool_call = types.SimpleNamespace(id="t1")
 
     # first call creates the step
     step1 = await processor.process_tool_call(
-        step=run_step,
-        tool_call=tool_call,
+        step=run_step,  # type: ignore[arg-type]
+        tool_call=tool_call,  # type: ignore[arg-type]
         name="tool",
         t_input="in1",
         t_output="out1",
@@ -40,8 +33,8 @@ async def test_process_tool_call_creates_and_updates():
     # second call with same tool_call updates the same step
     run_step2 = types.SimpleNamespace(created_at=1002, completed_at=1012)
     step2 = await processor.process_tool_call(
-        step=run_step2,
-        tool_call=tool_call,
+        step=run_step2,  # type: ignore[arg-type]
+        tool_call=tool_call,  # type: ignore[arg-type]
         name="tool",
         t_input="in2",
         t_output="out2",
