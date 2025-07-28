@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.1.2 (2025-07-28)
+
+### Bug Fixes
+
+- Add lifespan and DI tests ([#46](https://github.com/lkronecker13/assistant-service/pull/46),
+  [`c54cbf6`](https://github.com/lkronecker13/assistant-service/commit/c54cbf60bd8ae2afd11d9237ab7ac119f1b46f37))
+
+- Defer API instantiation to prevent GCP auth errors during imports
+  ([#46](https://github.com/lkronecker13/assistant-service/pull/46),
+  [`c54cbf6`](https://github.com/lkronecker13/assistant-service/commit/c54cbf60bd8ae2afd11d9237ab7ac119f1b46f37))
+
+- Import ordering and ensure singleton initialization is deferred
+  ([#46](https://github.com/lkronecker13/assistant-service/pull/46),
+  [`c54cbf6`](https://github.com/lkronecker13/assistant-service/commit/c54cbf60bd8ae2afd11d9237ab7ac119f1b46f37))
+
+### Testing
+
+- Cover client injection and lifespan
+  ([#46](https://github.com/lkronecker13/assistant-service/pull/46),
+  [`c54cbf6`](https://github.com/lkronecker13/assistant-service/commit/c54cbf60bd8ae2afd11d9237ab7ac119f1b46f37))
+
+
 ## v1.1.1 (2025-07-28)
 
 ### Bug Fixes
