@@ -621,18 +621,30 @@ def get_app() -> FastAPI:
 
 
 # Create a singleton instance for backward compatibility
-api = AssistantEngineAPI()
-app = api.app
+# Note: Instantiation is deferred to avoid initialization errors during imports
+api: Optional[AssistantEngineAPI] = None
+app: Optional[FastAPI] = None
+
+
+def _ensure_api_initialized() -> AssistantEngineAPI:
+    """Ensure the API singleton is initialized."""
+    global api, app
+    if api is None:
+        api = AssistantEngineAPI()
+        app = api.app
+    return api
 
 
 async def process_run(thread_id: str, human_query: str) -> list[str]:
     """Proxy to the API instance for backward compatibility."""
-    return await api._process_run(thread_id, human_query)
+    api_instance = _ensure_api_initialized()
+    return await api_instance._process_run(thread_id, human_query)
 
 
 async def process_run_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
     """Proxy streaming run for backward compatibility."""
-    async for event in api._process_run_stream(thread_id, human_query):
+    api_instance = _ensure_api_initialized()
+    async for event in api_instance._process_run_stream(thread_id, human_query):
         yield event
 
 
