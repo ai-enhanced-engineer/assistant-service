@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from openai import OpenAIError
-from starlette.websockets import WebSocketDisconnect
 
 from assistant_service import repositories as repos
 from assistant_service.main import AssistantEngineAPI
@@ -147,7 +146,7 @@ def test_start_endpoint(api: tuple[AssistantEngineAPI, Any]) -> None:
         assert resp.status_code == 200
         data = resp.json()
         assert data["thread_id"] == "thread123"
-        assert data["initial_message"] == "hi"
+        assert data["initial_message"] == "Hello! I'm your development assistant. How can I help you today?"
         assert "correlation_id" in data
         # Correlation ID should be a valid UUID
         from uuid import UUID
@@ -189,8 +188,8 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) 
         websocket.send_json({"thread_id": "thread123", "message": "hello"})
         assert websocket.receive_text() == "event1"
         assert websocket.receive_text() == "event2"
-        with pytest.raises(WebSocketDisconnect):
-            websocket.receive_text()
+        # WebSocket now stays open for multiple messages, so we close it explicitly
+        websocket.close()
     # Since client was injected (not created by lifespan), it shouldn't be closed
     dummy_client.close.assert_not_awaited()
 

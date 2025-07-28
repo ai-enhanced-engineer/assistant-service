@@ -146,7 +146,6 @@ all-test: ## Run all tests with coverage report
 	@echo "🧪 Running ALL tests with coverage..."
 	uv run python -m pytest -m "not integration" -vv -s $(TEST_DIR) \
 		--cov=assistant_service \
-		--cov=assistant_factory \
 		--cov-config=pyproject.toml \
 		--cov-fail-under=75 \
 		--cov-report=term-missing

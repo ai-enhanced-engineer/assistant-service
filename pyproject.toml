@@ -44,7 +44,6 @@ dev = [
 where = ["."]
 include = [
     "assistant_service*",
-    "assistant_factory*",
 ]
 
 [tool.ruff]
