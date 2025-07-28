@@ -20,7 +20,7 @@ GREEN_LINE=@echo "\033[0;32m--------------------------------------------------\0
 YELLOW_LINE=@echo "\033[0;33m--------------------------------------------------\033[0m"
 RED_LINE=@echo "\033[0;31m--------------------------------------------------\033[0m"
 
-SOURCE_DIR = assistant_service/ assistant_factory/
+SOURCE_DIR = assistant_service/
 TEST_DIR = tests/
 SCRIPTS_DIR = scripts/
 PROJECT_VERSION := $(shell awk '/^\[project\]/ {flag=1; next} /^\[/{flag=0} flag && /^version/ {gsub(/"/, "", $$2); print $$2}' pyproject.toml)

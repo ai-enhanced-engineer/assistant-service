@@ -112,9 +112,8 @@ assistant-service/
 │           ├── assistants.py # Agent configurations
 │           ├── functions.py  # Custom tool functions
 │           └── instructions.py # Agent personalities
-├── botbrew_commons/          # Shared infrastructure
-│   ├── data_models/          # Pydantic models
-│   └── repositories/         # Config/secret storage
+│   ├── data_models/          # Pydantic models (within assistant_service/)
+│   └── repositories/         # Config/secret storage (within assistant_service/)
 └── tests/                    # Test suites
 ```
 

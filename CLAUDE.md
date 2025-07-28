@@ -13,7 +13,7 @@ The system follows a **modular, layered architecture** with clear separation of 
 - **HTTP API Layer** (`assistant_service/main.py`) - FastAPI-based REST and WebSocket endpoints
 - **Business Logic Layer** (`assistant_service/processors.py`) - Run processing and message handling  
 - **Integration Layer** (`assistant_service/openai_helpers.py`) - OpenAI API interactions with retry logic
-- **Configuration Layer** (`botbrew_commons/`) - Shared data models and repository patterns
+- **Configuration Layer** (`assistant_service/data_models/`, `assistant_service/repositories/`) - Shared data models and repository patterns
 - **Factory Layer** (`assistant_factory/`) - Assistant creation and tool building
 - **Logging Layer** (`assistant_service/structured_logging.py`) - Structured logging with correlation IDs
 
@@ -33,7 +33,7 @@ The system follows a **modular, layered architecture** with clear separation of 
   - `tool_builder.py` - Converts Python functions to OpenAI tool definitions
   - `client_spec/` - Client-specific configurations and custom functions
 
-- `botbrew_commons/` - **Shared infrastructure**
+- `assistant_service/` - **Also contains shared infrastructure**
   - `data_models/` - Pydantic models for configuration and requests
   - `repositories/` - Repository pattern for config/secret storage (GCP + local)
 
