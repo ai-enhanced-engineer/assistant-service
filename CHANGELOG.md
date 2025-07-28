@@ -2,6 +2,57 @@
 
 <!-- version list -->
 
+## v1.2.0 (2025-07-28)
+
+### Bug Fixes
+
+- Update repository tests to match LocalRepository implementation
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+- Update tests to work with WebSocket persistence changes
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+- WebSocket connection now supports continuous conversations
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+- WebSocket persistence and clean up obsolete module references
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+### Chores
+
+- Clean up references to removed modules and update build configuration
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+- Move assistant_engine tests to root tests directory
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+### Features
+
+- Implement API isolation scripts and reorganize Makefile with enhanced development workflow
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+### Refactoring
+
+- Remove botbrew_commons and reorganize shared code
+  ([#61](https://github.com/lkronecker13/assistant-service/pull/61),
+  [`5a80bf1`](https://github.com/lkronecker13/assistant-service/commit/5a80bf18225e61e795c0bbc9a6f03f64aec9e422))
+
+- Rename assistant_engine to assistant_service
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+- Streamline conversation scripts and improve naming consistency
+  ([#62](https://github.com/lkronecker13/assistant-service/pull/62),
+  [`a65bd91`](https://github.com/lkronecker13/assistant-service/commit/a65bd91dfc2dee36487438f6681c1749e677eabd))
+
+
 ## v1.1.2 (2025-07-28)
 
 ### Bug Fixes
