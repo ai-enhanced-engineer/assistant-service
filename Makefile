@@ -147,7 +147,7 @@ all-test: ## Run all tests with coverage report
 	uv run python -m pytest -m "not integration" -vv -s $(TEST_DIR) \
 		--cov=assistant_service \
 		--cov-config=pyproject.toml \
-		--cov-fail-under=75 \
+		--cov-fail-under=85 \
 		--cov-report=term-missing
 	$(GREEN_LINE)
 
@@ -256,7 +256,7 @@ service-build: environment-sync ## Build Docker image for assistant service
 	@echo "🏗️  Building Assistant Service Docker image..."
 	@echo "📦 Version: $(PROJECT_VERSION)"
 	@echo "👤 Client: $(CLIENT_ID)"
-	cp assistant_factory/client_spec/$(CLIENT_ID)/functions.py assistant_service/functions.py
+	cp assistant_factory/client_spec/$(CLIENT_ID)/tools.py assistant_service/tools.py
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-service:latest -t assistant-service:$(PROJECT_VERSION)
 	@echo "✅ Docker image built successfully!"
 	$(GREEN_LINE)

@@ -1,11 +1,19 @@
 """Tests for tool output error recovery functionality."""
 
 import types
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from assistant_service.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
+from assistant_service.entities import EngineAssistantConfig
+from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+
+
+def create_mock_tool_executor():
+    """Create a mock tool executor for testing."""
+    tool_executor = Mock()
+    tool_executor.execute_tool = Mock(return_value={"tool_call_id": "test_call", "output": "test_output"})
+    return tool_executor
 
 
 @pytest.mark.asyncio
@@ -16,7 +24,12 @@ async def test_submit_tool_outputs_success():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    result = await submit_tool_outputs_with_backoff(mock_client, "thread_123", "run_456", tool_outputs)
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs)
 
     assert result == "success"
     mock_client.beta.threads.runs.submit_tool_outputs.assert_called_once_with(
@@ -33,7 +46,12 @@ async def test_submit_tool_outputs_retry_then_success():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    result = await submit_tool_outputs_with_backoff(mock_client, "thread_123", "run_456", tool_outputs, retries=2)
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
     assert result == "success"
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
@@ -47,7 +65,12 @@ async def test_submit_tool_outputs_permanent_failure():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    result = await submit_tool_outputs_with_backoff(mock_client, "thread_123", "run_456", tool_outputs, retries=2)
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
     assert result is None
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
@@ -63,7 +86,12 @@ async def test_cancel_run_safely_success():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.return_value = None
 
-    result = await cancel_run_safely(mock_client, "thread_123", "run_456")
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is True
     mock_client.beta.threads.runs.cancel.assert_called_once_with(thread_id="thread_123", run_id="run_456")
@@ -78,7 +106,12 @@ async def test_cancel_run_safely_already_terminal():
     mock_run = types.SimpleNamespace(status="completed")
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
 
-    result = await cancel_run_safely(mock_client, "thread_123", "run_456")
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is True
     # Should not attempt to cancel
@@ -95,7 +128,12 @@ async def test_cancel_run_safely_failure():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.side_effect = Exception("Cancel failed")
 
-    result = await cancel_run_safely(mock_client, "thread_123", "run_456")
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
+
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is False
 
@@ -104,7 +142,7 @@ async def test_cancel_run_safely_failure():
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
     from assistant_service import repositories as repos
-    from assistant_service.models import EngineAssistantConfig
+    from assistant_service.entities import EngineAssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -129,21 +167,32 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Also patch in the main module where they're imported
-    import assistant_service.main as main_module
+    from assistant_service.entities import ServiceConfig
+    from assistant_service.server.main import AssistantEngineAPI
 
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
 
-    from assistant_service.main import AssistantEngineAPI
+    # Monkeypatch the client
+    import openai
 
-    api = AssistantEngineAPI()
-    mock_client = AsyncMock()
-    api.client = mock_client
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: AsyncMock())
 
-    # Mock failed tool output submission
-    with patch("assistant_service.main.submit_tool_outputs_with_backoff", return_value=None):
-        with patch("assistant_service.main.cancel_run_safely", return_value=True) as mock_cancel:
+    api = AssistantEngineAPI(service_config=test_config)
+    mock_client = api.client
+
+    # Mock failed tool output submission - use AsyncMock to properly return None
+    mock_submit = AsyncMock(return_value=None)
+    mock_cancel = AsyncMock(return_value=True)
+
+    # Create a mock for the private methods on the run_processor instance
+    with patch.object(api.orchestrator, "_submit_tool_outputs_with_backoff", mock_submit):
+        with patch.object(api.orchestrator, "_cancel_run_safely", mock_cancel):
             # Create mock events
             async def mock_events():
                 # Run created event (to set run_id)
@@ -160,25 +209,40 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
                     event="thread.run.step.completed", data=types.SimpleNamespace(step_details=step_details)
                 )
 
-                # Requires action event
-                required_action = types.SimpleNamespace(type="submit_tool_outputs")
+                # Requires action event - with proper structure
+                required_action = types.SimpleNamespace(
+                    type="submit_tool_outputs",
+                    submit_tool_outputs=types.SimpleNamespace(tool_calls=[]),  # Empty since we already processed them
+                )
                 yield types.SimpleNamespace(
-                    event="thread.run.requires_action", data=types.SimpleNamespace(required_action=required_action)
+                    event="thread.run.requires_action",
+                    data=types.SimpleNamespace(id="run_123", required_action=required_action),
                 )
 
             # Mock event stream creation
-            mock_client.beta.threads.messages.create.return_value = None
-            mock_client.beta.threads.runs.create.return_value = mock_events()
+            mock_client.beta = AsyncMock()
+            mock_client.beta.threads = AsyncMock()
+            mock_client.beta.threads.messages = AsyncMock()
+            mock_client.beta.threads.runs = AsyncMock()
+            mock_client.beta.threads.messages.create = AsyncMock(return_value=None)
+            mock_client.beta.threads.runs.create = AsyncMock(return_value=mock_events())
 
-            # Mock TOOL_MAP with test function
-            with patch("assistant_service.main.TOOL_MAP", {"test_func": lambda param: "result"}):
+            # Mock TOOL_MAP with test function by patching the tool_map on the instance
+            test_tool_map = {"test_func": lambda param: "result"}
+            original_tool_map = api.orchestrator.tool_executor.tool_map
+            api.orchestrator.tool_executor.tool_map = test_tool_map
+
+            try:
                 events = []
                 try:
-                    async for event in api._iterate_run_events("thread_123", "test message"):
+                    async for event in api.orchestrator.iterate_run_events("thread_123", "test message"):
                         events.append(event)
                         # The function should break itself when error recovery triggers
                 except StopAsyncIteration:
                     pass
 
                 # Verify cancellation was called
-                mock_cancel.assert_called_once_with(mock_client, "thread_123", "run_123")
+                mock_cancel.assert_called_once_with("thread_123", "run_123")
+            finally:
+                # Restore original tool map
+                api.orchestrator.tool_executor.tool_map = original_tool_map

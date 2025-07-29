@@ -1,5 +1,6 @@
 import types
 from typing import Any, AsyncIterator
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -19,6 +20,10 @@ class DummyMessages:
 class DummyRuns:
     def __init__(self):
         self.created_kwargs = None
+        self.retrieve = AsyncMock(return_value=types.SimpleNamespace(status="completed"))
+        self.cancel = AsyncMock(return_value=True)
+        # Mock submit_tool_outputs method
+        self.submit_tool_outputs = AsyncMock(return_value="success")
 
     async def create(self, thread_id: str, assistant_id: str, stream: bool) -> AsyncIterator[Any]:
         assert thread_id == "thread"
@@ -55,7 +60,10 @@ class DummyRuns:
             yield types.SimpleNamespace(
                 event="thread.run.requires_action",
                 data=types.SimpleNamespace(
-                    id="run1", required_action=types.SimpleNamespace(type="submit_tool_outputs")
+                    id="run1",
+                    required_action=types.SimpleNamespace(
+                        type="submit_tool_outputs", submit_tool_outputs=types.SimpleNamespace(tool_calls=[])
+                    ),
                 ),
             )
             yield types.SimpleNamespace(event="thread.run.completed", data=types.SimpleNamespace())
@@ -82,9 +90,17 @@ class DummyClient:
         pass
 
 
-async def dummy_submit(client: Any, thread_id: str, run_id: str, tool_outputs: Any, *args: Any, **kwargs: Any) -> str:
-    dummy_submit.called_with = list(tool_outputs)  # type: ignore[attr-defined]
-    return "success"  # Return success instead of None
+# Create a class to track calls instead of using function attributes
+class DummySubmit:
+    def __init__(self):
+        self.called_with = None
+
+    async def __call__(self, thread_id: str, run_id: str, tool_outputs: Any, *args: Any, **kwargs: Any) -> str:
+        self.called_with = list(tool_outputs)
+        return "success"  # Return success instead of None
+
+
+dummy_submit = DummySubmit()
 
 
 async def dummy_function() -> str:
@@ -121,7 +137,7 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_service.models import EngineAssistantConfig
+            from assistant_service.entities import EngineAssistantConfig
 
             return EngineAssistantConfig(
                 assistant_id="aid",
@@ -135,26 +151,55 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service import main
+    from assistant_service.entities import ServiceConfig
 
-    monkeypatch.setattr(main, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
 
-    api = main.AssistantEngineAPI()
-    api.client = DummyClient()  # type: ignore[assignment]
-    monkeypatch.setattr(main, "submit_tool_outputs_with_backoff", dummy_submit)
-    monkeypatch.setattr(main, "TOOL_MAP", {"func": lambda: "out"})
+    # Create API first
+    from assistant_service.server.main import AssistantEngineAPI
+
+    api = AssistantEngineAPI(service_config=test_config)
+
+    # Create a single DummyClient instance and directly replace the client
+    dummy_client = DummyClient()
+    api.client = dummy_client
+
+    # Also update the orchestrator's client reference
+    api.orchestrator.client = dummy_client
+
+    # Import the modules where these are actually located
+    from assistant_service import tools
+
+    # Create a new instance of DummySubmit for this test
+    test_dummy_submit = DummySubmit()
+
+    # Patch the method on the orchestrator instance
+    monkeypatch.setattr(api.orchestrator, "_submit_tool_outputs_with_backoff", test_dummy_submit)
+    monkeypatch.setattr(tools, "TOOL_MAP", {"func": lambda: "out"})
+
+    # Also patch the tool_map on the tool_executor instance
+    api.orchestrator.tool_executor.tool_map = {"func": lambda: "out"}
+
+    # Attach the dummy_submit to the api object so tests can access it
+    api.dummy_submit = test_dummy_submit  # type: ignore[attr-defined]
+
     return api
 
 
 async def test_process_run(api):
-    result = await api._process_run("thread", "hi")
+    result = await api.orchestrator.process_run("thread", "hi")
     assert result == ["hello"]
-    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]
+    assert api.dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]
 
 
 async def test_process_run_stream(api):
-    events = [event async for event in api._process_run_stream("thread", "hi")]
+    events = [event async for event in api.orchestrator.process_run_stream("thread", "hi")]
     assert [e.event for e in events] == [
         "thread.run.created",
         "thread.run.step.completed",
@@ -162,4 +207,4 @@ async def test_process_run_stream(api):
         "thread.run.requires_action",
         "thread.run.completed",
     ]
-    assert dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]
+    assert api.dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]

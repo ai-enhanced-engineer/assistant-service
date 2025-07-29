@@ -10,8 +10,13 @@ A production-ready Python service for deploying customized AI assistants with cl
 - **☁️ Cloud-Native** - Built for Google Cloud Platform with proper secret management
 - **🛡️ Type-Safe** - Comprehensive Pydantic validation and type hints throughout
 - **🔄 Event-Driven Processing** - Real-time tool execution and message processing
+- **📊 Structured Logging** - Correlation IDs and configurable output formats
+- **🔌 Dependency Injection** - Clean separation of concerns with factory patterns
+- **🧪 Test-First Design** - Comprehensive test coverage with custom testing patterns
 
 ## Architecture Overview
+
+The service follows a **modular, layered architecture** with clear separation of concerns:
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -21,15 +26,23 @@ A production-ready Python service for deploying customized AI assistants with cl
                                 ▼
                     ┌──────────────────────────┐
                     │   Custom Tool Execution  │
-                    │   (Weather, Files, etc.) │
+                    │   (Client-specific Tools)│
                     └──────────────────────────┘
                                 │
                                 ▼
                     ┌──────────────────────────┐
                     │  Configuration Storage   │
-                    │     (GCP Cloud)          │
+                    │  (GCP Cloud / Local)     │
                     └──────────────────────────┘
 ```
+
+### Key Components
+
+- **Server Layer** (`server/`) - REST API and WebSocket endpoints
+- **Processors Layer** (`processors/`) - Business logic for message and tool processing, OpenAI integration
+- **Entities Layer** (`entities/`) - Data models and configuration
+- **Repositories Layer** (`repositories/`) - Storage abstraction for configs/secrets
+- **Bootstrap** (`bootstrap.py`) - Dependency injection and initialization
 
 ## Quick Start
 
@@ -57,7 +70,7 @@ A production-ready Python service for deploying customized AI assistants with cl
 
 3. **Run the service:**
    ```bash
-   python -m assistant_service.main
+   python -m assistant_service.server.main
    # or
    make local-run
    ```
@@ -100,37 +113,67 @@ ws.send(JSON.stringify({thread_id: "thread_abc123", message: "Hello!"}));
 
 ```
 assistant-service/
-├── assistant_service/          # Main runtime service
-│   ├── main.py               # FastAPI application
-│   ├── processors.py         # Message and tool processing
-│   └── openai_helpers.py     # OpenAI API integration
-├── assistant_factory/         # Assistant creation system
-│   ├── main.py               # Assistant factory
-│   ├── tool_builder.py       # Tool definition builder
-│   └── client_spec/          # Client-specific configurations
+├── assistant_service/            # Main runtime service
+│   ├── server/                  # HTTP/WebSocket API layer
+│   │   ├── main.py             # FastAPI application and routes
+│   │   ├── schemas.py          # Request/response models
+│   │   └── error_handlers.py   # Global error handling
+│   ├── processors/              # Business logic layer
+│   │   ├── openai_orchestrator.py # OpenAI assistant orchestration
+│   │   ├── message_parser.py    # Message parsing and extraction
+│   │   ├── tool_executor.py    # Tool execution engine
+│   │   └── stream_handler.py    # WebSocket streaming handler
+│   ├── entities/                # Data models and configuration
+│   │   └── config.py           # All configuration classes
+│   ├── repositories/            # Storage abstraction layer
+│   │   ├── base.py             # Repository interfaces
+│   │   ├── gcp.py              # GCP implementation
+│   │   └── local.py            # Local/dev implementation
+│   ├── bootstrap.py             # Application initialization
+│   ├── structured_logging.py    # Logging with correlation IDs
+│   └── tools.py                 # Tool registry (client-specific)
+├── assistant_factory/            # Assistant creation system
+│   ├── main.py                  # Assistant factory
+│   ├── tool_builder.py          # Tool definition builder
+│   └── client_spec/             # Client-specific configurations
 │       └── {CLIENT_ID}/
-│           ├── assistants.py # Agent configurations
-│           ├── functions.py  # Custom tool functions
-│           └── instructions.py # Agent personalities
-│   ├── data_models/          # Pydantic models (within assistant_service/)
-│   └── repositories/         # Config/secret storage (within assistant_service/)
-└── tests/                    # Test suites
+│           ├── assistants.py    # Assistant configurations
+│           ├── tools.py         # Custom tool implementations
+│           └── instructions.py  # Assistant personalities
+└── tests/                       # Comprehensive test suite
 ```
 
 ## Configuration System
 
 ### Environment Variables
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API authentication | ✅ |
-| `PROJECT_ID` | Google Cloud project ID | ✅ |
-| `BUCKET_ID` | GCS bucket for configurations | ✅ |
-| `CLIENT_ID` | Client identifier | ✅ |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account key | Production |
+
+The service uses Pydantic Settings for configuration management:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `ENVIRONMENT` | Environment mode (`development`/`production`) | ❌ | `development` |
+| `OPENAI_API_KEY` | OpenAI API authentication | ✅ | - |
+| `PROJECT_ID` | Google Cloud project ID | ✅ | - |
+| `BUCKET_ID` | GCS bucket for configurations | ✅ | - |
+| `CLIENT_ID` | Client identifier | ✅ | - |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account key | Production | - |
+| `LOGGING_LEVEL` | Log level (DEBUG, INFO, WARNING, ERROR) | ❌ | `INFO` |
+| `STREAM` | Log output stream (stdout, stderr) | ❌ | `stdout` |
+| `LOG_FORMAT` | Log format (json, keyvalue) | ❌ | `keyvalue` |
 
 ### Multi-Environment Support
-- **Local Development**: In-memory repositories
-- **Production**: GCP Cloud Storage + Secret Manager
+
+The service automatically configures itself based on the `ENVIRONMENT` variable:
+
+- **Development Mode** (`ENVIRONMENT=development`):
+  - Uses in-memory repositories for configs/secrets
+  - No GCP dependencies required
+  - Ideal for local testing
+
+- **Production Mode** (`ENVIRONMENT=production`):
+  - GCP Cloud Storage for configuration files
+  - GCP Secret Manager for sensitive data
+  - Requires proper GCP authentication
 
 ## Creating Custom Assistants
 
@@ -152,7 +195,7 @@ personal_assistant = ClientAssistantConfig(
 
 ### 2. Custom Functions
 ```python
-# functions.py
+# tools.py
 def my_custom_function(query: str) -> str:
     """Custom function that the assistant can call."""
     return f"Processed: {query}"
@@ -183,49 +226,77 @@ python -m assistant_factory.main
 ## Development
 
 ### Development Commands
+
+The project uses a comprehensive Makefile for development workflows:
+
 ```bash
-# Install dependencies
-uv sync
+# Environment setup
+make environment-create    # Set up Python environment with uv
+make environment-sync      # Re-sync dependencies
 
-# Run tests
-python -m pytest
+# Code quality
+make format               # Auto-format with Ruff
+make lint                 # Lint and auto-fix
+make type-check           # Type checking with MyPy
+make validate-branch      # Run all checks before commit
 
-# Lint and format
-ruff check      # Lint
-ruff format     # Format
-mypy .          # Type check
+# Testing
+make unit-test            # Run unit tests
+make functional-test      # Run functional tests
+make integration-test     # Run integration tests
+make all-test            # Run all tests with coverage
 
 # Run service locally
-python -m assistant_service.main
+make local-run           # Start with auto-reload (port 8000)
+
+# Docker
+make service-build       # Build Docker image
 ```
 
 ### Testing
+
+The project has comprehensive test coverage with custom testing patterns:
+
 ```bash
-# Run all tests
-python -m pytest
+# Run all tests with coverage
+make all-test
 
-# Run specific test modules
-python -m pytest assistant_service/tests/
-python -m pytest assistant_factory/tests/
+# Run specific test types
+make unit-test         # Unit tests only
+make functional-test   # Functional tests
+make integration-test  # Integration tests
 
-# Run with coverage
-python -m pytest --cov=assistant_service --cov=assistant_factory
+# Validate before committing
+make validate-branch   # Lint + unit tests
 ```
+
+**Testing Patterns:**
+- Custom `DummyClient` pattern for OpenAI mocking
+- Local repository implementations for isolated testing
+- Correlation ID validation in all API tests
+- WebSocket testing with TestClient
 
 ## Deployment
 
 ### Google Cloud Run
-1. **Build and push container:**
+
+1. **Authenticate with GCP:**
    ```bash
-   make build CLIENT_ID=your-client
-   make push CLIENT_ID=your-client
+   make auth-gcloud
    ```
 
-2. **Deploy to Cloud Run:**
+2. **Build and push container:**
+   ```bash
+   make service-build CLIENT_ID=your-client
+   # Then push to your container registry
+   ```
+
+3. **Deploy to Cloud Run:**
    ```bash
    gcloud run deploy assistant-service \
      --image gcr.io/your-project/assistant-service:latest \
-     --set-env-vars PROJECT_ID=your-project,BUCKET_ID=your-bucket,CLIENT_ID=your-client
+     --set-env-vars PROJECT_ID=your-project,BUCKET_ID=your-bucket,CLIENT_ID=your-client \
+     --port 8000
    ```
 
 ### Environment Setup
@@ -242,15 +313,24 @@ python -m pytest --cov=assistant_service --cov=assistant_factory
 
 ## Monitoring & Debugging
 
-### Logging
-- **Structured logging** with timestamps and levels
-- **OpenAI API interaction** logging (filtered for noise reduction)
-- **Tool execution** tracking and error reporting
+### Structured Logging
+- **Native structured logging** with `structlog`
+- **Correlation IDs** for request tracing across components
+- **Configurable output** - JSON or key-value format
+- **Environment-based configuration** for log level and stream
 
-### Health Checks
-- `/health` endpoint for service monitoring
-- Configuration validation on startup
-- OpenAI API connectivity verification
+### API Endpoints
+- **GET `/`** - Service status
+- **GET `/start`** - Create new conversation thread
+- **POST `/chat`** - Send message and get responses
+- **WebSocket `/stream`** - Real-time streaming responses
+
+### Error Handling
+- **Comprehensive error types** with correlation IDs
+- **OpenAI errors** → 502 Bad Gateway
+- **Validation errors** → 400 Bad Request
+- **Server errors** → 500 Internal Server Error
+- **Retry logic** with exponential backoff for transient failures
 
 ## Contributing
 

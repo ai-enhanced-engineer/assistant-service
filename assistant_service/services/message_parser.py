@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+"""Message parsing and processing logic for OpenAI thread messages."""
+
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Optional, Union
 
@@ -6,52 +8,22 @@ from openai.types.beta.threads import TextContentBlock
 from openai.types.beta.threads.message import Message
 from openai.types.beta.threads.runs import RunStep, ToolCall
 
-from .structured_logging import get_logger
+from ..entities.message_data import MessageData
+from ..entities.step_data import StepData
+from ..structured_logging import get_logger
 
-logger = get_logger("PROCESSORS")
-
-
-@dataclass
-class StepData:
-    """Information collected about a single run step.
-
-    Attributes:
-        name: The name of the step or tool.
-        type: The type of step being executed.
-        parent_id: Identifier for any parent step.
-        show_input: Whether to display the input when presenting the step.
-        start: ISO formatted creation time.
-        end: ISO formatted completion time.
-        input: Input payload provided to the step.
-        output: Output returned from the step.
-    """
-
-    name: Optional[str] = None
-    type: Optional[str] = None
-    parent_id: Optional[str] = None
-    show_input: Optional[Union[bool, str]] = None
-    start: Optional[str] = None
-    end: Optional[str] = None
-    input: Any = None
-    output: Any = None
+logger = get_logger("MESSAGE_PARSER")
 
 
-@dataclass
-class MessageData:
-    """Represents a single message extracted from a thread.
+class IMessageParser(ABC):
+    """Interface for message parsing."""
 
-    Attributes:
-        author: Role of the message sender.
-        content: Textual content of the message.
-        id: Unique identifier for the message content block.
-    """
-
-    author: Optional[str] = None
-    content: Optional[str] = None
-    id: Optional[str] = None
+    @abstractmethod
+    async def process(self, message: Message) -> Optional[MessageData]:
+        pass
 
 
-class ToolProcessor:
+class ToolTracker:
     """Track and update tool call steps during a run."""
 
     def __init__(self) -> None:
@@ -93,8 +65,8 @@ class ToolProcessor:
         return step_data
 
 
-class ThreadMessageProcessor:
-    """Process thread message."""
+class MessageParser(IMessageParser):
+    """Parse and process thread messages."""
 
     def __init__(self) -> None:
         self._message_references: dict[str, MessageData] = {}
