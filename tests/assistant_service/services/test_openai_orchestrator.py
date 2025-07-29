@@ -7,21 +7,7 @@ import pytest
 from fastapi import HTTPException
 from openai import OpenAIError
 
-from assistant_service.entities import EngineAssistantConfig
 from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
-
-
-@pytest.fixture
-def mock_config():
-    """Create a test configuration."""
-    return EngineAssistantConfig(
-        assistant_id="test-assistant",
-        assistant_name="Test Assistant",
-        initial_message="Hello",
-        code_interpreter=False,
-        retrieval=False,
-        function_names=["test_func"],
-    )
 
 
 @pytest.fixture
@@ -37,9 +23,9 @@ def mock_client():
 
 
 @pytest.fixture
-def orchestrator(mock_client, mock_config):
+def orchestrator(mock_client, test_engine_config):
     """Create a Run processor instance."""
-    return OpenAIOrchestrator(mock_client, mock_config)
+    return OpenAIOrchestrator(mock_client, test_engine_config)
 
 
 class TestCreateMessage:
@@ -83,7 +69,7 @@ class TestCreateRunStream:
     """Test cases for create_run_stream method."""
 
     @pytest.mark.asyncio
-    async def test_create_run_stream_success(self, orchestrator, mock_client, mock_config):
+    async def test_create_run_stream_success(self, orchestrator, mock_client, test_engine_config):
         """Test successful run stream creation."""
         mock_stream = AsyncMock()
         mock_client.beta.threads.runs.create.return_value = mock_stream
@@ -92,7 +78,7 @@ class TestCreateRunStream:
 
         assert result == mock_stream
         mock_client.beta.threads.runs.create.assert_called_once_with(
-            thread_id="thread123", assistant_id=mock_config.assistant_id, stream=True
+            thread_id="thread123", assistant_id=test_engine_config.assistant_id, stream=True
         )
 
     @pytest.mark.asyncio

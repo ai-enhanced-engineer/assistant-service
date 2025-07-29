@@ -6,83 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from openai import OpenAIError
 
-from assistant_service import repositories as repos
-from assistant_service.entities import EngineAssistantConfig, ServiceConfig
-
-
-@pytest.fixture()
-def api(monkeypatch):
-    # First set up all the patches before any imports
-
-    # Create dummy repositories
-    class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
-            self.project_id = project_id
-            self.client_id = client_id
-
-        def write_secret(self, _):
-            pass
-
-        def access_secret(self, _):
-            return "sk"
-
-    class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
-            self.client_id = client_id
-            self.project_id = project_id
-            self.bucket_name = bucket_name
-
-        def write_config(self, _config):
-            pass
-
-        def read_config(self):
-            return EngineAssistantConfig(
-                assistant_id="a",
-                assistant_name="Development Assistant",
-                initial_message="Hello! I'm your development assistant. How can I help you today?",
-            )
-
-    monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-
-    # Create dummy client
-    class DummyThreads:
-        async def create(self):
-            return types.SimpleNamespace(id="thread123")
-
-    class DummyBeta:
-        def __init__(self):
-            self.threads = DummyThreads()
-
-    class DummyClient:
-        def __init__(self, api_key=None) -> None:
-            self.beta = DummyBeta()
-            self.aclose = AsyncMock()
-            self.close = AsyncMock()
-
-    # Create a single instance to use
-    dummy_client = DummyClient()
-
-    # Patch the factory function
-    import assistant_service.bootstrap
-
-    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
-
-    # Create a test service config
-    test_config = ServiceConfig(
-        environment="development",
-        project_id="p",
-        bucket_id="b",
-        client_id="c",
-    )
-    monkeypatch.setenv("ASSISTANT_ID", "a")
-
-    # Import and create the API
-    from assistant_service.server.main import AssistantEngineAPI
-
-    api = AssistantEngineAPI(service_config=test_config)
-
-    return api, dummy_client
+from assistant_service.entities import ServiceConfig
 
 
 def test_lifespan(api: tuple[Any, Any]) -> None:
@@ -93,7 +17,7 @@ def test_lifespan(api: tuple[Any, Any]) -> None:
     # Note: TestClient may not always trigger shutdown properly in test environment
 
 
-def test_lifespan_creates_client(monkeypatch: Any) -> None:
+def test_lifespan_creates_client(monkeypatch: Any, mock_repositories) -> None:
     """Test that lifespan creates and closes client when not injected."""
     # Mock OpenAI first
     close_mock = AsyncMock()
@@ -118,31 +42,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
-    class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
-            pass
-
-        def access_secret(self, name: str) -> str:
-            return "dummy_secret"
-
-    class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
-            pass
-
-        def read_config(self):
-            from assistant_service.entities import EngineAssistantConfig
-
-            return EngineAssistantConfig(
-                assistant_id="a",
-                assistant_name="Development Assistant",
-                initial_message="Hello! I'm your development assistant. How can I help you today?",
-            )
-
-    monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-
     # Import after patches are set up
-    from assistant_service.entities import ServiceConfig
     from assistant_service.server.main import AssistantEngineAPI
 
     # Create a test service config

@@ -5,37 +5,8 @@ import types
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 from openai import OpenAIError
-
-from assistant_service.services.stream_handler import StreamHandler
-
-
-@pytest.fixture
-def mock_orchestrator():
-    """Create a mock OpenAI orchestrator."""
-    orchestrator = AsyncMock()
-    orchestrator.process_run_stream = AsyncMock()
-    return orchestrator
-
-
-@pytest.fixture
-def websocket_handler(mock_orchestrator):
-    """Create a StreamHandler instance."""
-    return StreamHandler(mock_orchestrator)
-
-
-@pytest.fixture
-def mock_websocket():
-    """Create a mock WebSocket."""
-    ws = AsyncMock(spec=WebSocket)
-    ws.accept = AsyncMock()
-    ws.close = AsyncMock()
-    ws.receive_json = AsyncMock()
-    ws.send_text = AsyncMock()
-    ws.send_json = AsyncMock()
-    return ws
 
 
 class TestHandleConnection:
@@ -75,10 +46,11 @@ class TestHandleConnection:
 
         # Mock run processor to return empty stream
         async def empty_stream(*args):
-            return
-            yield  # Make it an async generator
+            # This must actually yield to be an async generator
+            if False:  # Never reached but makes it a generator
+                yield
 
-        websocket_handler.orchestrator.process_run_stream.return_value = empty_stream()
+        websocket_handler.orchestrator.process_run_stream = empty_stream
 
         await websocket_handler.handle_connection(mock_websocket)
 
@@ -263,11 +235,12 @@ class TestHandleMessageLoop:
             WebSocketDisconnect(),  # End the loop
         ]
 
-        # Mock empty stream
-        async def empty_stream(*args):
+        # Mock empty stream - create proper async generator
+        async def empty_stream():
             return
-            yield
+            yield  # Never reached but makes it a generator
 
+        # Set up the mock to return the generator when called
         mock_orchestrator.process_run_stream.return_value = empty_stream()
 
         await websocket_handler._handle_message_loop(mock_websocket, 123)
@@ -283,11 +256,12 @@ class TestHandleMessageLoop:
             WebSocketDisconnect(),  # End the loop
         ]
 
-        # Mock empty stream
-        async def empty_stream(*args):
+        # Mock empty stream - create proper async generator
+        async def empty_stream():
             return
-            yield
+            yield  # Never reached but makes it a generator
 
+        # Set up the mock to return the generator when called
         mock_orchestrator.process_run_stream.return_value = empty_stream()
 
         await websocket_handler._handle_message_loop(mock_websocket, 123)

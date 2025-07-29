@@ -73,74 +73,11 @@ def test_set_and_get_correlation_id():
     assert get_correlation_id() == test_id
 
 
-@pytest.mark.asyncio
-async def test_api_endpoints_include_correlation_ids(monkeypatch):
+def test_api_endpoints_include_correlation_ids(api):
     """Test that API endpoints include correlation IDs in responses and logs."""
-    from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    api_obj, dummy_client = api
 
-    # Mock repositories
-    monkeypatch.setenv("PROJECT_ID", "p")
-    monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
-    monkeypatch.setenv("ASSISTANT_ID", "a")
-
-    class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
-            pass
-
-        def access_secret(self, _):
-            return "sk"
-
-    class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
-            pass
-
-        def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
-
-    monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-
-    # Mock client - define first
-    class DummyThreads:
-        async def create(self):
-            return types.SimpleNamespace(id="thread123")
-
-    class DummyBeta:
-        def __init__(self):
-            self.threads = DummyThreads()
-
-    class DummyClient:
-        def __init__(self) -> None:
-            self.beta = DummyBeta()
-            self.aclose = AsyncMock()
-            self.close = AsyncMock()
-
-    # Create a single instance to return consistently
-    dummy_client = DummyClient()
-
-    # Patch the factory function BEFORE importing AssistantEngineAPI
-    import assistant_service.bootstrap
-
-    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
-
-    from assistant_service.entities import ServiceConfig
-
-    # Create a test service config
-    test_config = ServiceConfig(
-        environment="development",
-        project_id="p",
-        bucket_id="b",
-        client_id="c",
-    )
-
-    # Import AFTER patching
-    from assistant_service.server.main import AssistantEngineAPI
-
-    api = AssistantEngineAPI(service_config=test_config)
-
-    with TestClient(api.app) as client:
+    with TestClient(api_obj.app) as client:
         # Test start endpoint includes correlation_id
         resp = client.get("/start")
         assert resp.status_code == 200
