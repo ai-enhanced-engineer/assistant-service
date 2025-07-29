@@ -1,4 +1,4 @@
-from assistant_service.models import EngineAssistantConfig
+from assistant_service.entities import EngineAssistantConfig
 from assistant_service.repositories import BaseConfigRepository, BaseSecretRepository
 
 

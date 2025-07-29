@@ -139,7 +139,7 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_service.models import EngineAssistantConfig
+            from assistant_service.entities import EngineAssistantConfig
 
             return EngineAssistantConfig(
                 assistant_id="aid",

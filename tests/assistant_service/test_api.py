@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from openai import OpenAIError
 
 from assistant_service import repositories as repos
-from assistant_service.models import EngineAssistantConfig
+from assistant_service.entities import EngineAssistantConfig
 from assistant_service.server.main import AssistantEngineAPI
 
 
@@ -113,7 +113,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
             pass
 
         def read_config(self):
-            from assistant_service.models import EngineAssistantConfig
+            from assistant_service.entities import EngineAssistantConfig
 
             return EngineAssistantConfig(
                 assistant_id="a",

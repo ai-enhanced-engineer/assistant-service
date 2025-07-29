@@ -104,7 +104,7 @@ async def test_cancel_run_safely_failure():
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
     from assistant_service import repositories as repos
-    from assistant_service.models import EngineAssistantConfig
+    from assistant_service.entities import EngineAssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")

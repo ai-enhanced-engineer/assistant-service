@@ -4,7 +4,7 @@ from typing import Optional
 
 from openai import AsyncOpenAI
 
-from ..models import EngineAssistantConfig
+from ..entities import EngineAssistantConfig
 from ..structured_logging import get_logger
 
 logger = get_logger("OPENAI_CLIENT")

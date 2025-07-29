@@ -1,4 +1,4 @@
-"""Data models for the assistant engine."""
+"""Data entities for the assistant engine."""
 
 from .config import EngineAssistantConfig
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from openai import AsyncOpenAI
 
     from ..core.run_processor import RunProcessor
-    from ..models import EngineAssistantConfig
+    from ..entities import EngineAssistantConfig
 
 logger = get_logger("API_ENDPOINTS")
 

@@ -77,7 +77,7 @@ def test_set_and_get_correlation_id():
 async def test_api_endpoints_include_correlation_ids(monkeypatch):
     """Test that API endpoints include correlation IDs in responses and logs."""
     from assistant_service import repositories as repos
-    from assistant_service.models import EngineAssistantConfig
+    from assistant_service.entities import EngineAssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -152,7 +152,7 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
     from assistant_service import repositories as repos
-    from assistant_service.models import EngineAssistantConfig
+    from assistant_service.entities import EngineAssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -227,7 +227,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     """Test chat endpoint validation includes correlation ID in error."""
     from assistant_service import repositories as repos
-    from assistant_service.models import EngineAssistantConfig
+    from assistant_service.entities import EngineAssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
