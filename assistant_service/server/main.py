@@ -61,7 +61,7 @@ class AssistantEngineAPI:
         # Create components using factory functions
         self.client: AsyncOpenAI = get_openai_client(self.engine_config)
         self.orchestrator = get_orchestrator(self.client, self.engine_config)
-        self.stream_handler = get_stream_handler(self.orchestrator)
+        self.stream_handler = get_stream_handler(self.orchestrator, self.engine_config.stream_handler_type)
 
         # Log configuration (without sensitive data)
         logger.info(

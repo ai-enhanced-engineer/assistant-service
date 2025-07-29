@@ -1,5 +1,6 @@
 """Centralized error handling for the assistant service."""
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import HTTPException, WebSocket
@@ -57,7 +58,7 @@ class WebSocketErrorHandler:
                 {
                     "error": message,
                     "error_code": error_code,
-                    "timestamp": "now",  # Simplified for now
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             )
         except Exception as err:  # noqa: BLE001
