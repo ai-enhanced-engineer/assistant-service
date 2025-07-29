@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for the WebSocketHandler."""
+"""Comprehensive unit tests for the StreamHandler."""
 
 import json
 import types
@@ -9,21 +9,21 @@ from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 from openai import OpenAIError
 
-from assistant_service.processors.websocket_processor import WebSocketHandler
+from assistant_service.processors.stream_handler import StreamHandler
 
 
 @pytest.fixture
-def mock_run_processor():
-    """Create a mock Run processor."""
-    processor = AsyncMock()
-    processor.process_run_stream = AsyncMock()
-    return processor
+def mock_orchestrator():
+    """Create a mock OpenAI orchestrator."""
+    orchestrator = AsyncMock()
+    orchestrator.process_run_stream = AsyncMock()
+    return orchestrator
 
 
 @pytest.fixture
-def websocket_handler(mock_run_processor):
-    """Create a WebSocketHandler instance."""
-    return WebSocketHandler(mock_run_processor)
+def websocket_handler(mock_orchestrator):
+    """Create a StreamHandler instance."""
+    return StreamHandler(mock_orchestrator)
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ class TestHandleConnection:
         mock_websocket.close.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_handle_connection_client_disconnect(self, websocket_handler, mock_websocket, mock_run_processor):
+    async def test_handle_connection_client_disconnect(self, websocket_handler, mock_websocket, mock_orchestrator):
         """Test handling client disconnect during message loop."""
         mock_websocket.receive_json.side_effect = WebSocketDisconnect()
 
@@ -62,7 +62,7 @@ class TestHandleConnection:
         mock_websocket.accept.assert_called_once()
         mock_websocket.close.assert_called_once()
         # Should not process any runs
-        mock_run_processor.process_run_stream.assert_not_called()
+        mock_orchestrator.process_run_stream.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_handle_connection_critical_error(self, websocket_handler, mock_websocket):
@@ -78,7 +78,7 @@ class TestHandleConnection:
             return
             yield  # Make it an async generator
 
-        websocket_handler.run_processor.process_run_stream.return_value = empty_stream()
+        websocket_handler.orchestrator.process_run_stream.return_value = empty_stream()
 
         await websocket_handler.handle_connection(mock_websocket)
 
@@ -106,7 +106,7 @@ class TestReceiveRequest:
         # Mock receive_json to raise JSONDecodeError
         mock_websocket.receive_json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             result = await websocket_handler._receive_request(mock_websocket, 123)
@@ -129,7 +129,7 @@ class TestReceiveRequest:
         """Test handling unexpected error during receive."""
         mock_websocket.receive_json.side_effect = RuntimeError("Unexpected error")
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = False
             mock_error_handler.send_error = AsyncMock()
 
@@ -155,7 +155,7 @@ class TestProcessStream:
             yield event2
 
         # Patch the method directly
-        with patch.object(websocket_handler.run_processor, "process_run_stream", mock_process_run_stream):
+        with patch.object(websocket_handler.orchestrator, "process_run_stream", mock_process_run_stream):
             await websocket_handler._process_stream(mock_websocket, 123, "thread123", "Hello", "corr123")
 
         assert mock_websocket.send_text.call_count == 2
@@ -171,11 +171,11 @@ class TestProcessStream:
             raise OpenAIError("API error")
             yield  # This won't be reached but satisfies the generator requirement
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             # Patch the method directly
-            with patch.object(websocket_handler.run_processor, "process_run_stream", mock_process_run_stream):
+            with patch.object(websocket_handler.orchestrator, "process_run_stream", mock_process_run_stream):
                 await websocket_handler._process_stream(mock_websocket, 123, "thread123", "Hello", "corr123")
 
             mock_error_handler.send_error.assert_called_once()
@@ -198,12 +198,12 @@ class TestProcessStream:
         # First send succeeds, second fails
         mock_websocket.send_text.side_effect = [None, RuntimeError("Send failed")]
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = False
             mock_error_handler.send_error = AsyncMock()
 
             # Patch the method directly
-            with patch.object(websocket_handler.run_processor, "process_run_stream", mock_process_run_stream):
+            with patch.object(websocket_handler.orchestrator, "process_run_stream", mock_process_run_stream):
                 await websocket_handler._process_stream(mock_websocket, 123, "thread123", "Hello", "corr123")
 
             mock_error_handler.send_error.assert_called_once()
@@ -223,11 +223,11 @@ class TestProcessStream:
         # Simulate disconnect on first send
         mock_websocket.send_text.side_effect = WebSocketDisconnect()
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = True
 
             # Patch the method directly
-            with patch.object(websocket_handler.run_processor, "process_run_stream", mock_process_run_stream):
+            with patch.object(websocket_handler.orchestrator, "process_run_stream", mock_process_run_stream):
                 await websocket_handler._process_stream(mock_websocket, 123, "thread123", "Hello", "corr123")
 
             # Should not send error on disconnect
@@ -246,7 +246,7 @@ class TestHandleMessageLoop:
             WebSocketDisconnect(),  # End the loop
         ]
 
-        with patch("assistant_service.processors.websocket_processor.WebSocketErrorHandler") as mock_error_handler:
+        with patch("assistant_service.processors.stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             await websocket_handler._handle_message_loop(mock_websocket, 123)
@@ -256,7 +256,7 @@ class TestHandleMessageLoop:
             assert "Missing thread_id or message" in args[1]
 
     @pytest.mark.asyncio
-    async def test_handle_message_loop_valid_request(self, websocket_handler, mock_websocket, mock_run_processor):
+    async def test_handle_message_loop_valid_request(self, websocket_handler, mock_websocket, mock_orchestrator):
         """Test handling valid request in message loop."""
         mock_websocket.receive_json.side_effect = [
             {"thread_id": "thread123", "message": "Hello"},
@@ -268,14 +268,14 @@ class TestHandleMessageLoop:
             return
             yield
 
-        mock_run_processor.process_run_stream.return_value = empty_stream()
+        mock_orchestrator.process_run_stream.return_value = empty_stream()
 
         await websocket_handler._handle_message_loop(mock_websocket, 123)
 
-        mock_run_processor.process_run_stream.assert_called_once_with("thread123", "Hello")
+        mock_orchestrator.process_run_stream.assert_called_once_with("thread123", "Hello")
 
     @pytest.mark.asyncio
-    async def test_handle_message_loop_multiple_messages(self, websocket_handler, mock_websocket, mock_run_processor):
+    async def test_handle_message_loop_multiple_messages(self, websocket_handler, mock_websocket, mock_orchestrator):
         """Test handling multiple messages in the loop."""
         mock_websocket.receive_json.side_effect = [
             {"thread_id": "thread1", "message": "Hello"},
@@ -288,10 +288,10 @@ class TestHandleMessageLoop:
             return
             yield
 
-        mock_run_processor.process_run_stream.return_value = empty_stream()
+        mock_orchestrator.process_run_stream.return_value = empty_stream()
 
         await websocket_handler._handle_message_loop(mock_websocket, 123)
 
-        assert mock_run_processor.process_run_stream.call_count == 2
-        mock_run_processor.process_run_stream.assert_any_call("thread1", "Hello")
-        mock_run_processor.process_run_stream.assert_any_call("thread2", "World")
+        assert mock_orchestrator.process_run_stream.call_count == 2
+        mock_orchestrator.process_run_stream.assert_any_call("thread1", "Hello")
+        mock_orchestrator.process_run_stream.assert_any_call("thread2", "World")

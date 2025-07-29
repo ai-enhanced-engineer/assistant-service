@@ -191,7 +191,7 @@ def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) ->
         assert msg == "hello"
         return ["response"]
 
-    monkeypatch.setattr(api_obj.run_processor, "process_run", dummy_run)
+    monkeypatch.setattr(api_obj.orchestrator, "process_run", dummy_run)
     with TestClient(api_obj.app) as client:
         resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
         assert resp.status_code == 200
@@ -209,7 +209,7 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) 
         yield types.SimpleNamespace(model_dump_json=lambda: "event1")
         yield types.SimpleNamespace(model_dump_json=lambda: "event2")
 
-    monkeypatch.setattr(api_obj.run_processor, "process_run_stream", dummy_stream)
+    monkeypatch.setattr(api_obj.orchestrator, "process_run_stream", dummy_stream)
 
     with TestClient(api_obj.app) as client, client.websocket_connect("/stream") as websocket:
         websocket.send_json({"thread_id": "thread123", "message": "hello"})
@@ -260,8 +260,8 @@ def test_validate_function_args_success(api: tuple[AssistantEngineAPI, Any]) -> 
         return f"{required_param}_{optional_param}"
 
     # Valid arguments
-    api_obj.run_processor.tool_executor.validate_function_args(test_func, {"required_param": "value"}, "test_func")
-    api_obj.run_processor.tool_executor.validate_function_args(
+    api_obj.orchestrator.tool_executor.validate_function_args(test_func, {"required_param": "value"}, "test_func")
+    api_obj.orchestrator.tool_executor.validate_function_args(
         test_func, {"required_param": "value", "optional_param": "custom"}, "test_func"
     )
 
@@ -275,7 +275,7 @@ def test_validate_function_args_missing_required(api: tuple[AssistantEngineAPI, 
 
     # Missing required parameter
     with pytest.raises(TypeError, match="Missing required arguments: required_param"):
-        api_obj.run_processor.tool_executor.validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
+        api_obj.orchestrator.tool_executor.validate_function_args(test_func, {"optional_param": "custom"}, "test_func")
 
 
 def test_validate_function_args_unexpected_params(api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -288,7 +288,7 @@ def test_validate_function_args_unexpected_params(api: tuple[AssistantEngineAPI,
     # Since we're using structured logging, we can't easily test log output in unit tests
     # Instead, we just verify that the function doesn't raise an error with unexpected params
     # and that it still works correctly
-    api_obj.run_processor.tool_executor.validate_function_args(
+    api_obj.orchestrator.tool_executor.validate_function_args(
         test_func, {"required_param": "value", "unexpected": "param"}, "test_func"
     )
     # validate_function_args doesn't return anything, just verify it runs without error
@@ -348,8 +348,8 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
 
     # Mock TOOL_MAP with our test function
     # Patch the tool_map on the actual tool_executor instance
-    original_tool_map = api_obj.run_processor.tool_executor.tool_map
-    api_obj.run_processor.tool_executor.tool_map = {"test_function": test_function}
+    original_tool_map = api_obj.orchestrator.tool_executor.tool_map
+    api_obj.orchestrator.tool_executor.tool_map = {"test_function": test_function}
 
     try:
         # Create a mock tool call event with missing required parameter
@@ -379,7 +379,7 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
                     if tool_call.type == "function":
                         # Use the tool executor directly
                         context = {"tool_call_id": tool_call.id, "thread_id": "test", "correlation_id": "test"}
-                        result = api_obj.run_processor.tool_executor.execute_tool(
+                        result = api_obj.orchestrator.tool_executor.execute_tool(
                             tool_name=tool_call.function.name, tool_args=tool_call.function.arguments, context=context
                         )
                         tool_outputs[tool_call.id] = result
@@ -390,4 +390,4 @@ async def test_function_tool_call_invalid_arguments(api: tuple[AssistantEngineAP
         assert "Missing required arguments: required_param" in tool_outputs["tool_456"]["output"]
     finally:
         # Restore original tool map
-        api_obj.run_processor.tool_executor.tool_map = original_tool_map
+        api_obj.orchestrator.tool_executor.tool_map = original_tool_map

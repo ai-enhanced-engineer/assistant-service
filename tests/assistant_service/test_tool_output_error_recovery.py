@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from assistant_service.entities import EngineAssistantConfig
-from assistant_service.processors.run_processor import Run
+from assistant_service.processors.openai_orchestrator import OpenAIOrchestrator
 
 
 @pytest.mark.asyncio
@@ -20,9 +20,9 @@ async def test_submit_tool_outputs_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs)
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs)
 
     assert result == "success"
     mock_client.beta.threads.runs.submit_tool_outputs.assert_called_once_with(
@@ -42,9 +42,9 @@ async def test_submit_tool_outputs_retry_then_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
     assert result == "success"
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
@@ -61,9 +61,9 @@ async def test_submit_tool_outputs_permanent_failure():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
+    result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
     assert result is None
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
@@ -82,9 +82,9 @@ async def test_cancel_run_safely_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is True
     mock_client.beta.threads.runs.cancel.assert_called_once_with(thread_id="thread_123", run_id="run_456")
@@ -102,9 +102,9 @@ async def test_cancel_run_safely_already_terminal():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is True
     # Should not attempt to cancel
@@ -124,9 +124,9 @@ async def test_cancel_run_safely_failure():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
     assert result is False
 
@@ -184,8 +184,8 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     mock_cancel = AsyncMock(return_value=True)
 
     # Create a mock for the private methods on the run_processor instance
-    with patch.object(api.run_processor, "_submit_tool_outputs_with_backoff", mock_submit):
-        with patch.object(api.run_processor, "_cancel_run_safely", mock_cancel):
+    with patch.object(api.orchestrator, "_submit_tool_outputs_with_backoff", mock_submit):
+        with patch.object(api.orchestrator, "_cancel_run_safely", mock_cancel):
             # Create mock events
             async def mock_events():
                 # Run created event (to set run_id)
@@ -222,13 +222,13 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
 
             # Mock TOOL_MAP with test function by patching the tool_map on the instance
             test_tool_map = {"test_func": lambda param: "result"}
-            original_tool_map = api.run_processor.tool_executor.tool_map
-            api.run_processor.tool_executor.tool_map = test_tool_map
+            original_tool_map = api.orchestrator.tool_executor.tool_map
+            api.orchestrator.tool_executor.tool_map = test_tool_map
 
             try:
                 events = []
                 try:
-                    async for event in api.run_processor.iterate_run_events("thread_123", "test message"):
+                    async for event in api.orchestrator.iterate_run_events("thread_123", "test message"):
                         events.append(event)
                         # The function should break itself when error recovery triggers
                 except StopAsyncIteration:
@@ -238,4 +238,4 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
                 mock_cancel.assert_called_once_with("thread_123", "run_123")
             finally:
                 # Restore original tool map
-                api.run_processor.tool_executor.tool_map = original_tool_map
+                api.orchestrator.tool_executor.tool_map = original_tool_map

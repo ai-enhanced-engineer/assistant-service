@@ -2,12 +2,12 @@ import pytest
 from openai.types.beta.threads import Message, TextContentBlock
 from openai.types.beta.threads.text import Text
 
-from assistant_service.processors.message_processor import ThreadMessage
+from assistant_service.processors.message_parser import MessageParser
 
 
 @pytest.mark.asyncio
 async def test__processor_updates_message_if_already_in_message_references() -> None:
-    processor = ThreadMessage()
+    processor = MessageParser()
 
     thread_message = Message(
         id="12340",
@@ -36,7 +36,7 @@ async def test__processor_updates_message_if_already_in_message_references() -> 
 
 @pytest.mark.asyncio
 async def test__processor_returns_none_when_content_empty():
-    processor = ThreadMessage()
+    processor = MessageParser()
 
     thread_message = Message(
         id="empty01",

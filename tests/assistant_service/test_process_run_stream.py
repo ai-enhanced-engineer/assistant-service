@@ -183,12 +183,12 @@ def api(monkeypatch):
     # Create a new instance of DummySubmit for this test
     test_dummy_submit = DummySubmit()
 
-    # Patch the method on the run_processor instance
-    monkeypatch.setattr(api.run_processor, "_submit_tool_outputs_with_backoff", test_dummy_submit)
+    # Patch the method on the orchestrator instance
+    monkeypatch.setattr(api.orchestrator, "_submit_tool_outputs_with_backoff", test_dummy_submit)
     monkeypatch.setattr(tools, "TOOL_MAP", {"func": lambda: "out"})
 
     # Also patch the tool_map on the tool_executor instance
-    api.run_processor.tool_executor.tool_map = {"func": lambda: "out"}
+    api.orchestrator.tool_executor.tool_map = {"func": lambda: "out"}
 
     # Attach the dummy_submit to the api object so tests can access it
     api.dummy_submit = test_dummy_submit  # type: ignore[attr-defined]
@@ -197,13 +197,13 @@ def api(monkeypatch):
 
 
 async def test_process_run(api):
-    result = await api.run_processor.process_run("thread", "hi")
+    result = await api.orchestrator.process_run("thread", "hi")
     assert result == ["hello"]
     assert api.dummy_submit.called_with == [{"tool_call_id": "call1", "output": "out"}]  # type: ignore[attr-defined]
 
 
 async def test_process_run_stream(api):
-    events = [event async for event in api.run_processor.process_run_stream("thread", "hi")]
+    events = [event async for event in api.orchestrator.process_run_stream("thread", "hi")]
     assert [e.event for e in events] == [
         "thread.run.created",
         "thread.run.step.completed",

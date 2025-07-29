@@ -119,10 +119,10 @@ assistant-service/
 │   │   ├── schemas.py          # Request/response models
 │   │   └── error_handlers.py   # Global error handling
 │   ├── processors/              # Business logic layer
-│   │   ├── run_processor.py    # OpenAI run orchestration
-│   │   ├── message_processor.py # Message extraction
+│   │   ├── openai_orchestrator.py # OpenAI assistant orchestration
+│   │   ├── message_parser.py    # Message parsing and extraction
 │   │   ├── tool_executor.py    # Tool execution engine
-│   │   └── websocket_processor.py # WebSocket handling
+│   │   └── stream_handler.py    # WebSocket streaming handler
 │   ├── entities/                # Data models and configuration
 │   │   └── config.py           # All configuration classes
 │   ├── repositories/            # Storage abstraction layer

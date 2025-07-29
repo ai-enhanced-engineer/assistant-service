@@ -7,17 +7,17 @@ The `processors` module contains the core business logic for handling OpenAI Ass
 ```
 processors/
 ├── __init__.py              # Module exports
-├── run_processor.py         # OpenAI run orchestration and streaming
+├── openai_orchestrator.py   # OpenAI assistant orchestration and streaming
 ├── tool_executor.py         # Tool/function execution engine
-├── message_processor.py     # Message and step data processing
-└── websocket_processor.py   # WebSocket connection handling
+├── message_parser.py        # Message and step data parsing
+└── stream_handler.py        # WebSocket streaming and connection handling
 ```
 
 ## Core Components
 
-### 1. Run Processor (`run_processor.py`)
+### 1. OpenAI Orchestrator (`openai_orchestrator.py`)
 
-The `Run` class is the central orchestrator for OpenAI Assistant interactions.
+The `OpenAIOrchestrator` class is the central orchestrator for OpenAI Assistant interactions.
 
 #### Key Responsibilities:
 - Creating and managing conversation threads
@@ -92,9 +92,9 @@ Returns standardized output:
 - Includes correlation IDs in error messages
 - Logs all execution attempts
 
-### 3. Message Processor (`message_processor.py`)
+### 3. Message Parser (`message_parser.py`)
 
-Provides data structures and processing logic for OpenAI messages and steps.
+Provides data structures and parsing logic for OpenAI messages and steps.
 
 #### Data Classes:
 
@@ -117,28 +117,28 @@ Provides data structures and processing logic for OpenAI messages and steps.
 - Collects tool outputs for submission
 - Handles step lifecycle (create/update)
 
-**`ThreadMessage`** - Processes OpenAI thread messages:
+**`MessageParser`** - Parses OpenAI thread messages:
 - Extracts text content from message objects
 - Handles multiple content blocks
 - Maintains message references
 
-### 4. WebSocket Processor (`websocket_processor.py`)
+### 4. Stream Handler (`stream_handler.py`)
 
-The `WebSocketHandler` class manages real-time streaming connections.
+The `StreamHandler` class manages real-time streaming connections via WebSocket.
 
 #### Key Features:
 - Full connection lifecycle management
 - Correlation ID tracking per request
 - Graceful disconnect handling
 - Structured error responses
-- Event streaming from Run processor
+- Event streaming from OpenAI orchestrator
 
 #### Connection Flow:
 
 1. **Accept Connection** → Log and track connection
 2. **Message Loop** → Process incoming requests continuously
 3. **Request Validation** → Ensure thread_id and message present
-4. **Stream Processing** → Forward events from Run processor
+4. **Stream Processing** → Forward events from OpenAI orchestrator
 5. **Error Handling** → Send structured error messages
 6. **Cleanup** → Close connection gracefully
 
@@ -155,14 +155,14 @@ The `WebSocketHandler` class manages real-time streaming connections.
 
 ```mermaid
 graph TD
-    A[Client Request] --> B[WebSocket/HTTP Handler]
-    B --> C[Run Processor]
+    A[Client Request] --> B[Stream Handler/HTTP Endpoint]
+    B --> C[OpenAI Orchestrator]
     C --> D[Create Message]
     C --> E[Create Streaming Run]
     E --> F[Event Stream]
     F --> G{Event Type}
     G -->|tool_calls| H[Tool Executor]
-    G -->|message| I[Message Processor]
+    G -->|message| I[Message Parser]
     G -->|requires_action| J[Submit Tool Outputs]
     H --> K[Tool Output]
     K --> J
@@ -193,16 +193,16 @@ graph TD
 ### HTTP Endpoint Usage
 ```python
 # In FastAPI route
-run_processor = Run(client, config)
-messages = await run_processor.process_run(thread_id, user_message)
+orchestrator = OpenAIOrchestrator(client, config)
+messages = await orchestrator.process_run(thread_id, user_message)
 return {"responses": messages}
 ```
 
 ### WebSocket Usage
 ```python
 # In WebSocket endpoint
-ws_handler = WebSocketHandler(run_processor)
-await ws_handler.handle_connection(websocket)
+stream_handler = StreamHandler(orchestrator)
+await stream_handler.handle_connection(websocket)
 ```
 
 ### Tool Registration
@@ -238,9 +238,9 @@ TOOL_MAP = {
 ## Testing
 
 The processors module includes comprehensive test coverage:
-- `test_run_processor.py`: Run processing and OpenAI integration
+- `test_openai_orchestrator.py`: OpenAI orchestration and integration
 - `test_tool_executor.py`: Tool execution and validation
-- `test_message_processor.py`: Message and step processing
-- `test_websocket_processor.py`: WebSocket handling
+- `test_message_parser.py`: Message and step parsing
+- `test_stream_handler.py`: Stream handling and WebSocket connections
 
 Tests use AsyncMock and custom dummy clients to avoid external dependencies.

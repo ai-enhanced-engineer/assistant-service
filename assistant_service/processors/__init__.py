@@ -1,16 +1,16 @@
-"""Processors for handling runs, messages, tool execution, and WebSocket connections."""
+"""Processors for handling assistant orchestration, message parsing, tool execution, and streaming."""
 
-from .message_processor import MessageData, StepData, ThreadMessage, ToolTracker
-from .run_processor import Run
+from .message_parser import MessageData, MessageParser, StepData, ToolTracker
+from .openai_orchestrator import OpenAIOrchestrator
+from .stream_handler import StreamHandler
 from .tool_executor import ToolExecutor
-from .websocket_processor import WebSocketHandler
 
 __all__ = [
     "MessageData",
     "StepData",
-    "ThreadMessage",
+    "MessageParser",
     "ToolTracker",
-    "Run",
+    "OpenAIOrchestrator",
     "ToolExecutor",
-    "WebSocketHandler",
+    "StreamHandler",
 ]

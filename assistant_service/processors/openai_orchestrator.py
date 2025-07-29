@@ -1,4 +1,4 @@
-"""Run processing logic for the assistant service."""
+"""OpenAI assistant orchestration logic for the assistant service."""
 
 import asyncio
 from typing import Any, AsyncGenerator, Iterable, Optional
@@ -10,11 +10,11 @@ from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import ToolExecutor
 
-logger = get_logger("RUN_PROCESSOR")
+logger = get_logger("OPENAI_ORCHESTRATOR")
 
 
-class Run:
-    """Handles OpenAI run processing and event streaming."""
+class OpenAIOrchestrator:
+    """Orchestrates OpenAI assistant runs and event streaming."""
 
     def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig):
         """Initialize with OpenAI client and configuration."""

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from assistant_service.entities import EngineAssistantConfig
-from assistant_service.processors.run_processor import Run
+from assistant_service.processors.openai_orchestrator import OpenAIOrchestrator
 
 
 @pytest.mark.asyncio
@@ -15,9 +15,9 @@ async def test_retrieve_run_returns_none_on_error():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._retrieve_run("t", "r")
+    result = await orchestrator._retrieve_run("t", "r")
     assert result is None
     mock_client.beta.threads.runs.retrieve.assert_called_once_with(thread_id="t", run_id="r")
 
@@ -31,9 +31,9 @@ async def test_list_run_steps_returns_none_on_error():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._list_run_steps("t", "r")
+    result = await orchestrator._list_run_steps("t", "r")
     assert result is None
     mock_client.beta.threads.runs.steps.list.assert_called_once_with(thread_id="t", run_id="r", order="asc")
 
@@ -48,9 +48,9 @@ async def test_submit_tool_outputs_retries():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._submit_tool_outputs_with_backoff("t", "r", [])
+    result = await orchestrator._submit_tool_outputs_with_backoff("t", "r", [])
     assert result == "ok"
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
 
@@ -64,9 +64,9 @@ async def test_submit_tool_outputs_returns_none_after_retries():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._submit_tool_outputs_with_backoff("t", "r", [], retries=2)
+    result = await orchestrator._submit_tool_outputs_with_backoff("t", "r", [], retries=2)
     assert result is None
     assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
 
@@ -83,9 +83,9 @@ async def test_cancel_run_safely_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
     assert result is True
     mock_client.beta.threads.runs.cancel.assert_called_once_with(thread_id="thread_123", run_id="run_456")
 
@@ -101,9 +101,9 @@ async def test_cancel_run_safely_already_terminal():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
     assert result is True
     # Should not attempt to cancel
     mock_client.beta.threads.runs.cancel.assert_not_called()
@@ -121,7 +121,7 @@ async def test_cancel_run_safely_failure():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    run_processor = Run(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config)
 
-    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    result = await orchestrator._cancel_run_safely("thread_123", "run_456")
     assert result is False

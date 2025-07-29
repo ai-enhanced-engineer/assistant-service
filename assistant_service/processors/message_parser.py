@@ -8,7 +8,7 @@ from openai.types.beta.threads.runs import RunStep, ToolCall
 
 from ..structured_logging import get_logger
 
-logger = get_logger("PROCESSORS")
+logger = get_logger("MESSAGE_PARSER")
 
 
 @dataclass
@@ -93,8 +93,8 @@ class ToolTracker:
         return step_data
 
 
-class ThreadMessage:
-    """Process thread message."""
+class MessageParser:
+    """Parse and process thread messages."""
 
     def __init__(self) -> None:
         self._message_references: dict[str, MessageData] = {}

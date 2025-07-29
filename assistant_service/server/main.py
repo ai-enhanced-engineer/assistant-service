@@ -11,8 +11,8 @@ from openai import AsyncOpenAI, OpenAIError
 
 from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
 from ..entities import ServiceConfig
-from ..processors.run_processor import Run
-from ..processors.websocket_processor import WebSocketHandler
+from ..processors.openai_orchestrator import OpenAIOrchestrator
+from ..processors.stream_handler import StreamHandler
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler
 from .schemas import ChatRequest, ChatResponse, StartResponse
@@ -69,8 +69,8 @@ class AssistantEngineAPI:
         )
 
         # Initialize all components
-        self.run_processor = Run(self.client, self.engine_config)
-        self.websocket_processor = WebSocketHandler(self.run_processor)
+        self.orchestrator = OpenAIOrchestrator(self.client, self.engine_config)
+        self.stream_handler = StreamHandler(self.orchestrator)
 
         # Create FastAPI app
         self.app = FastAPI(title="Assistant Engine", lifespan=create_lifespan(self))
@@ -109,14 +109,14 @@ class AssistantEngineAPI:
                 if not request.thread_id:
                     raise ErrorHandler.handle_validation_error("Missing thread_id", correlation_id)
 
-                responses = await self.run_processor.process_run(request.thread_id, request.message)
+                responses = await self.orchestrator.process_run(request.thread_id, request.message)
                 logger.debug("Chat processing completed", thread_id=request.thread_id, response_count=len(responses))
                 return ChatResponse(responses=responses)
 
         @self.app.websocket("/stream")
         async def stream(websocket: WebSocket) -> None:
             """Forward run events through WebSocket with robust error handling."""
-            await self.websocket_processor.handle_connection(websocket)
+            await self.stream_handler.handle_connection(websocket)
 
 
 def get_app() -> FastAPI:
@@ -147,13 +147,13 @@ def _ensure_api_initialized() -> AssistantEngineAPI:
 async def process_run(thread_id: str, human_query: str) -> list[str]:
     """Proxy to the API instance for backward compatibility."""
     api_instance = _ensure_api_initialized()
-    return await api_instance.run_processor.process_run(thread_id, human_query)
+    return await api_instance.orchestrator.process_run(thread_id, human_query)
 
 
 async def process_run_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
     """Proxy streaming run for backward compatibility."""
     api_instance = _ensure_api_initialized()
-    async for event in api_instance.run_processor.process_run_stream(thread_id, human_query):
+    async for event in api_instance.orchestrator.process_run_stream(thread_id, human_query):
         yield event
 
 

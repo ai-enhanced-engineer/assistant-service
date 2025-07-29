@@ -1,4 +1,4 @@
-"""WebSocket processing logic for the assistant service."""
+"""Stream handling logic for WebSocket connections in the assistant service."""
 
 import json
 from typing import Any
@@ -8,21 +8,21 @@ from openai import OpenAIError
 
 from ..server.error_handlers import WebSocketErrorHandler
 from ..structured_logging import CorrelationContext, get_logger
-from .run_processor import Run
+from .openai_orchestrator import OpenAIOrchestrator
 
-logger = get_logger("WEBSOCKET_PROCESSOR")
+logger = get_logger("STREAM_HANDLER")
 
 
-class WebSocketHandler:
+class StreamHandler:
     """Handles WebSocket connections and message streaming."""
 
-    def __init__(self, run_processor: Run):
-        """Initialize with a Run instance.
+    def __init__(self, orchestrator: OpenAIOrchestrator):
+        """Initialize with an OpenAI orchestrator.
 
         Args:
-            run_processor: The Run processor to use for processing runs
+            orchestrator: The OpenAI orchestrator to use for processing runs
         """
-        self.run_processor = run_processor
+        self.orchestrator = orchestrator
 
     async def handle_connection(self, websocket: FastAPIWebSocket) -> None:
         """Handle a WebSocket connection from accept to close.
@@ -156,7 +156,7 @@ class WebSocketHandler:
             correlation_id: The correlation ID for request tracking
         """
         try:
-            async for event in self.run_processor.process_run_stream(thread_id, message):
+            async for event in self.orchestrator.process_run_stream(thread_id, message):
                 try:
                     await websocket.send_text(event.model_dump_json())
                 except Exception as err:  # noqa: BLE001
