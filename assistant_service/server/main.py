@@ -11,8 +11,8 @@ from fastapi import FastAPI, HTTPException, WebSocket
 from openai import AsyncOpenAI, OpenAIError
 
 from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
+from ..entities import ServiceConfig
 from ..processors.run_processor import RunProcessor
-from ..service_config import ServiceConfig
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler, WebSocketErrorHandler
 from .schemas import ChatRequest, ChatResponse, StartResponse

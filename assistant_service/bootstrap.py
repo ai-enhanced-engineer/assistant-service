@@ -1,4 +1,4 @@
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import EngineAssistantConfig, ServiceConfig
 from assistant_service.repositories import (
     BaseConfigRepository,
     BaseSecretRepository,
@@ -7,7 +7,6 @@ from assistant_service.repositories import (
     LocalConfigRepository,
     LocalSecretRepository,
 )
-from assistant_service.service_config import ServiceConfig
 from assistant_service.structured_logging import get_logger
 
 logger = get_logger("BOOTSTRAP")

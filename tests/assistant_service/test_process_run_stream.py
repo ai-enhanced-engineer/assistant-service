@@ -153,7 +153,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.service_config import ServiceConfig
+    from assistant_service.entities import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(

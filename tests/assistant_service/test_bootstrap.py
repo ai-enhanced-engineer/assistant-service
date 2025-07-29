@@ -1,9 +1,9 @@
 from assistant_service.bootstrap import get_config_repository, get_engine_config, get_secret_repository
+from assistant_service.entities import ServiceConfig
 from assistant_service.repositories import (
     LocalConfigRepository,
     LocalSecretRepository,
 )
-from assistant_service.service_config import ServiceConfig
 
 
 def test__get_engine_config(monkeypatch):

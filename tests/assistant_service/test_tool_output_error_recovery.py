@@ -129,8 +129,8 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
+    from assistant_service.entities import ServiceConfig
     from assistant_service.server.main import AssistantEngineAPI
-    from assistant_service.service_config import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(

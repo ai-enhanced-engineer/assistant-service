@@ -102,7 +102,7 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.service_config import ServiceConfig
+    from assistant_service.entities import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(
@@ -185,7 +185,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.service_config import ServiceConfig
+    from assistant_service.entities import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(

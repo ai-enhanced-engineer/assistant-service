@@ -7,9 +7,8 @@ from fastapi.testclient import TestClient
 from openai import OpenAIError
 
 from assistant_service import repositories as repos
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import EngineAssistantConfig, ServiceConfig
 from assistant_service.server.main import AssistantEngineAPI
-from assistant_service.service_config import ServiceConfig
 
 
 @pytest.fixture()
@@ -145,8 +144,8 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     from assistant_service.server import main as server_main
 
     importlib.reload(server_main)
+    from assistant_service.entities import ServiceConfig
     from assistant_service.server.main import AssistantEngineAPI
-    from assistant_service.service_config import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(
