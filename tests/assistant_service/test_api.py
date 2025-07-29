@@ -9,13 +9,18 @@ from openai import OpenAIError
 from assistant_service import repositories as repos
 from assistant_service.entities import EngineAssistantConfig
 from assistant_service.server.main import AssistantEngineAPI
+from assistant_service.service_config import ServiceConfig
 
 
 @pytest.fixture()
 def api(monkeypatch):
-    monkeypatch.setenv("PROJECT_ID", "p")
-    monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
@@ -48,12 +53,6 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Also patch in the main module where they're imported
-    import assistant_service.server.main as main_module
-
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
-
     class DummyThreads:
         async def create(self):
             return types.SimpleNamespace(id="thread123")
@@ -68,7 +67,7 @@ def api(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
-    api = AssistantEngineAPI()
+    api = AssistantEngineAPI(service_config=test_config)
     dummy_client = DummyClient()
     api.client = dummy_client  # type: ignore[assignment]
 
@@ -98,7 +97,6 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
-    import assistant_service.server.main as main_module
     from assistant_service import repositories as repos
 
     class DummySecretRepo:
@@ -123,8 +121,6 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
 
     # Mock OpenAIClientFactory
     close_mock = AsyncMock()
@@ -140,7 +136,17 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
 
-    api = AssistantEngineAPI()
+    from assistant_service.service_config import ServiceConfig
+
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
+
+    api = AssistantEngineAPI(service_config=test_config)
     assert api.client is None  # Client not created yet
 
     with TestClient(api.app):

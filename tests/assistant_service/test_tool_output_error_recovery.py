@@ -129,15 +129,18 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Also patch in the main module where they're imported
-    import assistant_service.server.main as main_module
-
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
-
     from assistant_service.server.main import AssistantEngineAPI
+    from assistant_service.service_config import ServiceConfig
 
-    api = AssistantEngineAPI()
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
+
+    api = AssistantEngineAPI(service_config=test_config)
     mock_client = AsyncMock()
     api.client = mock_client
 

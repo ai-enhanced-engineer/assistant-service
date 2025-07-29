@@ -154,11 +154,17 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
     from assistant_service.server import main
+    from assistant_service.service_config import ServiceConfig
 
-    monkeypatch.setattr(main, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
 
-    api = main.AssistantEngineAPI()
+    api = main.AssistantEngineAPI(service_config=test_config)
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Import the modules where these are actually located

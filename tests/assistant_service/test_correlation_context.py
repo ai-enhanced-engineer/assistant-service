@@ -102,11 +102,15 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Also patch in the main module where they're imported
-    import assistant_service.server.main as main_module
+    from assistant_service.service_config import ServiceConfig
 
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
 
     from assistant_service.server.main import AssistantEngineAPI
 
@@ -125,7 +129,7 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
-    api = AssistantEngineAPI()
+    api = AssistantEngineAPI(service_config=test_config)
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Initialize components that would normally be initialized in lifespan
@@ -177,11 +181,15 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Also patch in the main module where they're imported
-    import assistant_service.server.main as main_module
+    from assistant_service.service_config import ServiceConfig
 
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
 
     from openai import OpenAIError
 
@@ -202,7 +210,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
-    api = AssistantEngineAPI()
+    api = AssistantEngineAPI(service_config=test_config)
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Initialize components that would normally be initialized in lifespan
@@ -251,12 +259,6 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
-
-    # Also patch in the main module where they're imported
-    import assistant_service.server.main as main_module
-
-    monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
-    monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
 
     from assistant_service.server.main import AssistantEngineAPI
 

@@ -3,24 +3,17 @@
 This module bootstraps the FastAPI application with all necessary components.
 """
 
-import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional, Union
+from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket
 from openai import AsyncOpenAI
 
-from assistant_service.repositories import (
-    GCPConfigRepository,
-    GCPSecretRepository,
-    LocalConfigRepository,
-    LocalSecretRepository,
-)
-
-from ..bootstrap import get_engine_config
+from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
 from ..processors.run_processor import RunProcessor
 from ..processors.tool_executor import ToolExecutor
 from ..providers.openai_client import OpenAIClientFactory
+from ..service_config import ServiceConfig
 from ..structured_logging import configure_structlog, get_logger
 from .endpoints import APIEndpoints
 from .schemas import ChatRequest, ChatResponse
@@ -58,23 +51,18 @@ def create_lifespan(api_instance: "AssistantEngineAPI") -> Any:
 class AssistantEngineAPI:
     """Main API class for the assistant engine."""
 
-    def __init__(self) -> None:
-        """Initialize the assistant engine with configuration."""
-        # Set up repositories based on environment
-        project_id = os.getenv("PROJECT_ID", "")
-        bucket_id = os.getenv("BUCKET_ID", "")
-        client_id = os.getenv("CLIENT_ID", "")
-        environment = os.getenv("ENVIRONMENT", "development")
+    def __init__(self, service_config: Optional[ServiceConfig] = None) -> None:
+        """Initialize the assistant engine with configuration.
 
-        # Use local repositories for development/testing
-        if environment == "development" or not project_id or not bucket_id:
-            logger.info("Using local repositories for development")
-            secret_repository: Union[LocalSecretRepository, GCPSecretRepository] = LocalSecretRepository()
-            config_repository: Union[LocalConfigRepository, GCPConfigRepository] = LocalConfigRepository()
-        else:
-            logger.info("Using GCP repositories for production")
-            secret_repository = GCPSecretRepository(project_id=project_id, client_id=client_id)
-            config_repository = GCPConfigRepository(client_id=client_id, project_id=project_id, bucket_name=bucket_id)
+        Args:
+            service_config: Optional service configuration. If not provided, will be loaded from environment.
+        """
+        # Load service configuration
+        self.service_config = service_config or ServiceConfig()
+
+        # Set up repositories using factory functions
+        secret_repository = get_secret_repository(self.service_config)
+        config_repository = get_config_repository(self.service_config)
 
         self.engine_config = get_engine_config(secret_repository, config_repository)
         self.client: Optional[AsyncOpenAI] = None
