@@ -1,96 +1,127 @@
+from unittest.mock import AsyncMock
+
 import pytest
 
-from assistant_service.providers.openai_helpers import (
-    list_run_steps,
-    retrieve_run,
-    submit_tool_outputs_with_backoff,
-)
-
-
-class DummyClient:
-    class Beta:
-        class Threads:
-            class Runs:
-                def __init__(self, outer):
-                    self.outer = outer
-
-                async def retrieve(self, *args, **kwargs):
-                    return await self.outer.retrieve(*args, **kwargs)
-
-                class Steps:
-                    def __init__(self, outer):
-                        self.outer = outer
-
-                    async def list(self, *args, **kwargs):
-                        return await self.outer.list(*args, **kwargs)
-
-                steps: "DummyClient.Beta.Threads.Runs.Steps"
-
-                async def submit_tool_outputs(self, *args, **kwargs):
-                    return await self.outer.submit(*args, **kwargs)
-
-            def __init__(self, outer):
-                self.runs = DummyClient.Beta.Threads.Runs(outer)
-
-        def __init__(self, outer):
-            self.threads = DummyClient.Beta.Threads(outer)
-
-    def __init__(self, callbacks):
-        self.callbacks = callbacks
-        self.beta = DummyClient.Beta(self)
-
-    async def retrieve(self, *args, **kwargs):
-        return await self.callbacks["retrieve"](*args, **kwargs)
-
-    async def list(self, *args, **kwargs):
-        return await self.callbacks["list"](*args, **kwargs)
-
-    async def submit(self, *args, **kwargs):
-        return await self.callbacks["submit"](*args, **kwargs)
+from assistant_service.entities import EngineAssistantConfig
+from assistant_service.processors.run_processor import Run
 
 
 @pytest.mark.asyncio
 async def test_retrieve_run_returns_none_on_error():
-    async def err(*_):
-        raise RuntimeError("boom")
+    """Test that _retrieve_run returns None on error."""
+    mock_client = AsyncMock()
+    mock_client.beta.threads.runs.retrieve.side_effect = RuntimeError("boom")
 
-    client = DummyClient({"retrieve": err, "list": err, "submit": err})
-    result = await retrieve_run(client, "t", "r")
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._retrieve_run("t", "r")
     assert result is None
+    mock_client.beta.threads.runs.retrieve.assert_called_once_with(thread_id="t", run_id="r")
 
 
 @pytest.mark.asyncio
 async def test_list_run_steps_returns_none_on_error():
-    async def err(*_):
-        raise RuntimeError("boom")
+    """Test that _list_run_steps returns None on error."""
+    mock_client = AsyncMock()
+    mock_client.beta.threads.runs.steps.list.side_effect = RuntimeError("boom")
 
-    client = DummyClient({"retrieve": err, "list": err, "submit": err})
-    result = await list_run_steps(client, "t", "r")
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._list_run_steps("t", "r")
     assert result is None
+    mock_client.beta.threads.runs.steps.list.assert_called_once_with(thread_id="t", run_id="r", order="asc")
 
 
 @pytest.mark.asyncio
 async def test_submit_tool_outputs_retries():
-    calls = 0
+    """Test that _submit_tool_outputs_with_backoff retries on failure."""
+    mock_client = AsyncMock()
+    # First call fails, second succeeds
+    mock_client.beta.threads.runs.submit_tool_outputs.side_effect = [RuntimeError("fail"), "ok"]
 
-    async def fail_then_succeed(*_args, **_kwargs):
-        nonlocal calls
-        calls += 1
-        if calls < 2:
-            raise RuntimeError("fail")
-        return "ok"
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
 
-    client = DummyClient({"retrieve": fail_then_succeed, "list": fail_then_succeed, "submit": fail_then_succeed})
-    result = await submit_tool_outputs_with_backoff(client, "t", "r", [])
+    result = await run_processor._submit_tool_outputs_with_backoff("t", "r", [])
     assert result == "ok"
-    assert calls == 2
+    assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
 
 
 @pytest.mark.asyncio
 async def test_submit_tool_outputs_returns_none_after_retries():
-    async def always_fail(*_args, **_kwargs):
-        raise RuntimeError("fail")
+    """Test that _submit_tool_outputs_with_backoff returns None after all retries fail."""
+    mock_client = AsyncMock()
+    mock_client.beta.threads.runs.submit_tool_outputs.side_effect = RuntimeError("fail")
 
-    client = DummyClient({"retrieve": always_fail, "list": always_fail, "submit": always_fail})
-    result = await submit_tool_outputs_with_backoff(client, "t", "r", [], retries=2)
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._submit_tool_outputs_with_backoff("t", "r", [], retries=2)
     assert result is None
+    assert mock_client.beta.threads.runs.submit_tool_outputs.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_safely_success():
+    """Test successful run cancellation."""
+    mock_client = AsyncMock()
+    mock_run = AsyncMock()
+    mock_run.status = "in_progress"
+    mock_client.beta.threads.runs.retrieve.return_value = mock_run
+    mock_client.beta.threads.runs.cancel.return_value = None
+
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    assert result is True
+    mock_client.beta.threads.runs.cancel.assert_called_once_with(thread_id="thread_123", run_id="run_456")
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_safely_already_terminal():
+    """Test canceling run that's already in terminal state."""
+    mock_client = AsyncMock()
+    mock_run = AsyncMock()
+    mock_run.status = "completed"
+    mock_client.beta.threads.runs.retrieve.return_value = mock_run
+
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    assert result is True
+    # Should not attempt to cancel
+    mock_client.beta.threads.runs.cancel.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_safely_failure():
+    """Test failed run cancellation."""
+    mock_client = AsyncMock()
+    mock_run = AsyncMock()
+    mock_run.status = "in_progress"
+    mock_client.beta.threads.runs.retrieve.return_value = mock_run
+    mock_client.beta.threads.runs.cancel.side_effect = Exception("Cancel failed")
+
+    config = EngineAssistantConfig(
+        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
+    )
+    run_processor = Run(mock_client, config)
+
+    result = await run_processor._cancel_run_safely("thread_123", "run_456")
+    assert result is False

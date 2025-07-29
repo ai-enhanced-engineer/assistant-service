@@ -1,11 +1,11 @@
 """Run processing logic for the assistant service."""
 
-from typing import Any, AsyncGenerator
+import asyncio
+from typing import Any, AsyncGenerator, Iterable, Optional
 
 from openai import AsyncOpenAI, OpenAIError
 
 from ..entities import EngineAssistantConfig
-from ..providers.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
 from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import ToolExecutor
@@ -13,7 +13,7 @@ from .tool_executor import ToolExecutor
 logger = get_logger("RUN_PROCESSOR")
 
 
-class RunProcessor:
+class Run:
     """Handles OpenAI run processing and event streaming."""
 
     def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig):
@@ -21,6 +21,151 @@ class RunProcessor:
         self.client = client
         self.config = config
         self.tool_executor = ToolExecutor()
+
+    async def _retrieve_run(self, thread_id: str, run_id: str) -> Optional[Any]:
+        """Safely retrieve a run, logging errors."""
+        correlation_id = get_or_create_correlation_id()
+        try:
+            result = await self.client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
+            logger.debug(
+                "Run retrieved successfully", thread_id=thread_id, run_id=run_id, correlation_id=correlation_id
+            )
+            return result
+        except Exception as err:  # noqa: BLE001
+            logger.error(
+                "Failed to retrieve run",
+                error=str(err),
+                thread_id=thread_id,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                error_type=type(err).__name__,
+            )
+            return None
+
+    async def _list_run_steps(self, thread_id: str, run_id: str) -> Optional[Any]:
+        """Safely list run steps, logging errors."""
+        correlation_id = get_or_create_correlation_id()
+        try:
+            result = await self.client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run_id, order="asc")
+            logger.debug(
+                "Run steps listed successfully",
+                thread_id=thread_id,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                step_count=len(result.data) if hasattr(result, "data") else "unknown",
+            )
+            return result
+        except Exception as err:  # noqa: BLE001
+            logger.error(
+                "Failed to list run steps",
+                error=str(err),
+                thread_id=thread_id,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                error_type=type(err).__name__,
+            )
+            return None
+
+    async def _submit_tool_outputs_with_backoff(
+        self,
+        thread_id: str,
+        run_id: str,
+        tool_outputs: Iterable[Any],
+        retries: int = 3,
+        backoff: int = 2,
+    ) -> Optional[Any]:
+        """Submit tool outputs with retries and exponential backoff.
+
+        Returns:
+            The submission result on success, None on permanent failure.
+        """
+        correlation_id = get_or_create_correlation_id()
+        tool_outputs_list = list(tool_outputs) if not isinstance(tool_outputs, list) else tool_outputs
+        tool_count = len(tool_outputs_list)
+
+        logger.info(
+            f"Submitting {tool_count} tool outputs",
+            thread_id=thread_id,
+            run_id=run_id,
+            correlation_id=correlation_id,
+            tool_count=tool_count,
+        )
+
+        for attempt in range(retries):
+            try:
+                result = await self.client.beta.threads.runs.submit_tool_outputs(
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    tool_outputs=tool_outputs_list,
+                )
+                logger.info(
+                    f"Successfully submitted {tool_count} tool outputs",
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    correlation_id=correlation_id,
+                    tool_count=tool_count,
+                    attempt=attempt + 1,
+                    max_retries=retries,
+                )
+                return result
+            except Exception as err:  # noqa: BLE001
+                wait_time = backoff**attempt
+                logger.error(
+                    "Tool output submission failed",
+                    error=str(err),
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    correlation_id=correlation_id,
+                    tool_count=tool_count,
+                    attempt=attempt + 1,
+                    max_retries=retries,
+                    error_type=type(err).__name__,
+                    wait_time=wait_time if attempt < retries - 1 else 0,
+                )
+                if attempt == retries - 1:
+                    logger.error(
+                        f"Permanent failure: Unable to submit {tool_count} tool outputs after {retries} attempts",
+                        thread_id=thread_id,
+                        run_id=run_id,
+                        correlation_id=correlation_id,
+                        tool_count=tool_count,
+                        max_retries=retries,
+                    )
+                    return None
+                await asyncio.sleep(wait_time)
+        return None
+
+    async def _cancel_run_safely(self, thread_id: str, run_id: str) -> bool:
+        """Safely cancel a run, returning True if successful or already in terminal state."""
+        correlation_id = get_or_create_correlation_id()
+        try:
+            # First check if run is already in a terminal state
+            run_status = await self._retrieve_run(thread_id, run_id)
+            if run_status and run_status.status in ["completed", "failed", "cancelled", "expired"]:
+                logger.info(
+                    f"Run already in terminal state: {run_status.status}",
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    correlation_id=correlation_id,
+                    status=run_status.status,
+                )
+                return True
+
+            # Attempt to cancel the run
+            await self.client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
+            logger.info("Successfully cancelled run", thread_id=thread_id, run_id=run_id, correlation_id=correlation_id)
+            return True
+
+        except Exception as err:  # noqa: BLE001
+            logger.error(
+                "Failed to cancel run",
+                error=str(err),
+                thread_id=thread_id,
+                run_id=run_id,
+                correlation_id=correlation_id,
+                error_type=type(err).__name__,
+            )
+            return False
 
     async def create_message(self, thread_id: str, content: str) -> None:
         """Create a message in the thread."""
@@ -142,8 +287,8 @@ class RunProcessor:
                 and tool_outputs
                 and run_id
             ):
-                submission_result = await submit_tool_outputs_with_backoff(
-                    self.client, thread_id, run_id, list(tool_outputs.values())
+                submission_result = await self._submit_tool_outputs_with_backoff(
+                    thread_id, run_id, list(tool_outputs.values())
                 )
 
                 if submission_result is None:
@@ -153,7 +298,7 @@ class RunProcessor:
                         run_id,
                         thread_id,
                     )
-                    await cancel_run_safely(self.client, thread_id, run_id)
+                    await self._cancel_run_safely(thread_id, run_id)
 
                 tool_outputs.clear()
 

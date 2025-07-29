@@ -3,12 +3,12 @@ from datetime import datetime
 
 import pytest
 
-from assistant_service.processors.message_processor import ToolProcessor
+from assistant_service.processors.message_processor import ToolTracker
 
 
 @pytest.mark.asyncio
 async def test_process_tool_call_creates_and_updates() -> None:
-    processor = ToolProcessor()
+    processor = ToolTracker()
     run_step = types.SimpleNamespace(created_at=1000, completed_at=1010)
     tool_call = types.SimpleNamespace(id="t1")
 

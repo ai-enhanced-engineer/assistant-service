@@ -3,18 +3,18 @@
 This module bootstraps the FastAPI application with all necessary components.
 """
 
-import json
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, WebSocket
 from openai import AsyncOpenAI, OpenAIError
 
 from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
 from ..entities import ServiceConfig
-from ..processors.run_processor import RunProcessor
+from ..processors.run_processor import Run
+from ..processors.websocket_processor import WebSocketHandler
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
-from .error_handlers import ErrorHandler, WebSocketErrorHandler
+from .error_handlers import ErrorHandler
 from .schemas import ChatRequest, ChatResponse, StartResponse
 
 # Use new structured logger
@@ -69,7 +69,8 @@ class AssistantEngineAPI:
         )
 
         # Initialize all components
-        self.run_processor = RunProcessor(self.client, self.engine_config)
+        self.run_processor = Run(self.client, self.engine_config)
+        self.websocket_processor = WebSocketHandler(self.run_processor)
 
         # Create FastAPI app
         self.app = FastAPI(title="Assistant Engine", lifespan=create_lifespan(self))
@@ -115,162 +116,7 @@ class AssistantEngineAPI:
         @self.app.websocket("/stream")
         async def stream(websocket: WebSocket) -> None:
             """Forward run events through WebSocket with robust error handling."""
-            await self._handle_websocket_stream(websocket)
-
-    async def _handle_websocket_stream(self, websocket: WebSocket) -> None:
-        """Handle WebSocket connection and message processing."""
-        connection_id = id(websocket)
-
-        # Accept connection
-        try:
-            await websocket.accept()
-            logger.info("WebSocket connection accepted", connection_id=connection_id)
-        except Exception as err:  # noqa: BLE001
-            logger.error(
-                "WebSocket accept failed",
-                connection_id=connection_id,
-                error_type=type(err).__name__,
-                error=str(err),
-            )
-            return
-
-        try:
-            await self._handle_websocket_messages(websocket, connection_id)
-        except Exception as err:  # noqa: BLE001
-            logger.error(
-                "Critical WebSocket error",
-                connection_id=connection_id,
-                error_type=type(err).__name__,
-                error=str(err),
-            )
-        finally:
-            logger.info("WebSocket connection closing", connection_id=connection_id)
-            await websocket.close()
-
-    async def _handle_websocket_messages(self, websocket: WebSocket, connection_id: int) -> None:
-        """Handle WebSocket message loop."""
-        while True:
-            with CorrelationContext() as correlation_id:
-                try:
-                    # Receive request
-                    data = await self._receive_websocket_request(websocket, connection_id)
-                    if data is None:
-                        return  # Client disconnected
-
-                    # Validate request
-                    thread_id = data.get("thread_id")
-                    message = data.get("message")
-
-                    if not thread_id or not message:
-                        logger.warning(
-                            "WebSocket request missing required fields",
-                            connection_id=connection_id,
-                            has_thread_id=bool(thread_id),
-                            has_message=bool(message),
-                        )
-                        await WebSocketErrorHandler.send_error(
-                            websocket, "Missing thread_id or message", "missing_fields"
-                        )
-                        continue
-
-                    logger.info(
-                        "Starting WebSocket stream",
-                        thread_id=thread_id,
-                        correlation_id=correlation_id,
-                        message_length=len(message),
-                    )
-
-                    # Process stream
-                    await self._process_websocket_stream(websocket, connection_id, thread_id, message, correlation_id)
-
-                except Exception as err:  # noqa: BLE001
-                    logger.error(
-                        "Error in message processing loop",
-                        connection_id=connection_id,
-                        error_type=type(err).__name__,
-                        error=str(err),
-                    )
-                    continue
-
-    async def _receive_websocket_request(self, websocket: WebSocket, connection_id: int) -> dict[str, Any] | None:
-        """Receive and parse WebSocket request."""
-        try:
-            data = await websocket.receive_json()
-            return data  # type: ignore[no-any-return]
-        except json.JSONDecodeError as err:
-            logger.warning(
-                "WebSocket JSON parsing error",
-                connection_id=connection_id,
-                error_type="JSONDecodeError",
-                error=str(err),
-            )
-            await WebSocketErrorHandler.send_error(websocket, "JSON parsing error", "invalid_json")
-            return None
-        except Exception as err:  # noqa: BLE001
-            if WebSocketErrorHandler.is_disconnect_error(err):
-                logger.info("WebSocket client disconnected", connection_id=connection_id)
-                return None
-            logger.error(
-                "WebSocket receive error",
-                connection_id=connection_id,
-                error_type=type(err).__name__,
-                error=str(err),
-            )
-            await WebSocketErrorHandler.send_error(websocket, "Failed to receive request", "receive_error")
-            return None
-
-    async def _process_websocket_stream(
-        self, websocket: WebSocket, connection_id: int, thread_id: str, message: str, correlation_id: str
-    ) -> None:
-        """Process and stream events to WebSocket client."""
-        try:
-            async for event in self.run_processor.process_run_stream(thread_id, message):
-                try:
-                    await websocket.send_text(event.model_dump_json())
-                except Exception as err:  # noqa: BLE001
-                    if WebSocketErrorHandler.is_disconnect_error(err):
-                        logger.info(
-                            "WebSocket client disconnected during stream",
-                            connection_id=connection_id,
-                            thread_id=thread_id,
-                        )
-                        return
-                    else:
-                        logger.error(
-                            "WebSocket send error",
-                            connection_id=connection_id,
-                            thread_id=thread_id,
-                            error_type=type(err).__name__,
-                            error=str(err),
-                        )
-                        await WebSocketErrorHandler.send_error(websocket, "Failed to send event", "send_error")
-                        break
-
-            logger.info("WebSocket stream completed", thread_id=thread_id, correlation_id=correlation_id)
-
-        except OpenAIError as err:
-            logger.error(
-                "OpenAI error during WebSocket stream",
-                connection_id=connection_id,
-                thread_id=thread_id,
-                error_type="OpenAIError",
-                error=str(err),
-            )
-            await WebSocketErrorHandler.send_error(websocket, f"OpenAI service error: {err}", "openai_error")
-        except HTTPException:
-            # Let HTTP exceptions propagate for proper error responses
-            raise
-        except Exception as err:  # noqa: BLE001
-            logger.error(
-                "Unexpected error during WebSocket stream",
-                thread_id=thread_id,
-                correlation_id=correlation_id,
-                error_type=type(err).__name__,
-                error=str(err),
-            )
-            await WebSocketErrorHandler.send_error(
-                websocket, f"Stream error (correlation_id: {correlation_id[:8]})", "stream_error"
-            )
+            await self.websocket_processor.handle_connection(websocket)
 
 
 def get_app() -> FastAPI:

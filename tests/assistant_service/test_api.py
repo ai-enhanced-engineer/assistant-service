@@ -300,7 +300,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
     api_obj, dummy_client = api
 
     # Mock TOOL_MAP to be empty
-    with patch("assistant_service.functions.TOOL_MAP", {}):
+    with patch("assistant_service.tools.TOOL_MAP", {}):
         # Create a mock tool call event
         tool_call = types.SimpleNamespace(
             id="tool_123",
@@ -325,7 +325,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[AssistantEngi
                     if tool_call.type == "function":
                         name = tool_call.function.name
 
-                        from assistant_service.functions import TOOL_MAP
+                        from assistant_service.tools import TOOL_MAP
 
                         if name not in TOOL_MAP:
                             tool_outputs[tool_call.id] = {

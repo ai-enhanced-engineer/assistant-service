@@ -4,8 +4,8 @@ import inspect
 import json
 from typing import Any, Callable, Optional
 
-from ..functions import TOOL_MAP
 from ..structured_logging import get_logger
+from ..tools import TOOL_MAP
 
 logger = get_logger("TOOL_EXECUTOR")
 

@@ -95,9 +95,7 @@ class DummySubmit:
     def __init__(self):
         self.called_with = None
 
-    async def __call__(
-        self, client: Any, thread_id: str, run_id: str, tool_outputs: Any, *args: Any, **kwargs: Any
-    ) -> str:
+    async def __call__(self, thread_id: str, run_id: str, tool_outputs: Any, *args: Any, **kwargs: Any) -> str:
         self.called_with = list(tool_outputs)
         return "success"  # Return success instead of None
 
@@ -180,19 +178,14 @@ def api(monkeypatch):
     api = AssistantEngineAPI(service_config=test_config)
 
     # Import the modules where these are actually located
-    from assistant_service import functions
-    from assistant_service.providers import openai_helpers
+    from assistant_service import tools
 
     # Create a new instance of DummySubmit for this test
     test_dummy_submit = DummySubmit()
 
-    monkeypatch.setattr(openai_helpers, "submit_tool_outputs_with_backoff", test_dummy_submit)
-    monkeypatch.setattr(functions, "TOOL_MAP", {"func": lambda: "out"})
-
-    # Also need to patch in the run_processor module since it imports directly
-    from assistant_service.processors import run_processor as run_processor_module
-
-    monkeypatch.setattr(run_processor_module, "submit_tool_outputs_with_backoff", test_dummy_submit)
+    # Patch the method on the run_processor instance
+    monkeypatch.setattr(api.run_processor, "_submit_tool_outputs_with_backoff", test_dummy_submit)
+    monkeypatch.setattr(tools, "TOOL_MAP", {"func": lambda: "out"})
 
     # Also patch the tool_map on the tool_executor instance
     api.run_processor.tool_executor.tool_map = {"func": lambda: "out"}

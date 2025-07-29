@@ -51,7 +51,7 @@ class MessageData:
     id: Optional[str] = None
 
 
-class ToolProcessor:
+class ToolTracker:
     """Track and update tool call steps during a run."""
 
     def __init__(self) -> None:
@@ -93,7 +93,7 @@ class ToolProcessor:
         return step_data
 
 
-class ThreadMessageProcessor:
+class ThreadMessage:
     """Process thread message."""
 
     def __init__(self) -> None:
