@@ -200,8 +200,8 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
 
                     # Mock TOOL_MAP with test function by patching the tool_map on the instance
                     test_tool_map = {"test_func": lambda param: "result"}
-                    original_tool_map = api.tool_executor.tool_map
-                    api.tool_executor.tool_map = test_tool_map
+                    original_tool_map = api.run_processor.tool_executor.tool_map
+                    api.run_processor.tool_executor.tool_map = test_tool_map
 
                     try:
                         events = []
@@ -216,4 +216,4 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
                         mock_cancel.assert_called_once_with(mock_client, "thread_123", "run_123")
                     finally:
                         # Restore original tool map
-                        api.tool_executor.tool_map = original_tool_map
+                        api.run_processor.tool_executor.tool_map = original_tool_map

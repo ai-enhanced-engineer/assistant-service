@@ -195,7 +195,7 @@ def api(monkeypatch):
     monkeypatch.setattr(run_processor_module, "submit_tool_outputs_with_backoff", test_dummy_submit)
 
     # Also patch the tool_map on the tool_executor instance
-    api.tool_executor.tool_map = {"func": lambda: "out"}
+    api.run_processor.tool_executor.tool_map = {"func": lambda: "out"}
 
     # Attach the dummy_submit to the api object so tests can access it
     api.dummy_submit = test_dummy_submit  # type: ignore[attr-defined]

@@ -1,6 +1,6 @@
 """Run processing logic for the assistant service."""
 
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator
 
 from openai import AsyncOpenAI, OpenAIError
 
@@ -16,13 +16,11 @@ logger = get_logger("RUN_PROCESSOR")
 class RunProcessor:
     """Handles OpenAI run processing and event streaming."""
 
-    def __init__(
-        self, client: AsyncOpenAI, config: EngineAssistantConfig, tool_executor: Optional[ToolExecutor] = None
-    ):
+    def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig):
         """Initialize with OpenAI client and configuration."""
         self.client = client
         self.config = config
-        self.tool_executor = tool_executor or ToolExecutor()
+        self.tool_executor = ToolExecutor()
 
     async def create_message(self, thread_id: str, content: str) -> None:
         """Create a message in the thread."""

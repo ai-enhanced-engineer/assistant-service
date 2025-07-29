@@ -12,7 +12,6 @@ from openai import AsyncOpenAI, OpenAIError
 
 from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
 from ..processors.run_processor import RunProcessor
-from ..processors.tool_executor import ToolExecutor
 from ..service_config import ServiceConfig
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler, WebSocketErrorHandler
@@ -70,8 +69,7 @@ class AssistantEngineAPI:
         )
 
         # Initialize all components
-        self.tool_executor = ToolExecutor()
-        self.run_processor = RunProcessor(self.client, self.engine_config, self.tool_executor)
+        self.run_processor = RunProcessor(self.client, self.engine_config)
 
         # Create FastAPI app
         self.app = FastAPI(title="Assistant Engine", lifespan=create_lifespan(self))
