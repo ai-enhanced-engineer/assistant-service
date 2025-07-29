@@ -13,8 +13,8 @@ from .schemas import ChatRequest, ChatResponse, StartResponse
 if TYPE_CHECKING:
     from openai import AsyncOpenAI
 
-    from ..core.run_processor import RunProcessor
     from ..entities import EngineAssistantConfig
+    from ..processors.run_processor import RunProcessor
 
 logger = get_logger("API_ENDPOINTS")
 

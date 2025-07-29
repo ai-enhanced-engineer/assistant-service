@@ -129,7 +129,7 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
@@ -206,7 +206,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
@@ -264,7 +264,7 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     api.client = AsyncMock()
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]

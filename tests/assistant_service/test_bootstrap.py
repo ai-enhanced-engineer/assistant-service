@@ -1,8 +1,8 @@
-from assistant_service.config import build_engine_config
+from assistant_service.bootstrap import get_engine_config
 from assistant_service.repositories import LocalConfigRepository, LocalSecretRepository
 
 
-def test__build_engine_config(monkeypatch):
+def test__get_engine_config(monkeypatch):
     with monkeypatch.context() as mp:
         mp.setenv("PROJECT_ID", "test-project")
         mp.setenv("CLIENT_ID", "test-client")
@@ -13,7 +13,7 @@ def test__build_engine_config(monkeypatch):
         local_secrets = LocalSecretRepository()  # No arguments
         local_config = LocalConfigRepository()  # No arguments
 
-        engine_config = build_engine_config(local_secrets, local_config)
+        engine_config = get_engine_config(local_secrets, local_config)
 
         # LocalConfigRepository always uses ASSISTANT_ID env var or default
         assert engine_config.assistant_id == "test-assistant-id"

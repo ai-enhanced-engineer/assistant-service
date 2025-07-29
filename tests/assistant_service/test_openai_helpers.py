@@ -1,6 +1,6 @@
 import pytest
 
-from assistant_service.openai_helpers import (
+from assistant_service.providers.openai_helpers import (
     list_run_steps,
     retrieve_run,
     submit_tool_outputs_with_backoff,

@@ -2,7 +2,7 @@ from assistant_service.entities import EngineAssistantConfig
 from assistant_service.repositories import BaseConfigRepository, BaseSecretRepository
 
 
-def build_engine_config(
+def get_engine_config(
     secret_repository: BaseSecretRepository, config_repository: BaseConfigRepository
 ) -> EngineAssistantConfig:
     config = config_repository.read_config()

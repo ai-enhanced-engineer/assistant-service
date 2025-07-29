@@ -6,7 +6,7 @@ from openai.types.beta.threads import TextContentBlock
 from openai.types.beta.threads.message import Message
 from openai.types.beta.threads.runs import RunStep, ToolCall
 
-from .structured_logging import get_logger
+from ..structured_logging import get_logger
 
 logger = get_logger("PROCESSORS")
 

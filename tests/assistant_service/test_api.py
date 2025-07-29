@@ -73,7 +73,7 @@ def api(monkeypatch):
     api.client = dummy_client  # type: ignore[assignment]
 
     # Initialize components with the dummy client
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
@@ -136,7 +136,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     def mock_create_from_config(config):
         return MockAsyncOpenAI()
 
-    from assistant_service.infrastructure import openai_client
+    from assistant_service.providers import openai_client
 
     monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
 

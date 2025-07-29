@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from assistant_service.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
+from assistant_service.providers.openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
 
 
 @pytest.mark.asyncio
@@ -142,7 +142,7 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     api.client = mock_client
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
@@ -153,10 +153,10 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     mock_cancel = AsyncMock(return_value=True)
 
     # Patch in both locations
-    from assistant_service.core import run_processor as run_processor_module
+    from assistant_service.processors import run_processor as run_processor_module
 
-    with patch("assistant_service.openai_helpers.submit_tool_outputs_with_backoff", mock_submit):
-        with patch("assistant_service.openai_helpers.cancel_run_safely", mock_cancel):
+    with patch("assistant_service.providers.openai_helpers.submit_tool_outputs_with_backoff", mock_submit):
+        with patch("assistant_service.providers.openai_helpers.cancel_run_safely", mock_cancel):
             # Also patch in the module that imports these functions
             with patch.object(run_processor_module, "submit_tool_outputs_with_backoff", mock_submit):
                 with patch.object(run_processor_module, "cancel_run_safely", mock_cancel):

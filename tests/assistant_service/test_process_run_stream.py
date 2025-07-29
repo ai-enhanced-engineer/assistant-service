@@ -162,7 +162,8 @@ def api(monkeypatch):
     api.client = DummyClient()  # type: ignore[assignment]
 
     # Import the modules where these are actually located
-    from assistant_service import functions, openai_helpers
+    from assistant_service import functions
+    from assistant_service.providers import openai_helpers
 
     # Create a new instance of DummySubmit for this test
     test_dummy_submit = DummySubmit()
@@ -171,12 +172,12 @@ def api(monkeypatch):
     monkeypatch.setattr(functions, "TOOL_MAP", {"func": lambda: "out"})
 
     # Also need to patch in the run_processor module since it imports directly
-    from assistant_service.core import run_processor as run_processor_module
+    from assistant_service.processors import run_processor as run_processor_module
 
     monkeypatch.setattr(run_processor_module, "submit_tool_outputs_with_backoff", test_dummy_submit)
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.processors.run_processor import RunProcessor
     from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]

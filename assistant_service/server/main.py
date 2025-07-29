@@ -17,10 +17,10 @@ from assistant_service.repositories import (
     LocalSecretRepository,
 )
 
-from ..config import build_engine_config
-from ..core.run_processor import RunProcessor
-from ..core.tool_executor import ToolExecutor
-from ..infrastructure.openai_client import OpenAIClientFactory
+from ..bootstrap import get_engine_config
+from ..processors.run_processor import RunProcessor
+from ..processors.tool_executor import ToolExecutor
+from ..providers.openai_client import OpenAIClientFactory
 from ..structured_logging import configure_structlog, get_logger
 from .endpoints import APIEndpoints
 from .schemas import ChatRequest, ChatResponse
@@ -76,7 +76,7 @@ class AssistantEngineAPI:
             secret_repository = GCPSecretRepository(project_id=project_id, client_id=client_id)
             config_repository = GCPConfigRepository(client_id=client_id, project_id=project_id, bucket_name=bucket_id)
 
-        self.engine_config = build_engine_config(secret_repository, config_repository)
+        self.engine_config = get_engine_config(secret_repository, config_repository)
         self.client: Optional[AsyncOpenAI] = None
 
         # Log configuration (without sensitive data)
