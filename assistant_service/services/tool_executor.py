@@ -16,16 +16,6 @@ class IToolExecutor(ABC):
 
     @abstractmethod
     def execute_tool(self, tool_name: str, tool_args: str | dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-        """Execute a tool and return the result.
-
-        Args:
-            tool_name: Name of the tool to execute
-            tool_args: Arguments as JSON string or dict
-            context: Execution context (thread_id, run_id, etc.)
-
-        Returns:
-            Dict with tool_call_id and output
-        """
         pass
 
 
@@ -33,7 +23,6 @@ class ToolExecutor(IToolExecutor):
     """Handles tool execution and validation."""
 
     def __init__(self, tool_map: Optional[dict[str, Callable[..., Any]]] = None):
-        """Initialize with tool registry."""
         self.tool_map = tool_map or TOOL_MAP
 
     def validate_function_args(self, func: Callable[..., Any], args: dict[str, Any], name: str) -> None:

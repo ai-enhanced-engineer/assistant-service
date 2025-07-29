@@ -19,28 +19,10 @@ class IOrchestrator(ABC):
 
     @abstractmethod
     async def process_run(self, thread_id: str, message: str) -> list[str]:
-        """Process a single run and return responses.
-
-        Args:
-            thread_id: The thread ID for the conversation
-            message: The user's message
-
-        Returns:
-            List of assistant responses
-        """
         pass
 
     @abstractmethod
     def process_run_stream(self, thread_id: str, message: str) -> AsyncGenerator[Any, None]:
-        """Process a run with streaming responses.
-
-        Args:
-            thread_id: The thread ID for the conversation
-            message: The user's message
-
-        Yields:
-            Stream events from the assistant
-        """
         pass
 
 
@@ -48,13 +30,11 @@ class OpenAIOrchestrator(IOrchestrator):
     """Orchestrates OpenAI assistant runs and event streaming."""
 
     def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig):
-        """Initialize with OpenAI client and configuration."""
         self.client = client
         self.config = config
         self.tool_executor = ToolExecutor()
 
     async def _retrieve_run(self, thread_id: str, run_id: str) -> Optional[Any]:
-        """Safely retrieve a run, logging errors."""
         correlation_id = get_or_create_correlation_id()
         try:
             result = await self.client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
@@ -74,7 +54,6 @@ class OpenAIOrchestrator(IOrchestrator):
             return None
 
     async def _list_run_steps(self, thread_id: str, run_id: str) -> Optional[Any]:
-        """Safely list run steps, logging errors."""
         correlation_id = get_or_create_correlation_id()
         try:
             result = await self.client.beta.threads.runs.steps.list(thread_id=thread_id, run_id=run_id, order="asc")

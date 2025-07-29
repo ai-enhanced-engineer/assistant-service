@@ -1,3 +1,5 @@
+"""Structured logging configuration with correlation ID support for request tracking."""
+
 import logging
 import sys
 import uuid

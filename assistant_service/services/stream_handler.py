@@ -21,11 +21,6 @@ class IStreamHandler(ABC):
 
     @abstractmethod
     async def handle_connection(self, websocket: FastAPIWebSocket) -> None:
-        """Handle a WebSocket connection for streaming.
-
-        Args:
-            websocket: The WebSocket connection to handle
-        """
         pass
 
 
@@ -33,11 +28,6 @@ class StreamHandler(IStreamHandler):
     """Handles WebSocket connections and message streaming."""
 
     def __init__(self, orchestrator: "IOrchestrator"):
-        """Initialize with an orchestrator.
-
-        Args:
-            orchestrator: The orchestrator to use for processing runs
-        """
         self.orchestrator = orchestrator
 
     async def handle_connection(self, websocket: FastAPIWebSocket) -> None:

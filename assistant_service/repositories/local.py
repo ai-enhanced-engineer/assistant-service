@@ -12,11 +12,9 @@ class LocalSecretRepository(BaseSecretRepository):
     """Local implementation of secret repository for development."""
 
     def __init__(self) -> None:
-        """Initialize with environment variables."""
         pass
 
     def write_secret(self, secret_suffix: str) -> None:
-        """Not needed for local development."""
         pass
 
     def access_secret(self, secret_suffix: str) -> str:
@@ -34,11 +32,9 @@ class LocalConfigRepository(BaseConfigRepository):
     """Local implementation of config repository for development."""
 
     def __init__(self) -> None:
-        """Initialize with default development configuration."""
         pass
 
     def write_config(self, config: Any) -> None:
-        """Not needed for local development."""
         pass
 
     def read_config(self) -> EngineAssistantConfig:

@@ -1,3 +1,5 @@
+"""Message parsing and processing logic for OpenAI thread messages."""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Optional, Union
@@ -18,14 +20,6 @@ class IMessageParser(ABC):
 
     @abstractmethod
     async def process(self, message: Message) -> Optional[MessageData]:
-        """Process a thread message.
-
-        Args:
-            message: The OpenAI message to process
-
-        Returns:
-            Parsed message data or None if no content
-        """
         pass
 
 

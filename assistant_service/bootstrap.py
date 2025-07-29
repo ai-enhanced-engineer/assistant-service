@@ -1,3 +1,5 @@
+"""Factory functions for creating and configuring application components with dependency injection."""
+
 from typing import TYPE_CHECKING, Optional
 
 from openai import AsyncOpenAI
@@ -26,7 +28,7 @@ logger = get_logger("BOOTSTRAP")
 
 
 def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
-    """Factory function to create the appropriate secret repository based on config."""
+    """Create development or production secret repository based on environment."""
     if config.is_development:
         logger.info("Using local secret repository for development")
         return LocalSecretRepository()
@@ -39,7 +41,7 @@ def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
 
 
 def get_config_repository(config: ServiceConfig) -> BaseConfigRepository:
-    """Factory function to create the appropriate config repository based on config."""
+    """Create development or production config repository based on environment."""
     if config.is_development:
         logger.info("Using local config repository for development")
         return LocalConfigRepository()
@@ -63,28 +65,12 @@ def get_engine_config(
 
 
 def get_openai_client(config: EngineAssistantConfig) -> AsyncOpenAI:
-    """Create OpenAI client based on configuration.
-
-    Args:
-        config: Engine configuration with API key
-
-    Returns:
-        Configured AsyncOpenAI client
-    """
     logger.info("Creating OpenAI client")
     return AsyncOpenAI(api_key=config.openai_apikey)
 
 
 def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOrchestrator":
-    """Create OpenAI orchestrator based on configuration.
-
-    Args:
-        client: OpenAI client instance
-        config: Engine configuration
-
-    Returns:
-        Orchestrator instance implementing IOrchestrator
-    """
+    """Create orchestrator with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
     from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
@@ -98,14 +84,6 @@ def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOr
 
 
 def get_stream_handler(orchestrator: "IOrchestrator") -> "IStreamHandler":
-    """Create stream handler with configured orchestrator.
-
-    Args:
-        orchestrator: Orchestrator instance
-
-    Returns:
-        Stream handler instance implementing IStreamHandler
-    """
     # Import here to avoid circular dependencies
     from assistant_service.services.stream_handler import StreamHandler
 
@@ -114,14 +92,6 @@ def get_stream_handler(orchestrator: "IOrchestrator") -> "IStreamHandler":
 
 
 def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> "IToolExecutor":
-    """Create tool executor with configured tool map.
-
-    Args:
-        config: Optional engine configuration for custom tool maps
-
-    Returns:
-        Tool executor instance implementing IToolExecutor
-    """
     # Import here to avoid circular dependencies
     from assistant_service.services.tool_executor import ToolExecutor
 
@@ -131,11 +101,6 @@ def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> "IToolE
 
 
 def get_message_parser() -> "IMessageParser":
-    """Create message parser.
-
-    Returns:
-        Message parser instance implementing IMessageParser
-    """
     # Import here to avoid circular dependencies
     from assistant_service.services.message_parser import MessageParser
 
