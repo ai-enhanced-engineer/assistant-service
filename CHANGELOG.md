@@ -2,6 +2,108 @@
 
 <!-- version list -->
 
+## v1.3.0 (2025-07-29)
+
+### Chores
+
+- Add Claude Code GitHub Workflow ([#63](https://github.com/lkronecker13/assistant-service/pull/63),
+  [`becd7c4`](https://github.com/lkronecker13/assistant-service/commit/becd7c4da0bf027d947405da85804d23cb3d725a))
+
+- Implement Domain-Driven Design with Factory Pattern and Dependency Injection
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+### Documentation
+
+- Add comprehensive PR description for domain-driven design refactor
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Add technical documentation for processors module
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Implement meaningful, non-redundant docstring guidelines
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+### Features
+
+- Implement high priority recommendations from domain-driven design review
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+### Refactoring
+
+- Consolidate configuration classes into entities/config.py
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Consolidate correlation ID functionality into structured_logging
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Consolidate interfaces with implementations to reduce over-abstraction
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Implement domain-driven design with factory pattern and dependency injection
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Improve configuration management with Pydantic Settings
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Improve processor architecture and add comprehensive tests
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Inject tool executor via dependency injection in OpenAIOrchestrator
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Integrate ToolExecutor into RunProcessor as internal component
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Move error_handlers from infrastructure to server directory
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Remove OpenAIClientFactory and simplify client initialization
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Rename models folder to entities
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Rename processor files to more descriptive names
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Rename processors/ to services/ for domain-driven design alignment
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Reorganize assistant_service with improved directory structure
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Reorganize assistant_service/main.py with layer-based architecture
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Reorganize tests to mirror production structure with shared fixtures
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+- Simplify architecture by removing APIEndpoints abstraction
+  ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
+  [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
+
+
 ## v1.2.0 (2025-07-28)
 
 ### Bug Fixes
