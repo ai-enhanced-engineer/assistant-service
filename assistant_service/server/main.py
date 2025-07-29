@@ -17,13 +17,13 @@ from assistant_service.repositories import (
     LocalSecretRepository,
 )
 
-from .api.endpoints import APIEndpoints
-from .api.schemas import ChatRequest, ChatResponse
-from .config import build_engine_config
-from .core.run_processor import RunProcessor
-from .core.tool_executor import ToolExecutor
-from .infrastructure.openai_client import OpenAIClientFactory
-from .structured_logging import configure_structlog, get_logger
+from ..config import build_engine_config
+from ..core.run_processor import RunProcessor
+from ..core.tool_executor import ToolExecutor
+from ..infrastructure.openai_client import OpenAIClientFactory
+from ..structured_logging import configure_structlog, get_logger
+from .endpoints import APIEndpoints
+from .schemas import ChatRequest, ChatResponse
 
 # Use new structured logger
 logger = get_logger("MAIN")

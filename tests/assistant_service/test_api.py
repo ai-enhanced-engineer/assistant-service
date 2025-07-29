@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from openai import OpenAIError
 
 from assistant_service import repositories as repos
-from assistant_service.main import AssistantEngineAPI
 from assistant_service.models import EngineAssistantConfig
+from assistant_service.server.main import AssistantEngineAPI
 
 
 @pytest.fixture()
@@ -49,7 +49,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
     # Also patch in the main module where they're imported
-    import assistant_service.main as main_module
+    import assistant_service.server.main as main_module
 
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
@@ -73,8 +73,8 @@ def api(monkeypatch):
     api.client = dummy_client  # type: ignore[assignment]
 
     # Initialize components with the dummy client
-    from assistant_service.api.endpoints import APIEndpoints
     from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
     api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)
@@ -98,7 +98,7 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
-    import assistant_service.main as main_module
+    import assistant_service.server.main as main_module
     from assistant_service import repositories as repos
 
     class DummySecretRepo:

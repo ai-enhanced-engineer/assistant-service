@@ -57,7 +57,7 @@ A production-ready Python service for deploying customized AI assistants with cl
 
 3. **Run the service:**
    ```bash
-   python -m assistant_service.main
+   python -m assistant_service.server.main
    # or
    make local-run
    ```

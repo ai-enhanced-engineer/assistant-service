@@ -130,20 +130,20 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
     # Also patch in the main module where they're imported
-    import assistant_service.main as main_module
+    import assistant_service.server.main as main_module
 
     monkeypatch.setattr(main_module, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main_module, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.main import AssistantEngineAPI
+    from assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI()
     mock_client = AsyncMock()
     api.client = mock_client
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.api.endpoints import APIEndpoints
     from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
     api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)

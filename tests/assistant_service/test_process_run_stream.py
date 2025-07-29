@@ -153,7 +153,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service import main
+    from assistant_service.server import main
 
     monkeypatch.setattr(main, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(main, "GCPConfigRepository", DummyConfigRepo)
@@ -176,8 +176,8 @@ def api(monkeypatch):
     monkeypatch.setattr(run_processor_module, "submit_tool_outputs_with_backoff", test_dummy_submit)
 
     # Initialize components that would normally be initialized in lifespan
-    from assistant_service.api.endpoints import APIEndpoints
     from assistant_service.core.run_processor import RunProcessor
+    from assistant_service.server.endpoints import APIEndpoints
 
     api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
     api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
