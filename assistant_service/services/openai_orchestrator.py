@@ -9,7 +9,7 @@ from openai import AsyncOpenAI, OpenAIError
 from ..entities import EngineAssistantConfig
 from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
-from .tool_executor import ToolExecutor
+from .tool_executor import IToolExecutor
 
 logger = get_logger("OPENAI_ORCHESTRATOR")
 
@@ -29,10 +29,10 @@ class IOrchestrator(ABC):
 class OpenAIOrchestrator(IOrchestrator):
     """Orchestrates OpenAI assistant runs and event streaming."""
 
-    def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig):
+    def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig, tool_executor: IToolExecutor):
         self.client = client
         self.config = config
-        self.tool_executor = ToolExecutor()
+        self.tool_executor = tool_executor
 
     async def _retrieve_run(self, thread_id: str, run_id: str) -> Optional[Any]:
         correlation_id = get_or_create_correlation_id()

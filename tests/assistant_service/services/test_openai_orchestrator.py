@@ -23,9 +23,17 @@ def mock_client():
 
 
 @pytest.fixture
-def orchestrator(mock_client, test_engine_config):
+def mock_tool_executor():
+    """Create a mock tool executor."""
+    tool_executor = Mock()
+    tool_executor.execute_tool = Mock(return_value={"tool_call_id": "test_call", "output": "test_output"})
+    return tool_executor
+
+
+@pytest.fixture
+def orchestrator(mock_client, test_engine_config, mock_tool_executor):
     """Create a Run processor instance."""
-    return OpenAIOrchestrator(mock_client, test_engine_config)
+    return OpenAIOrchestrator(mock_client, test_engine_config, mock_tool_executor)
 
 
 class TestCreateMessage:

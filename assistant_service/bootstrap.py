@@ -78,7 +78,8 @@ def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOr
 
     if orchestrator_type == "openai":
         logger.info("Creating OpenAI orchestrator")
-        return OpenAIOrchestrator(client, config)
+        tool_executor = get_tool_executor(config)
+        return OpenAIOrchestrator(client, config, tool_executor)
     else:
         raise ValueError(f"Unknown orchestrator type: {orchestrator_type}")
 

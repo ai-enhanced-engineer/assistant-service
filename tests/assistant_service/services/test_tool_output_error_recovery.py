@@ -1,12 +1,19 @@
 """Tests for tool output error recovery functionality."""
 
 import types
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from assistant_service.entities import EngineAssistantConfig
 from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+
+
+def create_mock_tool_executor():
+    """Create a mock tool executor for testing."""
+    tool_executor = Mock()
+    tool_executor.execute_tool = Mock(return_value={"tool_call_id": "test_call", "output": "test_output"})
+    return tool_executor
 
 
 @pytest.mark.asyncio
@@ -20,7 +27,7 @@ async def test_submit_tool_outputs_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs)
 
@@ -42,7 +49,7 @@ async def test_submit_tool_outputs_retry_then_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
@@ -61,7 +68,7 @@ async def test_submit_tool_outputs_permanent_failure():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
 
@@ -82,7 +89,7 @@ async def test_cancel_run_safely_success():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
@@ -102,7 +109,7 @@ async def test_cancel_run_safely_already_terminal():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
@@ -124,7 +131,7 @@ async def test_cancel_run_safely_failure():
     config = EngineAssistantConfig(
         assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
     )
-    orchestrator = OpenAIOrchestrator(mock_client, config)
+    orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
 
