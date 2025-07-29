@@ -2,13 +2,31 @@
 
 import inspect
 import json
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Optional
 
-from ..entities import IToolExecutor
 from ..structured_logging import get_logger
 from ..tools import TOOL_MAP
 
 logger = get_logger("TOOL_EXECUTOR")
+
+
+class IToolExecutor(ABC):
+    """Interface for tool execution."""
+
+    @abstractmethod
+    def execute_tool(self, tool_name: str, tool_args: str | dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+        """Execute a tool and return the result.
+
+        Args:
+            tool_name: Name of the tool to execute
+            tool_args: Arguments as JSON string or dict
+            context: Execution context (thread_id, run_id, etc.)
+
+        Returns:
+            Dict with tool_call_id and output
+        """
+        pass
 
 
 class ToolExecutor(IToolExecutor):

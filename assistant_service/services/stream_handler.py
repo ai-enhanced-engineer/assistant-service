@@ -1,22 +1,38 @@
 """Stream handling logic for WebSocket connections in the assistant service."""
 
 import json
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from fastapi import WebSocket as FastAPIWebSocket
 from openai import OpenAIError
 
-from ..entities import IOrchestrator, IStreamHandler
 from ..server.error_handlers import WebSocketErrorHandler
 from ..structured_logging import CorrelationContext, get_logger
 
+if TYPE_CHECKING:
+    from .openai_orchestrator import IOrchestrator
+
 logger = get_logger("STREAM_HANDLER")
+
+
+class IStreamHandler(ABC):
+    """Interface for stream handling."""
+
+    @abstractmethod
+    async def handle_connection(self, websocket: FastAPIWebSocket) -> None:
+        """Handle a WebSocket connection for streaming.
+
+        Args:
+            websocket: The WebSocket connection to handle
+        """
+        pass
 
 
 class StreamHandler(IStreamHandler):
     """Handles WebSocket connections and message streaming."""
 
-    def __init__(self, orchestrator: IOrchestrator):
+    def __init__(self, orchestrator: "IOrchestrator"):
         """Initialize with an orchestrator.
 
         Args:

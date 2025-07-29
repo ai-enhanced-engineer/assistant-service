@@ -1,15 +1,17 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from openai import AsyncOpenAI
 
 from assistant_service.entities import (
     EngineAssistantConfig,
-    IMessageParser,
-    IOrchestrator,
-    IStreamHandler,
-    IToolExecutor,
     ServiceConfig,
 )
+
+if TYPE_CHECKING:
+    from assistant_service.services.message_parser import IMessageParser
+    from assistant_service.services.openai_orchestrator import IOrchestrator
+    from assistant_service.services.stream_handler import IStreamHandler
+    from assistant_service.services.tool_executor import IToolExecutor
 from assistant_service.repositories import (
     BaseConfigRepository,
     BaseSecretRepository,
@@ -73,7 +75,7 @@ def get_openai_client(config: EngineAssistantConfig) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=config.openai_apikey)
 
 
-def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> IOrchestrator:
+def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOrchestrator":
     """Create OpenAI orchestrator based on configuration.
 
     Args:
@@ -95,7 +97,7 @@ def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> IOrc
         raise ValueError(f"Unknown orchestrator type: {orchestrator_type}")
 
 
-def get_stream_handler(orchestrator: IOrchestrator) -> IStreamHandler:
+def get_stream_handler(orchestrator: "IOrchestrator") -> "IStreamHandler":
     """Create stream handler with configured orchestrator.
 
     Args:
@@ -111,7 +113,7 @@ def get_stream_handler(orchestrator: IOrchestrator) -> IStreamHandler:
     return StreamHandler(orchestrator)
 
 
-def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> IToolExecutor:
+def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> "IToolExecutor":
     """Create tool executor with configured tool map.
 
     Args:
@@ -128,7 +130,7 @@ def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> IToolEx
     return ToolExecutor()
 
 
-def get_message_parser() -> IMessageParser:
+def get_message_parser() -> "IMessageParser":
     """Create message parser.
 
     Returns:

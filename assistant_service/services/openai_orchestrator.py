@@ -1,16 +1,47 @@
 """OpenAI assistant orchestration service for the assistant service."""
 
 import asyncio
+from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Iterable, Optional
 
 from openai import AsyncOpenAI, OpenAIError
 
-from ..entities import EngineAssistantConfig, IOrchestrator
+from ..entities import EngineAssistantConfig
 from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import ToolExecutor
 
 logger = get_logger("OPENAI_ORCHESTRATOR")
+
+
+class IOrchestrator(ABC):
+    """Interface for OpenAI orchestration."""
+
+    @abstractmethod
+    async def process_run(self, thread_id: str, message: str) -> list[str]:
+        """Process a single run and return responses.
+
+        Args:
+            thread_id: The thread ID for the conversation
+            message: The user's message
+
+        Returns:
+            List of assistant responses
+        """
+        pass
+
+    @abstractmethod
+    def process_run_stream(self, thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        """Process a run with streaming responses.
+
+        Args:
+            thread_id: The thread ID for the conversation
+            message: The user's message
+
+        Yields:
+            Stream events from the assistant
+        """
+        pass
 
 
 class OpenAIOrchestrator(IOrchestrator):

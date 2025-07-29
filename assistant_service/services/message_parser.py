@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Optional, Union
 
@@ -5,12 +6,27 @@ from openai.types.beta.threads import TextContentBlock
 from openai.types.beta.threads.message import Message
 from openai.types.beta.threads.runs import RunStep, ToolCall
 
-from ..entities import IMessageParser
 from ..entities.message_data import MessageData
 from ..entities.step_data import StepData
 from ..structured_logging import get_logger
 
 logger = get_logger("MESSAGE_PARSER")
+
+
+class IMessageParser(ABC):
+    """Interface for message parsing."""
+
+    @abstractmethod
+    async def process(self, message: Message) -> Optional[MessageData]:
+        """Process a thread message.
+
+        Args:
+            message: The OpenAI message to process
+
+        Returns:
+            Parsed message data or None if no content
+        """
+        pass
 
 
 class ToolTracker:
