@@ -67,16 +67,16 @@ def api(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
+    # Monkeypatch OpenAIClientFactory to return our dummy client
+    def mock_create_from_config(config):
+        return DummyClient()
+
+    from assistant_service.providers import openai_client
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = AssistantEngineAPI(service_config=test_config)
-    dummy_client = DummyClient()
-    api.client = dummy_client  # type: ignore[assignment]
-
-    # Initialize components with the dummy client
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)
+    dummy_client = api.client  # Get the client that was created
 
     return api, dummy_client
 
@@ -86,8 +86,8 @@ def test_lifespan(api: tuple[AssistantEngineAPI, Any]) -> None:
     with TestClient(api_obj.app):
         assert api_obj.client is dummy_client
         dummy_client.close.assert_not_awaited()
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_lifespan_creates_client(monkeypatch: Any) -> None:
@@ -147,10 +147,10 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     )
 
     api = AssistantEngineAPI(service_config=test_config)
-    assert api.client is None  # Client not created yet
+    assert api.client is not None  # Client created immediately
+    assert isinstance(api.client, MockAsyncOpenAI)
 
     with TestClient(api.app):
-        assert api.client is not None  # Client created by lifespan
         close_mock.assert_not_awaited()
 
     # Client should be closed after lifespan
@@ -170,8 +170,8 @@ def test_start_endpoint(api: tuple[AssistantEngineAPI, Any]) -> None:
         from uuid import UUID
 
         UUID(data["correlation_id"])
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -187,8 +187,8 @@ def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) ->
         resp = client.post("/chat", json={"thread_id": "thread123", "message": "hello"})
         assert resp.status_code == 200
         assert resp.json() == {"responses": ["response"]}
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -208,8 +208,8 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) 
         assert websocket.receive_text() == "event2"
         # WebSocket now stays open for multiple messages, so we close it explicitly
         websocket.close()
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_start_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -222,8 +222,8 @@ def test_start_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngin
     with TestClient(api_obj.app) as client:
         resp = client.get("/start")
         assert resp.status_code == 502
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_chat_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -239,8 +239,8 @@ def test_chat_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngine
     with TestClient(api_obj.app) as client:
         resp = client.post("/chat", json={"thread_id": "thread123", "message": "hi"})
         assert resp.status_code == 502
-    # Since client was injected (not created by lifespan), it shouldn't be closed
-    dummy_client.close.assert_not_awaited()
+    # Client should be closed after lifespan
+    dummy_client.close.assert_awaited_once()
 
 
 def test_validate_function_args_success(api: tuple[AssistantEngineAPI, Any]) -> None:

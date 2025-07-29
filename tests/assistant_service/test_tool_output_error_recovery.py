@@ -140,16 +140,16 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
         client_id="c",
     )
 
+    # Monkeypatch the client
+    from assistant_service.providers import openai_client
+
+    def mock_create_from_config(config):
+        return AsyncMock()
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = AssistantEngineAPI(service_config=test_config)
-    mock_client = AsyncMock()
-    api.client = mock_client
-
-    # Initialize components that would normally be initialized in lifespan
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)
+    mock_client = api.client
 
     # Mock failed tool output submission - use AsyncMock to properly return None
     mock_submit = AsyncMock(return_value=None)

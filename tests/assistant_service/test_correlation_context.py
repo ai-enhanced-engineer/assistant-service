@@ -129,15 +129,15 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
+    # Monkeypatch the client
+    from assistant_service.providers import openai_client
+
+    def mock_create_from_config(config):
+        return DummyClient()
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = AssistantEngineAPI(service_config=test_config)
-    api.client = DummyClient()  # type: ignore[assignment]
-
-    # Initialize components that would normally be initialized in lifespan
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
 
     with TestClient(api.app) as client:
         # Test start endpoint includes correlation_id
@@ -210,15 +210,15 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
+    # Monkeypatch the client
+    from assistant_service.providers import openai_client
+
+    def mock_create_from_config(config):
+        return DummyClient()
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = AssistantEngineAPI(service_config=test_config)
-    api.client = DummyClient()  # type: ignore[assignment]
-
-    # Initialize components that would normally be initialized in lifespan
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
 
     with TestClient(api.app) as client:
         # Test error response includes correlation_id
@@ -260,17 +260,16 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
+    from assistant_service.providers import openai_client
     from assistant_service.server.main import AssistantEngineAPI
 
+    # Monkeypatch the client
+    def mock_create_from_config(config):
+        return AsyncMock()
+
+    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = AssistantEngineAPI()
-    api.client = AsyncMock()
-
-    # Initialize components that would normally be initialized in lifespan
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
 
     with TestClient(api.app) as client:
         # Test missing thread_id includes correlation_id

@@ -164,8 +164,15 @@ def api(monkeypatch):
         client_id="c",
     )
 
+    # Monkeypatch the client
+    from assistant_service.providers import openai_client as oc
+
+    def mock_create_from_config(config):
+        return DummyClient()
+
+    monkeypatch.setattr(oc.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+
     api = main.AssistantEngineAPI(service_config=test_config)
-    api.client = DummyClient()  # type: ignore[assignment]
 
     # Import the modules where these are actually located
     from assistant_service import functions
@@ -181,13 +188,6 @@ def api(monkeypatch):
     from assistant_service.processors import run_processor as run_processor_module
 
     monkeypatch.setattr(run_processor_module, "submit_tool_outputs_with_backoff", test_dummy_submit)
-
-    # Initialize components that would normally be initialized in lifespan
-    from assistant_service.processors.run_processor import RunProcessor
-    from assistant_service.server.endpoints import APIEndpoints
-
-    api.run_processor = RunProcessor(api.client, api.engine_config, api.tool_executor)  # type: ignore[arg-type]
-    api.api_endpoints = APIEndpoints(api.client, api.engine_config, api.run_processor)  # type: ignore[arg-type]
 
     # Also patch the tool_map on the tool_executor instance
     api.tool_executor.tool_map = {"func": lambda: "out"}
