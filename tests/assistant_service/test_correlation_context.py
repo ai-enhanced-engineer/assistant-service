@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant_service.correlation import (
+from assistant_service.structured_logging import (
     CorrelationContext,
     generate_correlation_id,
     get_correlation_id,

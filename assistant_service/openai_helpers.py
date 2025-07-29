@@ -1,8 +1,7 @@
 import asyncio
 from typing import Any, Iterable, Optional
 
-from .correlation import get_or_create_correlation_id
-from .structured_logging import get_logger
+from .structured_logging import get_logger, get_or_create_correlation_id
 
 logger = get_logger("OPENAI_HELPERS")
 
