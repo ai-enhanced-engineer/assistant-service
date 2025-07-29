@@ -9,13 +9,18 @@ from typing import Any, AsyncGenerator, Optional
 from fastapi import FastAPI, WebSocket
 from openai import AsyncOpenAI, OpenAIError
 
-from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
+from ..bootstrap import (
+    get_config_repository,
+    get_engine_config,
+    get_openai_client,
+    get_orchestrator,
+    get_secret_repository,
+    get_stream_handler,
+)
 from ..entities import ServiceConfig
-from ..processors.openai_orchestrator import OpenAIOrchestrator
-from ..processors.stream_handler import StreamHandler
+from ..entities.schemas import ChatRequest, ChatResponse, StartResponse
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler
-from .schemas import ChatRequest, ChatResponse, StartResponse
 
 # Use new structured logger
 logger = get_logger("MAIN")
@@ -53,8 +58,10 @@ class AssistantEngineAPI:
 
         self.engine_config = get_engine_config(secret_repository, config_repository)
 
-        # Create client immediately
-        self.client: AsyncOpenAI = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
+        # Create components using factory functions
+        self.client: AsyncOpenAI = get_openai_client(self.engine_config)
+        self.orchestrator = get_orchestrator(self.client, self.engine_config)
+        self.stream_handler = get_stream_handler(self.orchestrator)
 
         # Log configuration (without sensitive data)
         logger.info(
@@ -66,11 +73,11 @@ class AssistantEngineAPI:
             retrieval=self.engine_config.retrieval,
             function_names=self.engine_config.function_names,
             openai_apikey="sk" if self.engine_config.openai_apikey else None,
+            orchestrator_type=self.engine_config.orchestrator_type,
+            stream_handler_type=self.engine_config.stream_handler_type,
+            tool_executor_type=self.engine_config.tool_executor_type,
+            message_parser_type=self.engine_config.message_parser_type,
         )
-
-        # Initialize all components
-        self.orchestrator = OpenAIOrchestrator(self.client, self.engine_config)
-        self.stream_handler = StreamHandler(self.orchestrator)
 
         # Create FastAPI app
         self.app = FastAPI(title="Assistant Engine", lifespan=create_lifespan(self))

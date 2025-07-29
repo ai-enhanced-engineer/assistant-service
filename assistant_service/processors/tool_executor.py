@@ -4,13 +4,14 @@ import inspect
 import json
 from typing import Any, Callable, Optional
 
+from ..entities import IToolExecutor
 from ..structured_logging import get_logger
 from ..tools import TOOL_MAP
 
 logger = get_logger("TOOL_EXECUTOR")
 
 
-class ToolExecutor:
+class ToolExecutor(IToolExecutor):
     """Handles tool execution and validation."""
 
     def __init__(self, tool_map: Optional[dict[str, Callable[..., Any]]] = None):

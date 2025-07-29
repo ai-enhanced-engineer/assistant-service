@@ -102,19 +102,7 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.entities import ServiceConfig
-
-    # Create a test service config
-    test_config = ServiceConfig(
-        environment="development",
-        project_id="p",
-        bucket_id="b",
-        client_id="c",
-    )
-
-    from assistant_service.server.main import AssistantEngineAPI
-
-    # Mock client
+    # Mock client - define first
     class DummyThreads:
         async def create(self):
             return types.SimpleNamespace(id="thread123")
@@ -129,17 +117,26 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
             self.aclose = AsyncMock()
             self.close = AsyncMock()
 
-    # Monkeypatch the client
-    import openai
+    # Create a single instance to return consistently
+    dummy_client = DummyClient()
 
-    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: DummyClient())
+    # Patch the factory function BEFORE importing AssistantEngineAPI
+    import assistant_service.bootstrap
 
-    # Reload the module to pick up our patched AsyncOpenAI
-    import importlib
+    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
 
-    from assistant_service.server import main as server_main
+    from assistant_service.entities import ServiceConfig
 
-    importlib.reload(server_main)
+    # Create a test service config
+    test_config = ServiceConfig(
+        environment="development",
+        project_id="p",
+        bucket_id="b",
+        client_id="c",
+    )
+
+    # Import AFTER patching
+    from assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI(service_config=test_config)
 
@@ -185,6 +182,8 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
+    from openai import OpenAIError
+
     from assistant_service.entities import ServiceConfig
 
     # Create a test service config
@@ -195,38 +194,16 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
         client_id="c",
     )
 
-    from openai import OpenAIError
-
+    # Import and create API first
     from assistant_service.server.main import AssistantEngineAPI
 
-    # Mock client that raises error
-    class DummyThreads:
-        async def create(self):
-            raise OpenAIError("Test OpenAI error")
-
-    class DummyBeta:
-        def __init__(self):
-            self.threads = DummyThreads()
-
-    class DummyClient:
-        def __init__(self) -> None:
-            self.beta = DummyBeta()
-            self.aclose = AsyncMock()
-            self.close = AsyncMock()
-
-    # Monkeypatch the client
-    import openai
-
-    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: DummyClient())
-
-    # Reload the module to pick up our patched AsyncOpenAI
-    import importlib
-
-    from assistant_service.server import main as server_main
-
-    importlib.reload(server_main)
-
     api = AssistantEngineAPI(service_config=test_config)
+
+    # Now patch the actual client instance that was created to raise error
+    async def error_create():
+        raise OpenAIError("Test OpenAI error")
+
+    monkeypatch.setattr(api.client.beta.threads, "create", error_create)
 
     with TestClient(api.app) as client:
         # Test error response includes correlation_id
@@ -268,12 +245,28 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Monkeypatch the client
-    import openai
+    # Create a proper dummy client to avoid interface issues
+    class DummyThreads:
+        async def create(self):
+            return types.SimpleNamespace(id="thread123")
 
+    class DummyBeta:
+        def __init__(self):
+            self.threads = DummyThreads()
+
+    class DummyClient:
+        def __init__(self) -> None:
+            self.beta = DummyBeta()
+            self.aclose = AsyncMock()
+            self.close = AsyncMock()
+
+    dummy_client = DummyClient()
+
+    # Patch the factory function
+    import assistant_service.bootstrap
     from assistant_service.server.main import AssistantEngineAPI
 
-    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: AsyncMock())
+    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
 
     api = AssistantEngineAPI()
 

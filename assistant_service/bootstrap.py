@@ -1,4 +1,15 @@
-from assistant_service.entities import EngineAssistantConfig, ServiceConfig
+from typing import Optional
+
+from openai import AsyncOpenAI
+
+from assistant_service.entities import (
+    EngineAssistantConfig,
+    IMessageParser,
+    IOrchestrator,
+    IStreamHandler,
+    IToolExecutor,
+    ServiceConfig,
+)
 from assistant_service.repositories import (
     BaseConfigRepository,
     BaseSecretRepository,
@@ -47,3 +58,84 @@ def get_engine_config(
         raise TypeError("Config repository returned invalid type")
     config.openai_apikey = secret_repository.access_secret("openai-api-key")
     return config
+
+
+def get_openai_client(config: EngineAssistantConfig) -> AsyncOpenAI:
+    """Create OpenAI client based on configuration.
+
+    Args:
+        config: Engine configuration with API key
+
+    Returns:
+        Configured AsyncOpenAI client
+    """
+    logger.info("Creating OpenAI client")
+    return AsyncOpenAI(api_key=config.openai_apikey)
+
+
+def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> IOrchestrator:
+    """Create OpenAI orchestrator based on configuration.
+
+    Args:
+        client: OpenAI client instance
+        config: Engine configuration
+
+    Returns:
+        Orchestrator instance implementing IOrchestrator
+    """
+    # Import here to avoid circular dependencies
+    from assistant_service.processors.openai_orchestrator import OpenAIOrchestrator
+
+    orchestrator_type = getattr(config, "orchestrator_type", "openai")
+
+    if orchestrator_type == "openai":
+        logger.info("Creating OpenAI orchestrator")
+        return OpenAIOrchestrator(client, config)
+    else:
+        raise ValueError(f"Unknown orchestrator type: {orchestrator_type}")
+
+
+def get_stream_handler(orchestrator: IOrchestrator) -> IStreamHandler:
+    """Create stream handler with configured orchestrator.
+
+    Args:
+        orchestrator: Orchestrator instance
+
+    Returns:
+        Stream handler instance implementing IStreamHandler
+    """
+    # Import here to avoid circular dependencies
+    from assistant_service.processors.stream_handler import StreamHandler
+
+    logger.info("Creating WebSocket stream handler")
+    return StreamHandler(orchestrator)
+
+
+def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> IToolExecutor:
+    """Create tool executor with configured tool map.
+
+    Args:
+        config: Optional engine configuration for custom tool maps
+
+    Returns:
+        Tool executor instance implementing IToolExecutor
+    """
+    # Import here to avoid circular dependencies
+    from assistant_service.processors.tool_executor import ToolExecutor
+
+    logger.info("Creating tool executor")
+    # In the future, config could specify different tool maps
+    return ToolExecutor()
+
+
+def get_message_parser() -> IMessageParser:
+    """Create message parser.
+
+    Returns:
+        Message parser instance implementing IMessageParser
+    """
+    # Import here to avoid circular dependencies
+    from assistant_service.processors.message_parser import MessageParser
+
+    logger.info("Creating message parser")
+    return MessageParser()

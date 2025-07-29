@@ -161,21 +161,17 @@ def api(monkeypatch):
         client_id="c",
     )
 
-    # Create a single DummyClient instance and patch AsyncOpenAI to return it
-    dummy_client = DummyClient()
-    import openai
-
-    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: dummy_client)
-
-    # Reload the module to pick up our patched AsyncOpenAI
-    import importlib
-
-    from assistant_service.server import main as server_main
-
-    importlib.reload(server_main)
+    # Create API first
     from assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI(service_config=test_config)
+
+    # Create a single DummyClient instance and directly replace the client
+    dummy_client = DummyClient()
+    api.client = dummy_client
+
+    # Also update the orchestrator's client reference
+    api.orchestrator.client = dummy_client
 
     # Import the modules where these are actually located
     from assistant_service import tools

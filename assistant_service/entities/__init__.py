@@ -1,5 +1,23 @@
 """Data entities for the assistant engine."""
 
 from .config import EngineAssistantConfig, ServiceConfig
+from .interfaces import IMessageParser, IOrchestrator, IStreamHandler, IToolExecutor
+from .message_data import MessageData
+from .schemas import ChatRequest, ChatResponse, StartResponse, WebSocketError, WebSocketRequest
+from .step_data import StepData
 
-__all__ = ["EngineAssistantConfig", "ServiceConfig"]
+__all__ = [
+    "EngineAssistantConfig",
+    "ServiceConfig",
+    "MessageData",
+    "StepData",
+    "ChatRequest",
+    "ChatResponse",
+    "StartResponse",
+    "WebSocketRequest",
+    "WebSocketError",
+    "IOrchestrator",
+    "IStreamHandler",
+    "IToolExecutor",
+    "IMessageParser",
+]

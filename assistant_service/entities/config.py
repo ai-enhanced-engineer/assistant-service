@@ -63,3 +63,15 @@ class EngineAssistantConfig(BaseModel):
     function_names: list[str] = Field(default_factory=list)
     # Secrets
     openai_apikey: Optional[str] = Field(default=None)
+
+    # Component type configurations for dependency injection
+    orchestrator_type: str = Field(default="openai", description="Type of orchestrator to use (e.g., 'openai', 'mock')")
+    stream_handler_type: str = Field(
+        default="websocket", description="Type of stream handler to use (e.g., 'websocket', 'buffered', 'sse')"
+    )
+    tool_executor_type: str = Field(
+        default="default", description="Type of tool executor to use (e.g., 'default', 'sandboxed', 'async')"
+    )
+    message_parser_type: str = Field(
+        default="default", description="Type of message parser to use (e.g., 'default', 'strict', 'lenient')"
+    )

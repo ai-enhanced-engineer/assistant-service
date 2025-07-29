@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional, Union
 
@@ -6,49 +5,12 @@ from openai.types.beta.threads import TextContentBlock
 from openai.types.beta.threads.message import Message
 from openai.types.beta.threads.runs import RunStep, ToolCall
 
+from ..entities import IMessageParser
+from ..entities.message_data import MessageData
+from ..entities.step_data import StepData
 from ..structured_logging import get_logger
 
 logger = get_logger("MESSAGE_PARSER")
-
-
-@dataclass
-class StepData:
-    """Information collected about a single run step.
-
-    Attributes:
-        name: The name of the step or tool.
-        type: The type of step being executed.
-        parent_id: Identifier for any parent step.
-        show_input: Whether to display the input when presenting the step.
-        start: ISO formatted creation time.
-        end: ISO formatted completion time.
-        input: Input payload provided to the step.
-        output: Output returned from the step.
-    """
-
-    name: Optional[str] = None
-    type: Optional[str] = None
-    parent_id: Optional[str] = None
-    show_input: Optional[Union[bool, str]] = None
-    start: Optional[str] = None
-    end: Optional[str] = None
-    input: Any = None
-    output: Any = None
-
-
-@dataclass
-class MessageData:
-    """Represents a single message extracted from a thread.
-
-    Attributes:
-        author: Role of the message sender.
-        content: Textual content of the message.
-        id: Unique identifier for the message content block.
-    """
-
-    author: Optional[str] = None
-    content: Optional[str] = None
-    id: Optional[str] = None
 
 
 class ToolTracker:
@@ -93,7 +55,7 @@ class ToolTracker:
         return step_data
 
 
-class MessageParser:
+class MessageParser(IMessageParser):
     """Parse and process thread messages."""
 
     def __init__(self) -> None:

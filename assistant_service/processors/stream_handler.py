@@ -6,21 +6,21 @@ from typing import Any
 from fastapi import WebSocket as FastAPIWebSocket
 from openai import OpenAIError
 
+from ..entities import IOrchestrator, IStreamHandler
 from ..server.error_handlers import WebSocketErrorHandler
 from ..structured_logging import CorrelationContext, get_logger
-from .openai_orchestrator import OpenAIOrchestrator
 
 logger = get_logger("STREAM_HANDLER")
 
 
-class StreamHandler:
+class StreamHandler(IStreamHandler):
     """Handles WebSocket connections and message streaming."""
 
-    def __init__(self, orchestrator: OpenAIOrchestrator):
-        """Initialize with an OpenAI orchestrator.
+    def __init__(self, orchestrator: IOrchestrator):
+        """Initialize with an orchestrator.
 
         Args:
-            orchestrator: The OpenAI orchestrator to use for processing runs
+            orchestrator: The orchestrator to use for processing runs
         """
         self.orchestrator = orchestrator
 
