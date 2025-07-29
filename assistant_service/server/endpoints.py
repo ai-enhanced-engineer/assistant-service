@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, WebSocket
 from openai import OpenAIError
 
-from ..infrastructure.error_handlers import ErrorHandler, WebSocketErrorHandler
 from ..structured_logging import CorrelationContext, get_logger
+from .error_handlers import ErrorHandler, WebSocketErrorHandler
 from .schemas import ChatRequest, ChatResponse, StartResponse
 
 if TYPE_CHECKING:

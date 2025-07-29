@@ -5,8 +5,8 @@ from typing import Any, AsyncGenerator, Optional
 from openai import AsyncOpenAI, OpenAIError
 
 from ..entities import EngineAssistantConfig
-from ..infrastructure.error_handlers import ErrorHandler
 from ..openai_helpers import cancel_run_safely, submit_tool_outputs_with_backoff
+from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import ToolExecutor
 
