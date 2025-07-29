@@ -13,7 +13,6 @@ from openai import AsyncOpenAI, OpenAIError
 from ..bootstrap import get_config_repository, get_engine_config, get_secret_repository
 from ..processors.run_processor import RunProcessor
 from ..processors.tool_executor import ToolExecutor
-from ..providers.openai_client import OpenAIClientFactory
 from ..service_config import ServiceConfig
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler, WebSocketErrorHandler
@@ -56,7 +55,7 @@ class AssistantEngineAPI:
         self.engine_config = get_engine_config(secret_repository, config_repository)
 
         # Create client immediately
-        self.client: AsyncOpenAI = OpenAIClientFactory.create_from_config(self.engine_config)
+        self.client: AsyncOpenAI = AsyncOpenAI(api_key=self.engine_config.openai_apikey)
 
         # Log configuration (without sensitive data)
         logger.info(

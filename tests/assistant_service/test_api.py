@@ -14,6 +14,27 @@ from assistant_service.service_config import ServiceConfig
 
 @pytest.fixture()
 def api(monkeypatch):
+    # Patch AsyncOpenAI before importing the module
+    class DummyThreads:
+        async def create(self):
+            return types.SimpleNamespace(id="thread123")
+
+    class DummyBeta:
+        def __init__(self):
+            self.threads = DummyThreads()
+
+    class DummyClient:
+        def __init__(self, api_key=None) -> None:
+            self.beta = DummyBeta()
+            self.aclose = AsyncMock()
+            self.close = AsyncMock()
+
+    # Create a single instance to use
+    dummy_client = DummyClient()
+    import openai
+
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: dummy_client)
+
     # Create a test service config
     test_config = ServiceConfig(
         environment="development",
@@ -53,30 +74,15 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    class DummyThreads:
-        async def create(self):
-            return types.SimpleNamespace(id="thread123")
+    # Now we need to reload the module to pick up our patched AsyncOpenAI
+    import importlib
 
-    class DummyBeta:
-        def __init__(self):
-            self.threads = DummyThreads()
+    from assistant_service.server import main as server_main
 
-    class DummyClient:
-        def __init__(self) -> None:
-            self.beta = DummyBeta()
-            self.aclose = AsyncMock()
-            self.close = AsyncMock()
-
-    # Monkeypatch OpenAIClientFactory to return our dummy client
-    def mock_create_from_config(config):
-        return DummyClient()
-
-    from assistant_service.providers import openai_client
-
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    importlib.reload(server_main)
+    from assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI(service_config=test_config)
-    dummy_client = api.client  # Get the client that was created
 
     return api, dummy_client
 
@@ -85,13 +91,24 @@ def test_lifespan(api: tuple[AssistantEngineAPI, Any]) -> None:
     api_obj, dummy_client = api
     with TestClient(api_obj.app):
         assert api_obj.client is dummy_client
-        dummy_client.close.assert_not_awaited()
+        dummy_client.close.assert_not_called()
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_lifespan_creates_client(monkeypatch: Any) -> None:
     """Test that lifespan creates and closes client when not injected."""
+    # Mock OpenAI first
+    close_mock = AsyncMock()
+
+    class MockAsyncOpenAI:
+        def __init__(self, api_key: str = None):
+            self.close = close_mock
+
+    import openai
+
+    monkeypatch.setattr(openai, "AsyncOpenAI", MockAsyncOpenAI)
+
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
     monkeypatch.setenv("CLIENT_ID", "c")
@@ -122,20 +139,13 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    # Mock OpenAIClientFactory
-    close_mock = AsyncMock()
+    # Reload the module to pick up our patched AsyncOpenAI
+    import importlib
 
-    class MockAsyncOpenAI:
-        def __init__(self, api_key: str = None):
-            self.close = close_mock
+    from assistant_service.server import main as server_main
 
-    def mock_create_from_config(config):
-        return MockAsyncOpenAI()
-
-    from assistant_service.providers import openai_client
-
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
-
+    importlib.reload(server_main)
+    from assistant_service.server.main import AssistantEngineAPI
     from assistant_service.service_config import ServiceConfig
 
     # Create a test service config
@@ -151,10 +161,10 @@ def test_lifespan_creates_client(monkeypatch: Any) -> None:
     assert isinstance(api.client, MockAsyncOpenAI)
 
     with TestClient(api.app):
-        close_mock.assert_not_awaited()
+        close_mock.assert_not_called()
 
     # Client should be closed after lifespan
-    close_mock.assert_awaited_once()
+    close_mock.assert_called_once()
 
 
 def test_start_endpoint(api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -171,7 +181,7 @@ def test_start_endpoint(api: tuple[AssistantEngineAPI, Any]) -> None:
 
         UUID(data["correlation_id"])
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -188,7 +198,7 @@ def test_chat_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) ->
         assert resp.status_code == 200
         assert resp.json() == {"responses": ["response"]}
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -209,7 +219,7 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) 
         # WebSocket now stays open for multiple messages, so we close it explicitly
         websocket.close()
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_start_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -223,7 +233,7 @@ def test_start_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngin
         resp = client.get("/start")
         assert resp.status_code == 502
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_chat_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngineAPI, Any]) -> None:
@@ -240,7 +250,7 @@ def test_chat_endpoint_openai_error(monkeypatch: Any, api: tuple[AssistantEngine
         resp = client.post("/chat", json={"thread_id": "thread123", "message": "hi"})
         assert resp.status_code == 502
     # Client should be closed after lifespan
-    dummy_client.close.assert_awaited_once()
+    dummy_client.close.assert_called_once()
 
 
 def test_validate_function_args_success(api: tuple[AssistantEngineAPI, Any]) -> None:

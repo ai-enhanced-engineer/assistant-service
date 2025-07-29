@@ -130,12 +130,16 @@ async def test_api_endpoints_include_correlation_ids(monkeypatch):
             self.close = AsyncMock()
 
     # Monkeypatch the client
-    from assistant_service.providers import openai_client
+    import openai
 
-    def mock_create_from_config(config):
-        return DummyClient()
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: DummyClient())
 
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    # Reload the module to pick up our patched AsyncOpenAI
+    import importlib
+
+    from assistant_service.server import main as server_main
+
+    importlib.reload(server_main)
 
     api = AssistantEngineAPI(service_config=test_config)
 
@@ -211,12 +215,16 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
             self.close = AsyncMock()
 
     # Monkeypatch the client
-    from assistant_service.providers import openai_client
+    import openai
 
-    def mock_create_from_config(config):
-        return DummyClient()
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: DummyClient())
 
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    # Reload the module to pick up our patched AsyncOpenAI
+    import importlib
+
+    from assistant_service.server import main as server_main
+
+    importlib.reload(server_main)
 
     api = AssistantEngineAPI(service_config=test_config)
 
@@ -260,14 +268,12 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.providers import openai_client
+    # Monkeypatch the client
+    import openai
+
     from assistant_service.server.main import AssistantEngineAPI
 
-    # Monkeypatch the client
-    def mock_create_from_config(config):
-        return AsyncMock()
-
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: AsyncMock())
 
     api = AssistantEngineAPI()
 

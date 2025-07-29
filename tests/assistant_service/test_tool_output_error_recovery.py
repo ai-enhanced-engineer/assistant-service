@@ -141,12 +141,9 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     )
 
     # Monkeypatch the client
-    from assistant_service.providers import openai_client
+    import openai
 
-    def mock_create_from_config(config):
-        return AsyncMock()
-
-    monkeypatch.setattr(openai_client.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: AsyncMock())
 
     api = AssistantEngineAPI(service_config=test_config)
     mock_client = api.client
@@ -194,8 +191,12 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
                         )
 
                     # Mock event stream creation
-                    mock_client.beta.threads.messages.create.return_value = None
-                    mock_client.beta.threads.runs.create.return_value = mock_events()
+                    mock_client.beta = AsyncMock()
+                    mock_client.beta.threads = AsyncMock()
+                    mock_client.beta.threads.messages = AsyncMock()
+                    mock_client.beta.threads.runs = AsyncMock()
+                    mock_client.beta.threads.messages.create = AsyncMock(return_value=None)
+                    mock_client.beta.threads.runs.create = AsyncMock(return_value=mock_events())
 
                     # Mock TOOL_MAP with test function by patching the tool_map on the instance
                     test_tool_map = {"test_func": lambda param: "result"}

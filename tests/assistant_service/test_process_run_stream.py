@@ -153,7 +153,6 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.server import main
     from assistant_service.service_config import ServiceConfig
 
     # Create a test service config
@@ -164,15 +163,21 @@ def api(monkeypatch):
         client_id="c",
     )
 
-    # Monkeypatch the client
-    from assistant_service.providers import openai_client as oc
+    # Create a single DummyClient instance and patch AsyncOpenAI to return it
+    dummy_client = DummyClient()
+    import openai
 
-    def mock_create_from_config(config):
-        return DummyClient()
+    monkeypatch.setattr(openai, "AsyncOpenAI", lambda api_key=None: dummy_client)
 
-    monkeypatch.setattr(oc.OpenAIClientFactory, "create_from_config", mock_create_from_config)
+    # Reload the module to pick up our patched AsyncOpenAI
+    import importlib
 
-    api = main.AssistantEngineAPI(service_config=test_config)
+    from assistant_service.server import main as server_main
+
+    importlib.reload(server_main)
+    from assistant_service.server.main import AssistantEngineAPI
+
+    api = AssistantEngineAPI(service_config=test_config)
 
     # Import the modules where these are actually located
     from assistant_service import functions
