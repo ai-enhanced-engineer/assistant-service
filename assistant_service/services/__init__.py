@@ -1,4 +1,4 @@
-"""Processors for handling assistant orchestration, message parsing, tool execution, and streaming."""
+"""Application services for handling assistant orchestration, message parsing, tool execution, and streaming."""
 
 from ..entities import MessageData, StepData
 from .message_parser import MessageParser, ToolTracker

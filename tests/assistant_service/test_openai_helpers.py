@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from assistant_service.entities import EngineAssistantConfig
-from assistant_service.processors.openai_orchestrator import OpenAIOrchestrator
+from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
 @pytest.mark.asyncio

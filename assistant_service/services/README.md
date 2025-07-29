@@ -1,11 +1,11 @@
-# Processors Module - Technical Documentation
+# Services Module - Technical Documentation
 
-The `processors` module contains the core business logic for handling OpenAI Assistant API interactions, tool execution, message processing, and WebSocket streaming. This module implements the Event-Driven Processing pattern to handle real-time assistant interactions.
+The `services` module contains the application services layer for handling OpenAI Assistant API interactions, tool execution, message processing, and WebSocket streaming. This module implements the Event-Driven Processing pattern to handle real-time assistant interactions.
 
 ## Architecture Overview
 
 ```
-processors/
+services/
 ├── __init__.py              # Module exports
 ├── openai_orchestrator.py   # OpenAI assistant orchestration and streaming
 ├── tool_executor.py         # Tool/function execution engine
@@ -237,7 +237,7 @@ TOOL_MAP = {
 
 ## Testing
 
-The processors module includes comprehensive test coverage:
+The services module includes comprehensive test coverage:
 - `test_openai_orchestrator.py`: OpenAI orchestration and integration
 - `test_tool_executor.py`: Tool execution and validation
 - `test_message_parser.py`: Message and step parsing

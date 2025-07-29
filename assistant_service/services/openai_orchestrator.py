@@ -1,4 +1,4 @@
-"""OpenAI assistant orchestration logic for the assistant service."""
+"""OpenAI assistant orchestration service for the assistant service."""
 
 import asyncio
 from typing import Any, AsyncGenerator, Iterable, Optional

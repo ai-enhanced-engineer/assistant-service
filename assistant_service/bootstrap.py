@@ -84,7 +84,7 @@ def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> IOrc
         Orchestrator instance implementing IOrchestrator
     """
     # Import here to avoid circular dependencies
-    from assistant_service.processors.openai_orchestrator import OpenAIOrchestrator
+    from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
     orchestrator_type = getattr(config, "orchestrator_type", "openai")
 
@@ -105,7 +105,7 @@ def get_stream_handler(orchestrator: IOrchestrator) -> IStreamHandler:
         Stream handler instance implementing IStreamHandler
     """
     # Import here to avoid circular dependencies
-    from assistant_service.processors.stream_handler import StreamHandler
+    from assistant_service.services.stream_handler import StreamHandler
 
     logger.info("Creating WebSocket stream handler")
     return StreamHandler(orchestrator)
@@ -121,7 +121,7 @@ def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> IToolEx
         Tool executor instance implementing IToolExecutor
     """
     # Import here to avoid circular dependencies
-    from assistant_service.processors.tool_executor import ToolExecutor
+    from assistant_service.services.tool_executor import ToolExecutor
 
     logger.info("Creating tool executor")
     # In the future, config could specify different tool maps
@@ -135,7 +135,7 @@ def get_message_parser() -> IMessageParser:
         Message parser instance implementing IMessageParser
     """
     # Import here to avoid circular dependencies
-    from assistant_service.processors.message_parser import MessageParser
+    from assistant_service.services.message_parser import MessageParser
 
     logger.info("Creating message parser")
     return MessageParser()
