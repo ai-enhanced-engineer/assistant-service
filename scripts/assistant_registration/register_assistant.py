@@ -41,7 +41,7 @@ class AssistantRegistrar:
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set. Please check your .env file.")
-        logger.debug(f"OpenAI API key loaded (first 10 chars): {api_key[:10]}...")
+        logger.debug("OpenAI API key loaded successfully")
         self.client = AsyncOpenAI(api_key=api_key)
 
     async def upload_file(self, file_path: str) -> str:
@@ -142,51 +142,28 @@ class AssistantRegistrar:
             Vector store ID if successful, None otherwise
         """
         try:
-            # Try to create vector store using direct API call
-            import httpx
+            # Create vector store using official OpenAI client
+            vector_store = await self.client.beta.vector_stores.create(name=name)
+            vector_store_id = vector_store.id
+            logger.info(f"Vector store created with ID: {vector_store_id}")
 
-            headers = {
-                "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
-                "Content-Type": "application/json",
-                "OpenAI-Beta": "assistants=v2",
-            }
+            # Upload files and add to vector store
+            file_ids = []
+            for file_path in file_paths:
+                logger.info(f"Uploading file: {file_path}")
+                with open(file_path, "rb") as f:
+                    file = await self.client.files.create(file=f, purpose="assistants")
+                file_ids.append(file.id)
+                logger.info(f"File {file_path} uploaded with ID: {file.id}")
 
-            # Create vector store
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://api.openai.com/v1/vector_stores", headers=headers, json={"name": name}
-                )
+                # Add file to vector store using official client
+                try:
+                    await self.client.beta.vector_stores.files.create(vector_store_id=vector_store_id, file_id=file.id)
+                    logger.info(f"File {file.id} added to vector store")
+                except Exception as e:
+                    logger.warning(f"Failed to add file {file.id} to vector store: {e}")
 
-                if response.status_code != 200:
-                    logger.warning(f"Failed to create vector store via API: {response.text}")
-                    return None
-
-                vector_store = response.json()
-                vector_store_id = vector_store["id"]
-                logger.info(f"Vector store created with ID: {vector_store_id}")
-
-                # Upload files and add to vector store
-                file_ids = []
-                for file_path in file_paths:
-                    logger.info(f"Uploading file: {file_path}")
-                    with open(file_path, "rb") as f:
-                        file = await self.client.files.create(file=f, purpose="assistants")
-                    file_ids.append(file.id)
-                    logger.info(f"File {file_path} uploaded with ID: {file.id}")
-
-                    # Add file to vector store
-                    response = await client.post(
-                        f"https://api.openai.com/v1/vector_stores/{vector_store_id}/files",
-                        headers=headers,
-                        json={"file_id": file.id},
-                    )
-
-                    if response.status_code == 200:
-                        logger.info(f"File {file.id} added to vector store")
-                    else:
-                        logger.warning(f"Failed to add file to vector store: {response.text}")
-
-                return vector_store_id
+            return vector_store_id
 
         except Exception as e:
             logger.warning(f"Vector store creation failed: {e}")
