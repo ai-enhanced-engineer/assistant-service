@@ -28,7 +28,12 @@ def test__get_assistant_config(monkeypatch):
 
 def test__get_secret_repository_development():
     """Test that development config returns LocalSecretRepository."""
-    config = ServiceConfig(environment="development")
+    config = ServiceConfig(
+        environment="development",
+        project_id="test-project",
+        bucket_id="test-bucket",
+        openai_api_key="test-key",
+    )
     repo = get_secret_repository(config)
     assert isinstance(repo, LocalSecretRepository)
 
@@ -43,7 +48,12 @@ def test__get_secret_repository_production(monkeypatch):
 
     monkeypatch.setattr("assistant_service.bootstrap.GCPSecretRepository", MockGCPSecretRepository)
 
-    config = ServiceConfig(environment="production", project_id="test-project", bucket_id="test-bucket")
+    config = ServiceConfig(
+        environment="production",
+        project_id="test-project",
+        bucket_id="test-bucket",
+        openai_api_key="test-key",
+    )
     repo = get_secret_repository(config)
     assert isinstance(repo, MockGCPSecretRepository)
     assert repo.project_id == "test-project"
@@ -51,7 +61,12 @@ def test__get_secret_repository_production(monkeypatch):
 
 def test__get_config_repository_development():
     """Test that development config returns LocalConfigRepository."""
-    config = ServiceConfig(environment="development")
+    config = ServiceConfig(
+        environment="development",
+        project_id="test-project",
+        bucket_id="test-bucket",
+        openai_api_key="test-key",
+    )
     repo = get_config_repository(config)
     assert isinstance(repo, LocalConfigRepository)
 
@@ -67,7 +82,12 @@ def test__get_config_repository_production(monkeypatch):
 
     monkeypatch.setattr("assistant_service.bootstrap.GCPConfigRepository", MockGCPConfigRepository)
 
-    config = ServiceConfig(environment="production", project_id="test-project", bucket_id="test-bucket")
+    config = ServiceConfig(
+        environment="production",
+        project_id="test-project",
+        bucket_id="test-bucket",
+        openai_api_key="test-key",
+    )
     repo = get_config_repository(config)
     assert isinstance(repo, MockGCPConfigRepository)
     assert repo.project_id == "test-project"

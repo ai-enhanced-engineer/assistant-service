@@ -156,6 +156,7 @@ def api(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
+        openai_api_key="test-key",
     )
 
     # Create API first

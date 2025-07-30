@@ -23,17 +23,14 @@ class ServiceConfig(BaseSettings):
         validation_alias="ENVIRONMENT",
     )
     project_id: str = Field(
-        default="",
         description="GCP project ID",
         validation_alias="PROJECT_ID",
     )
     bucket_id: str = Field(
-        default="",
         description="GCS bucket ID",
         validation_alias="BUCKET_ID",
     )
     openai_api_key: str = Field(
-        default="",
         description="OpenAI API key",
         validation_alias="OPENAI_API_KEY",
     )

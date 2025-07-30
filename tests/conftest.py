@@ -97,6 +97,7 @@ def test_service_config():
         environment="development",
         project_id="test-project",
         bucket_id="test-bucket",
+        openai_api_key="test-key",
     )
 
 

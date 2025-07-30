@@ -162,6 +162,7 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
+        openai_api_key="test-key",
     )
 
     # Monkeypatch the client

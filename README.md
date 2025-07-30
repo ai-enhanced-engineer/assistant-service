@@ -261,23 +261,23 @@ custom-assistant-service/
 
 ## Configuration
 
-### Required Environment Variables
+### Environment Variables
 
-Create a `.env` file with:
+#### Required Variables
 
-```bash
-OPENAI_API_KEY="your-openai-api-key"
-```
+The service requires these environment variables to start:
 
-### Optional Configuration
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | Your OpenAI API key | `sk-...` |
+| `PROJECT_ID` | GCP project ID (can be dummy in development) | `my-project` |
+| `BUCKET_ID` | GCS bucket name (can be dummy in development) | `my-bucket` |
 
-For production deployments:
+#### Optional Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ENVIRONMENT` | `development` or `production` | `development` |
-| `PROJECT_ID` | GCP project ID (for cloud storage) | - |
-| `BUCKET_ID` | GCS bucket for assistant configs | - |
 | `ASSISTANT_ID` | Default assistant to load | - |
 | `LOGGING_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO` |
 | `LOG_FORMAT` | `json` or `keyvalue` | `keyvalue` |

@@ -125,11 +125,14 @@ Tool Processing → Message Processing → HTTP Response
 ## Environment Variables
 
 ### Required
-- `PROJECT_ID` - GCP project ID
-- `BUCKET_ID` - GCP bucket for configurations
-- `ASSISTANT_ID` - Default assistant to load
+- `PROJECT_ID` - GCP project ID (can be dummy value in development)
+- `BUCKET_ID` - GCP bucket for configurations (can be dummy value in development)
 - `OPENAI_API_KEY` - OpenAI API key
-- `GOOGLE_APPLICATION_CREDENTIALS` - Path to GCP credentials
+
+### Optional
+- `ENVIRONMENT` - Environment mode (development/production), defaults to development
+- `ASSISTANT_ID` - Default assistant to load
+- `GOOGLE_APPLICATION_CREDENTIALS` - Path to GCP credentials (only needed for production)
 
 ### Optional (Logging)
 - `LOGGING_LEVEL` - Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)

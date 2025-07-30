@@ -127,6 +127,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
+        openai_api_key="test-key",
     )
 
     # Import and create API first
