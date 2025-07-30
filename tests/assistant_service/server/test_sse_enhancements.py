@@ -22,7 +22,7 @@ class MockEvent:
 
     def model_dump_json(self) -> str:
         return json.dumps(self._data)
-        
+
     def model_dump(self) -> dict:
         return self._data
 
@@ -291,7 +291,7 @@ async def test_sse_rate_limiting_integration(api_with_mocks):
 
     # Set low connection limit for testing
     api.sse_stream_handler.max_connections_per_client = 1
-    
+
     # Create mock event stream that doesn't immediately complete
     async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
         yield MockEvent("thread.run.created", {"id": "run_123"})
@@ -307,7 +307,7 @@ async def test_sse_rate_limiting_integration(api_with_mocks):
             events.append(event)
         return events
 
-    # Start second connection concurrently  
+    # Start second connection concurrently
     async def second_connection():
         # Small delay to let first connection establish
         await asyncio.sleep(0.005)
@@ -319,7 +319,7 @@ async def test_sse_rate_limiting_integration(api_with_mocks):
 
     # Run both connections concurrently
     first_events, second_events = await asyncio.gather(first_connection(), second_connection())
-    
+
     # First connection should work normally
     assert len(first_events) == 1
     assert first_events[0]["event"] == "thread.run.created"
@@ -338,10 +338,11 @@ async def test_sse_connection_timeout_integration(api_with_mocks):
 
     # Set very short timeout for testing
     api.sse_stream_handler.max_connection_duration = 0.01
-    
+
     # Create slow stream
     async def slow_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
         import asyncio
+
         yield MockEvent("thread.run.created", {"id": "run_123"})
         await asyncio.sleep(0.05)  # Longer than timeout
         yield MockEvent("thread.run.completed", {"status": "completed"})
@@ -357,7 +358,7 @@ async def test_sse_connection_timeout_integration(api_with_mocks):
     # Should have initial event and timeout error
     timeout_events = [e for e in events if e.get("event") == "error" and "timeout" in e.get("id", "")]
     assert len(timeout_events) == 1
-    
+
     error_data = json.loads(timeout_events[0]["data"])
     assert error_data["error"] == "Connection timeout reached"
     assert error_data["error_type"] == "ConnectionTimeoutError"

@@ -54,7 +54,7 @@ class ServiceConfig(BaseSettings):
         description="Message parser type",
         validation_alias="MESSAGE_PARSER_TYPE",
     )
-    
+
     # SSE-specific configuration
     sse_heartbeat_interval: float = Field(
         default=15.0,

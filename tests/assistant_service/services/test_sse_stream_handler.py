@@ -275,21 +275,21 @@ def test_sse_handler_initialization(service_config):
 @pytest.mark.asyncio
 async def test_sse_handler_rate_limiting(mock_correlation_id, service_config):
     """Test rate limiting functionality."""
-    
+
     # Create mock event that keeps connection alive briefly
     mock_event = MagicMock()
     mock_event.event = "thread.run.created"
     mock_event.model_dump_json.return_value = '{"event": "thread.run.created"}'
     mock_event.model_dump.return_value = {"event": "thread.run.created"}
-    
+
     # Create orchestrator that yields event with small delay
     async def slow_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
         yield mock_event
         await asyncio.sleep(0.01)  # Keep connection alive
-    
+
     orchestrator = MagicMock()
     orchestrator.process_run_stream = slow_stream
-    
+
     # Set very low connection limit for testing
     service_config.sse_max_connections_per_client = 1
     handler = SSEStreamHandler(orchestrator, service_config)
@@ -300,7 +300,7 @@ async def test_sse_handler_rate_limiting(mock_correlation_id, service_config):
         async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
             formatted_events.append(event)
         return formatted_events
-    
+
     # Start second connection concurrently
     async def second_connection():
         # Small delay to let first connection establish
@@ -310,14 +310,14 @@ async def test_sse_handler_rate_limiting(mock_correlation_id, service_config):
             formatted_events.append(event)
             break  # Only get first event (rate limit error)
         return formatted_events
-    
+
     # Run both connections concurrently
     first_events, second_events = await asyncio.gather(first_connection(), second_connection())
-    
+
     # First connection should succeed and get the event
     assert len(first_events) == 1
     assert first_events[0]["event"] == "thread.run.created"
-    
+
     # Second connection should be rate limited
     assert len(second_events) == 1
     assert second_events[0]["event"] == "error"
@@ -329,7 +329,7 @@ async def test_sse_handler_rate_limiting(mock_correlation_id, service_config):
 @pytest.mark.asyncio
 async def test_sse_handler_connection_timeout(mock_correlation_id, service_config):
     """Test connection timeout functionality."""
-    
+
     # Create orchestrator that yields events slowly
     async def slow_events():
         while True:
@@ -339,17 +339,17 @@ async def test_sse_handler_connection_timeout(mock_correlation_id, service_confi
             mock_event.model_dump.return_value = {"event": "thread.run.created"}
             yield mock_event
             await asyncio.sleep(0.1)
-    
+
     orchestrator = MagicMock()
     orchestrator.process_run_stream = MagicMock(return_value=slow_events())
-    
+
     # Set very short connection timeout for testing
     service_config.sse_max_connection_duration = 0.05
     handler = SSEStreamHandler(orchestrator, service_config)
 
     formatted_events = []
     timeout_reached = False
-    
+
     async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
         formatted_events.append(event)
         if event.get("event") == "error" and "timeout" in event.get("id", ""):
@@ -362,7 +362,7 @@ async def test_sse_handler_connection_timeout(mock_correlation_id, service_confi
     assert timeout_reached
     timeout_event = [e for e in formatted_events if e.get("event") == "error" and "timeout" in e.get("id", "")]
     assert len(timeout_event) == 1
-    
+
     error_data = json.loads(timeout_event[0]["data"])
     assert error_data["error"] == "Connection timeout reached"
     assert error_data["error_type"] == "ConnectionTimeoutError"
@@ -389,7 +389,7 @@ async def test_sse_handler_correlation_id_truncation(mock_correlation_id, servic
     assert "test-correlation-id" not in formatted_events[0]["id"]
 
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 async def test_sse_handler_event_serialization_caching(mock_correlation_id, service_config):
     """Test that event serialization is cached for performance."""
     # Create identical events that should hit the cache
@@ -398,9 +398,9 @@ async def test_sse_handler_event_serialization_caching(mock_correlation_id, serv
     event_data = {"event": "thread.run.created", "data": "identical"}
     mock_event1.model_dump_json.return_value = json.dumps(event_data)
     mock_event1.model_dump.return_value = event_data
-    
+
     mock_event2 = MagicMock()
-    mock_event2.event = "thread.run.created" 
+    mock_event2.event = "thread.run.created"
     mock_event2.model_dump_json.return_value = json.dumps(event_data)
     mock_event2.model_dump.return_value = event_data
 

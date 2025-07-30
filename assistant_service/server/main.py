@@ -130,8 +130,8 @@ class AssistantEngineAPI:
                     }
 
                     # Extract client IP for rate limiting
-                    client_ip = getattr(http_request.client, 'host', 'unknown') if http_request.client else 'unknown'
-                    
+                    client_ip = getattr(http_request.client, "host", "unknown") if http_request.client else "unknown"
+
                     return EventSourceResponse(
                         self.sse_stream_handler.format_events(request.thread_id, request.message, client_ip),
                         headers=headers,

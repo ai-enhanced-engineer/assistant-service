@@ -1,10 +1,9 @@
 """SSE (Server-Sent Events) stream handling logic with enhanced features for the assistant service."""
 
-import asyncio
 import json
 import time
 from abc import ABC, abstractmethod
-from collections import defaultdict, deque
+from collections import defaultdict
 from threading import Lock
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
 logger = get_logger("SSE_STREAM_HANDLER")
 
 # Global rate limiting tracker (thread-safe)
-_connection_tracker = defaultdict(int)
+_connection_tracker: defaultdict[str, int] = defaultdict(int)
 _connection_lock = Lock()
 
 # Event serialization cache for performance
@@ -31,7 +30,9 @@ class ISSEStreamHandler(ABC):
     """Interface for SSE stream handling."""
 
     @abstractmethod
-    def format_events(self, thread_id: str, human_query: str, client_ip: str = "unknown") -> AsyncGenerator[dict[str, Any], None]:
+    def format_events(
+        self, thread_id: str, human_query: str, client_ip: str = "unknown"
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Format OpenAI streaming events as SSE events.
 
         Args:
@@ -65,10 +66,10 @@ class SSEStreamHandler(ISSEStreamHandler):
 
     def _truncate_correlation_id(self, correlation_id: str) -> str:
         """Truncate correlation ID for security to prevent internal state exposure.
-        
+
         Args:
             correlation_id: Full correlation ID
-            
+
         Returns:
             Truncated correlation ID for client-facing use
         """
@@ -76,10 +77,10 @@ class SSEStreamHandler(ISSEStreamHandler):
 
     def _check_rate_limit(self, client_ip: str) -> bool:
         """Check if client IP has exceeded connection limit.
-        
+
         Args:
             client_ip: Client IP address
-            
+
         Returns:
             True if within rate limit, False if exceeded
         """
@@ -98,7 +99,7 @@ class SSEStreamHandler(ISSEStreamHandler):
 
     def _release_connection(self, client_ip: str) -> None:
         """Release connection count for client IP.
-        
+
         Args:
             client_ip: Client IP address
         """
@@ -108,13 +109,13 @@ class SSEStreamHandler(ISSEStreamHandler):
                 if _connection_tracker[client_ip] == 0:
                     del _connection_tracker[client_ip]
 
-    def _get_cached_event(self, event_key: str, event_data: dict) -> str:
+    def _get_cached_event(self, event_key: str, event_data: dict[str, Any]) -> str:
         """Get cached serialized event data for performance.
-        
+
         Args:
             event_key: Cache key for the event
             event_data: Event data to serialize
-            
+
         Returns:
             Serialized event data (cached or newly serialized)
         """
@@ -129,7 +130,9 @@ class SSEStreamHandler(ISSEStreamHandler):
                         del _event_cache[key]
             return _event_cache[event_key]
 
-    async def format_events(self, thread_id: str, human_query: str, client_ip: str = "unknown") -> AsyncGenerator[dict[str, Any], None]:
+    async def format_events(
+        self, thread_id: str, human_query: str, client_ip: str = "unknown"
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Format OpenAI streaming events as SSE events with enhanced features.
 
         Features:
@@ -159,7 +162,7 @@ class SSEStreamHandler(ISSEStreamHandler):
                         "error": "Rate limit exceeded",
                         "error_type": "RateLimitError",
                         "max_connections": self.max_connections_per_client,
-                    }
+                    },
                 ),
                 "id": "rate_limit_error",
                 "retry": self.retry_interval,
@@ -184,7 +187,7 @@ class SSEStreamHandler(ISSEStreamHandler):
 
             async for event in self.orchestrator.process_run_stream(thread_id, human_query):
                 current_time = time.time()
-                
+
                 # Connection timeout check
                 if current_time - start_time > self.max_connection_duration:
                     logger.info(
@@ -203,7 +206,7 @@ class SSEStreamHandler(ISSEStreamHandler):
                                 "error_type": "ConnectionTimeoutError",
                                 "max_duration": self.max_connection_duration,
                                 "timestamp": current_time,
-                            }
+                            },
                         ),
                         "id": f"{truncated_id}_timeout_{int(current_time)}",
                         "retry": self.retry_interval,
@@ -221,10 +224,10 @@ class SSEStreamHandler(ISSEStreamHandler):
                 # Pass through relevant events to the client
                 if event.event in SSE_STREAM_EVENTS:
                     event_count += 1
-                    
+
                     # Use caching for event serialization
                     cache_key = f"{event.event}_{hash(str(event.model_dump()))}"
-                    
+
                     yield {
                         "event": event.event,
                         "data": self._get_cached_event(cache_key, event.model_dump()),
@@ -277,7 +280,7 @@ class SSEStreamHandler(ISSEStreamHandler):
             # Explicit connection cleanup
             self._release_connection(client_ip)
             self.active_connections = max(0, self.active_connections - 1)
-            
+
             elapsed_time = time.time() - start_time
             logger.info(
                 "SSE connection closed",
