@@ -1,6 +1,12 @@
 # Services Module - Technical Documentation
 
-The `services` module contains the application services layer for handling OpenAI Assistant API interactions, tool execution, message processing, and WebSocket streaming. This module implements the Event-Driven Processing pattern to handle real-time assistant interactions.
+The `services` module contains the application services layer for handling OpenAI Assistant API interactions, tool execution, message processing, and real-time streaming via both WebSocket and Server-Sent Events (SSE). This module implements the Event-Driven Processing pattern to handle real-time assistant interactions.
+
+## Streaming Protocols
+
+The service supports two streaming protocols:
+- **WebSocket** (`/ws/chat`) - Bidirectional communication for interactive chat applications
+- **Server-Sent Events** (`/chat` with Accept: text/event-stream) - Unidirectional streaming for web applications
 
 ## Architecture Overview
 
@@ -10,7 +16,8 @@ services/
 ├── openai_orchestrator.py   # OpenAI assistant orchestration and streaming
 ├── tool_executor.py         # Tool/function execution engine
 ├── message_parser.py        # Message and step data parsing
-└── stream_handler.py        # WebSocket streaming and connection handling
+├── stream_handler.py        # WebSocket streaming and connection handling
+└── sse_stream_handler.py    # Server-Sent Events (SSE) streaming handler
 ```
 
 ## Core Components
@@ -124,7 +131,7 @@ Provides data structures and parsing logic for OpenAI messages and steps.
 
 ### 4. Stream Handler (`stream_handler.py`)
 
-The `StreamHandler` class manages real-time streaming connections via WebSocket.
+The `StreamHandler` class manages real-time streaming connections via WebSocket at the `/ws/chat` endpoint.
 
 #### Key Features:
 - Full connection lifecycle management
@@ -151,23 +158,55 @@ The `StreamHandler` class manages real-time streaming connections via WebSocket.
 }
 ```
 
+### 5. SSE Stream Handler (`sse_stream_handler.py`)
+
+The `SSEStreamHandler` class manages Server-Sent Events streaming for the `/chat` endpoint when the Accept header includes `text/event-stream`.
+
+#### Key Features:
+- Server-to-client only streaming (unidirectional)
+- Automatic reconnection support with retry intervals
+- Heartbeat mechanism to detect stale connections
+- Event ID tracking for resumption
+- Metadata events with performance metrics
+
+#### Event Types:
+- **Message Events**: `thread.message.delta`, `thread.run.completed`
+- **Metadata Events**: Performance metrics, correlation IDs
+- **Error Events**: Structured error information
+- **Heartbeat Comments**: Keep-alive signals
+
+#### SSE Format:
+```
+event: thread.message.delta
+id: correlation_123_delta_1
+data: {"delta": {"content": "Hello"}}
+retry: 5000
+
+:
+```
+
 ## Event Flow
 
 ```mermaid
 graph TD
-    A[Client Request] --> B[Stream Handler/HTTP Endpoint]
-    B --> C[OpenAI Orchestrator]
-    C --> D[Create Message]
-    C --> E[Create Streaming Run]
-    E --> F[Event Stream]
-    F --> G{Event Type}
-    G -->|tool_calls| H[Tool Executor]
-    G -->|message| I[Message Parser]
-    G -->|requires_action| J[Submit Tool Outputs]
-    H --> K[Tool Output]
-    K --> J
-    J --> F
-    I --> L[Client Response]
+    A[Client Request] --> B{Protocol?}
+    B -->|WebSocket /ws/chat| C[Stream Handler]
+    B -->|SSE /chat| D[SSE Stream Handler]
+    B -->|HTTP /chat| E[HTTP Endpoint]
+    C --> F[OpenAI Orchestrator]
+    D --> F
+    E --> F
+    F --> G[Create Message]
+    F --> H[Create Streaming Run]
+    H --> I[Event Stream]
+    I --> J{Event Type}
+    J -->|tool_calls| K[Tool Executor]
+    J -->|message| L[Message Parser]
+    J -->|requires_action| M[Submit Tool Outputs]
+    K --> N[Tool Output]
+    N --> M
+    M --> I
+    L --> O[Client Response]
 ```
 
 ## Error Handling Strategy
@@ -190,20 +229,41 @@ graph TD
 
 ## Usage Examples
 
-### HTTP Endpoint Usage
+### HTTP Endpoint Usage (Sequential)
 ```python
-# In FastAPI route
+# In FastAPI route - traditional request/response
 orchestrator = OpenAIOrchestrator(client, config)
 messages = await orchestrator.process_run(thread_id, user_message)
 return {"responses": messages}
 ```
 
+### HTTP Endpoint Usage (SSE Streaming)
+```python
+# In FastAPI route with Accept: text/event-stream
+from sse_starlette.sse import EventSourceResponse
+
+async def chat_sse(request: ChatRequest):
+    async def event_generator():
+        async for event in orchestrator.process_run_stream(
+            request.thread_id, request.message
+        ):
+            # Format events for SSE
+            yield {
+                "event": event.event,
+                "data": event.model_dump_json(),
+                "id": f"{correlation_id}_{event.event}_{count}"
+            }
+    
+    return EventSourceResponse(event_generator())
+```
+
 ### WebSocket Usage
 ```python
-# In WebSocket endpoint
+# In WebSocket endpoint at /ws/chat
 stream_handler = StreamHandler(orchestrator)
 await stream_handler.handle_connection(websocket)
 ```
+
 
 ### Tool Registration
 ```python
