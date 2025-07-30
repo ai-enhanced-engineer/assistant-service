@@ -219,9 +219,9 @@ class AssistantEngineAPI:
                     )
                     return ChatResponse(responses=responses)
 
-        @self.app.websocket("/stream")
-        async def stream(websocket: WebSocket) -> None:
-            """Forward run events through WebSocket with robust error handling."""
+        @self.app.websocket("/ws/chat")
+        async def ws_chat(websocket: WebSocket) -> None:
+            """Handle WebSocket chat connections for real-time streaming."""
             await self.stream_handler.handle_connection(websocket)
 
 

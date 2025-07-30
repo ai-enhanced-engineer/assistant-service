@@ -99,7 +99,7 @@ def main():
     print(f"  Health check: http://localhost:{args.port}/")
     print(f"  Start conversation: http://localhost:{args.port}/start")
     print(f"  Send message: http://localhost:{args.port}/chat")
-    print(f"  WebSocket stream: ws://localhost:{args.port}/stream")
+    print(f"  WebSocket stream: ws://localhost:{args.port}/ws/chat")
     print(f"\n{'=' * 60}")
     print("Example usage:")
     print("  1. Start a conversation:")

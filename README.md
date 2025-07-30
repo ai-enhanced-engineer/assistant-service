@@ -218,7 +218,7 @@ curl -X POST "http://localhost:8000/chat" \
 ### Real-Time Streaming
 ```javascript
 // WebSocket connection for live responses
-const ws = new WebSocket('ws://localhost:8000/stream');
+const ws = new WebSocket('ws://localhost:8000/ws/chat');
 ws.send(JSON.stringify({thread_id: "thread_abc123", message: "Hello!"}));
 ```
 
@@ -448,8 +448,8 @@ The service works with any container orchestration platform. See `deployment/` f
 - **GET `/`** - Service status
 - **GET `/health`** - Health check endpoint
 - **GET `/start`** - Create new conversation thread
-- **POST `/chat`** - Send message and get responses
-- **WebSocket `/stream`** - Real-time streaming responses
+- **POST `/chat`** - Send message and get responses (supports SSE streaming)
+- **WebSocket `/ws/chat`** - Real-time WebSocket streaming
 
 ### Error Handling
 - **Comprehensive error types** with correlation IDs

@@ -20,7 +20,7 @@ The system follows a **modular, layered architecture** with clear separation of 
 
 ### Core Components
 - `assistant_service/` - **Main application engine**
-  - `server/main.py` - FastAPI application with `/start`, `/chat`, `/stream` endpoints
+  - `server/main.py` - FastAPI application with `/start`, `/chat`, `/ws/chat` endpoints
   - `processors/` - Run processing, tool execution, and WebSocket handling
   - `bootstrap.py` - Configuration building and dependency injection
   - `structured_logging.py` - Structured logging with structlog
@@ -106,8 +106,8 @@ The system supports **multi-environment configuration**:
 - **GET `/start`** - Creates new conversation thread, returns `thread_id`
 - **POST `/chat`** - Processes user message, returns assistant responses
   - Request: `{"thread_id": "...", "message": "..."}`
-  - Response: `{"responses": ["..."]}`
-- **WebSocket `/stream`** - Real-time event streaming for assistant runs
+  - Response: `{"responses": ["..."]}` (JSON) or SSE stream (if Accept: text/event-stream)
+- **WebSocket `/ws/chat`** - Real-time WebSocket streaming for assistant runs
 
 ## Data Flow
 

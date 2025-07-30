@@ -43,7 +43,7 @@ async def chat_session(base_url: str, thread_id: Optional[str] = None):
                 return
 
     # Connect to WebSocket
-    ws_url = f"{base_url}/stream"
+    ws_url = f"{base_url}/ws/chat"
     print(f"Connecting to {ws_url}...")
 
     try:
