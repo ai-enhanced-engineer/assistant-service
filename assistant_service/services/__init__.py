@@ -3,8 +3,8 @@
 from ..entities import MessageData, StepData
 from .message_parser import MessageParser, ToolTracker
 from .openai_orchestrator import OpenAIOrchestrator
-from .stream_handler import StreamHandler
 from .tool_executor import ToolExecutor
+from .ws_stream_handler import WebSocketStreamHandler
 
 __all__ = [
     "MessageData",
@@ -13,5 +13,5 @@ __all__ = [
     "ToolTracker",
     "OpenAIOrchestrator",
     "ToolExecutor",
-    "StreamHandler",
+    "WebSocketStreamHandler",
 ]

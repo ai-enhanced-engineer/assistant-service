@@ -111,7 +111,7 @@ def test_stream_endpoint(monkeypatch: Any, api: tuple[Any, Any]) -> None:
 
     monkeypatch.setattr(api_obj.orchestrator, "process_run_stream", dummy_stream)
 
-    with TestClient(api_obj.app) as client, client.websocket_connect("/stream") as websocket:
+    with TestClient(api_obj.app) as client, client.websocket_connect("/ws/chat") as websocket:
         websocket.send_json({"thread_id": "thread123", "message": "hello"})
         assert websocket.receive_text() == "event1"
         assert websocket.receive_text() == "event2"

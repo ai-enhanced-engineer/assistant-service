@@ -12,8 +12,9 @@ from assistant_service.entities import (
 if TYPE_CHECKING:
     from assistant_service.services.message_parser import IMessageParser
     from assistant_service.services.openai_orchestrator import IOrchestrator
-    from assistant_service.services.stream_handler import IStreamHandler
+    from assistant_service.services.sse_stream_handler import ISSEStreamHandler
     from assistant_service.services.tool_executor import IToolExecutor
+    from assistant_service.services.ws_stream_handler import IWebSocketStreamHandler
 from assistant_service.repositories import (
     BaseConfigRepository,
     BaseSecretRepository,
@@ -29,6 +30,7 @@ logger = get_logger("BOOTSTRAP")
 # Component type registries for better error messages and future extensibility
 SUPPORTED_ORCHESTRATORS = {"openai"}
 SUPPORTED_STREAM_HANDLERS = {"websocket"}
+SUPPORTED_SSE_STREAM_HANDLERS = {"default"}
 SUPPORTED_TOOL_EXECUTORS = {"default"}
 SUPPORTED_MESSAGE_PARSERS = {"default"}
 
@@ -94,10 +96,12 @@ def get_orchestrator(
     raise ValueError(f"Orchestrator type '{orchestrator_type}' is supported but not implemented")
 
 
-def get_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceConfig) -> "IStreamHandler":
-    """Create stream handler with configurable type selection for future extensibility."""
+def get_websocket_stream_handler(
+    orchestrator: "IOrchestrator", service_config: ServiceConfig
+) -> "IWebSocketStreamHandler":
+    """Create WebSocket stream handler with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.stream_handler import StreamHandler
+    from assistant_service.services.ws_stream_handler import WebSocketStreamHandler
 
     stream_handler_type = service_config.stream_handler_type
 
@@ -107,10 +111,19 @@ def get_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceCon
 
     if stream_handler_type == "websocket":
         logger.info("Creating WebSocket stream handler")
-        return StreamHandler(orchestrator)
+        return WebSocketStreamHandler(orchestrator)
 
     # This should not be reachable due to SUPPORTED_STREAM_HANDLERS check above
     raise ValueError(f"Stream handler type '{stream_handler_type}' is supported but not implemented")
+
+
+def get_sse_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceConfig) -> "ISSEStreamHandler":
+    """Create SSE stream handler for formatting Server-Sent Events."""
+    # Import here to avoid circular dependencies
+    from assistant_service.services.sse_stream_handler import SSEStreamHandler
+
+    logger.info("Creating SSE stream handler")
+    return SSEStreamHandler(orchestrator, service_config)
 
 
 def get_tool_executor(service_config: ServiceConfig) -> "IToolExecutor":

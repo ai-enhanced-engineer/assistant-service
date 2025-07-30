@@ -54,6 +54,28 @@ class ServiceConfig(BaseSettings):
         description="Message parser type",
         validation_alias="MESSAGE_PARSER_TYPE",
     )
+    
+    # SSE-specific configuration
+    sse_heartbeat_interval: float = Field(
+        default=15.0,
+        description="SSE heartbeat interval in seconds",
+        validation_alias="SSE_HEARTBEAT_INTERVAL",
+    )
+    sse_max_connection_duration: float = Field(
+        default=3600.0,
+        description="Maximum SSE connection duration in seconds (1 hour default)",
+        validation_alias="SSE_MAX_CONNECTION_DURATION",
+    )
+    sse_retry_interval: int = Field(
+        default=5000,
+        description="SSE retry interval in milliseconds",
+        validation_alias="SSE_RETRY_INTERVAL",
+    )
+    sse_max_connections_per_client: int = Field(
+        default=10,
+        description="Maximum SSE connections per client IP",
+        validation_alias="SSE_MAX_CONNECTIONS_PER_CLIENT",
+    )
 
 
 class AssistantConfig(BaseModel):

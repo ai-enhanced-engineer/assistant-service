@@ -57,7 +57,7 @@ def mock_orchestrator():
 
 @pytest.fixture
 def websocket_handler(mock_orchestrator):
-    """Create a StreamHandler instance."""
-    from assistant_service.services.stream_handler import StreamHandler
+    """Create a WebSocketStreamHandler instance."""
+    from assistant_service.services.ws_stream_handler import WebSocketStreamHandler
 
-    return StreamHandler(mock_orchestrator)
+    return WebSocketStreamHandler(mock_orchestrator)

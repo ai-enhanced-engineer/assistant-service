@@ -6,10 +6,10 @@ A production-ready service for deploying AI assistants with custom actions. Buil
 
 OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service solves that by providing:
 
-- **🚀 Easy Custom Actions** - Write Python functions that become assistant capabilities
+- **🚀 Custom Actions** - Write Python functions that become assistant capabilities
 - **⚡ Production-Ready** - Built-in streaming, error handling, and logging
 - **🔧 Flexible Integration** - Connect to databases, APIs, or any Python code
-- **📚 Knowledge Bases** - Combine custom actions with document search via vector stores
+- **📚 Knowledge Bases** - Combine custom actions with document search
 
 ## Quick Example
 
@@ -28,7 +28,7 @@ assistant_config = {
     "assistant_name": "Customer Support Assistant",
     "instructions": "Help users with customer inquiries using our database.",
     "initial_message": "Hello! I'm here to help with any customer inquiries. How can I assist you today?",
-    "custom_actions": ["search_customers"],
+    "function_names": ["search_customers"],
     "vector_store_files": ["docs/product_guide.pdf", "docs/faq.md"]
 }
 ```
@@ -44,18 +44,14 @@ Build assistants that can:
 - **Sales Assistant** - Access CRM data, update opportunities, send emails
 - **Research Assistant** - Search documents, summarize findings, cite sources
 
-## Features
+## Key Features
 
-- **🔧 Custom Actions** - Turn any Python function into an assistant capability
-- **🤖 Assistant Management** - Create and configure assistants programmatically with JSON
-- **📚 Knowledge Integration** - Combine custom actions with document search via vector stores
-- **⚡ Real-Time Streaming** - Get responses as they're generated via WebSocket or HTTP
-- **🔄 Async Everything** - Built on FastAPI for high-performance concurrent operations
-- **🛡️ Production-Ready** - Comprehensive error handling, logging, and monitoring
-- **☁️ Cloud-Native** - Deploy to GCP, AWS, or any container platform
-- **🧪 Testable** - Mock OpenAI calls and test your custom actions locally
-- **📊 Structured Logging** - Track every action with correlation IDs
-- **🔌 Extensible** - Clean architecture for adding new capabilities
+- **Custom Actions** - Turn any Python function into an assistant capability
+- **Real-Time Streaming** - Get responses as they're generated via SSE or WebSocket
+- **Production-Ready** - Comprehensive error handling, structured logging, correlation IDs
+- **Cloud-Native** - Deploy to GCP, AWS, or any container platform
+- **Fully Async** - Built on FastAPI for high-performance concurrent operations
+- **Testable** - Mock OpenAI calls and test your custom actions locally
 
 ## Architecture
 
@@ -78,126 +74,74 @@ Build assistants that can:
                         └─────────────────────┘
 ```
 
-## How It Works
-
-1. **Define Custom Actions**: Write Python functions for your business logic
-2. **Create an Assistant**: Configure an OpenAI Assistant with your custom actions
-3. **Deploy**: Run the service to expose your assistant via REST API or WebSocket
-4. **Interact**: Your assistant intelligently uses custom actions to answer queries
 
 ## Quick Start
 
-Get your first assistant running in 5 minutes:
+Get your first assistant with custom actions running in 5 minutes:
 
 ### Prerequisites
 - Python 3.10-3.12
 - OpenAI API key
 - `uv` package manager (`pip install uv`)
 
-### 1. Install
+### 1. Setup
 
 ```bash
 git clone https://github.com/yourusername/custom-assistant-service
 cd custom-assistant-service
-make environment-create  # Or: uv sync
+make environment-create
 ```
 
 ### 2. Configure
 
-Create a `.env` file:
+Create `.env` file:
 ```bash
 OPENAI_API_KEY="your-openai-api-key"
 ```
 
-### 3. Create Your First Assistant
+### 3. Create Custom Action
 
-Create `assistant-config.json`:
-```json
-{
-  "assistant_name": "My First Assistant",
-  "instructions": "You are a helpful assistant that can perform calculations.",
-  "initial_message": "Hello! I'm ready to help you with calculations. What would you like me to compute?",
-  "model": "gpt-4-turbo-preview",
-  "code_interpreter": true
-}
-```
-
-Register your assistant:
-```bash
-make register-assistant ARGS='assistant-config.json'
-# Note the assistant_id in the output
-```
-
-### 4. Run
-
-```bash
-make local-run  # Starts on http://localhost:8000
-```
-
-### 5. Test Your Assistant
-
-```bash
-curl -X POST "http://localhost:8000/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "thread_id": "new",
-    "message": "Calculate the square root of 144"
-  }'
-```
-
-## Creating Custom Actions
-
-The real power comes from adding custom actions to your assistants:
-
-### 1. Define Your Actions
-
-Create a file `my_actions.py`:
+Create `assistant_factory/assistants/my_assistant/tools.py`:
 ```python
 def get_weather(location: str) -> str:
     """Get current weather for a location."""
     # Your weather API integration here
     return f"The weather in {location} is sunny and 72°F"
 
-def query_inventory(product_id: str) -> str:
-    """Check product inventory levels."""
-    # Your database query here
-    inventory = db.get_inventory(product_id)
-    return f"Product {product_id} has {inventory} units in stock"
-
-# Map function names to implementations
-TOOL_MAP = {
-    "get_weather": get_weather,
-    "query_inventory": query_inventory
-}
+TOOL_MAP = {"get_weather": get_weather}
 ```
 
-### 2. Register Actions with Your Assistant
+### 4. Register Assistant
 
-Update your assistant configuration:
+Create `assistant-config.json`:
 ```json
 {
-  "assistant_name": "Business Assistant",
-  "instructions": "Help users with weather and inventory queries.",
-  "initial_message": "Welcome! I can help you check the weather or look up inventory. What would you like to know?",
+  "assistant_name": "Weather Assistant",
+  "instructions": "You are a helpful assistant that can check weather conditions.",
+  "initial_message": "Hello! I can help you check the weather. Just ask me about any location!",
   "model": "gpt-4-turbo-preview",
-  "function_names": ["get_weather", "query_inventory"]
+  "function_names": ["get_weather"]
 }
 ```
 
-### 3. Connect Your Actions
-
-Place your actions in the appropriate directory structure:
-```
-assistant_factory/
-└── assistants/
-    └── my_business/
-        └── tools.py  # Your my_actions.py content here
+Register:
+```bash
+make register-assistant ARGS='assistant-config.json'
+# Save the assistant_id from output
 ```
 
-Now your assistant can answer questions like:
-- "What's the weather in New York?"
-- "How many units of product ABC123 do we have?"
-- "Is it good weather for shipping to Boston today?"
+### 5. Run & Test
+
+```bash
+# Terminal 1: Start the service
+make local-run
+
+# Terminal 2: Test your assistant
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"thread_id": "new", "message": "What is the weather in New York?"}'
+```
+
 
 ## API Usage
 
@@ -215,52 +159,78 @@ curl -X POST "http://localhost:8000/chat" \
 # Returns: {"responses": ["The current weather is..."]}
 ```
 
-### Real-Time Streaming
-```javascript
-// WebSocket connection for live responses
-const ws = new WebSocket('ws://localhost:8000/stream');
-ws.send(JSON.stringify({thread_id: "thread_abc123", message: "Hello!"}));
+### Streaming
+
+See [Streaming Protocols](#streaming-protocols) section below for real-time streaming options.
+
+## Streaming Protocols
+
+The assistant service provides real-time streaming through two protocols:
+
+### HTTP with Server-Sent Events (SSE) - `/chat` endpoint
+
+**Use this when**: Building web applications, need one-way streaming, working behind proxies/firewalls.
+
+**Features**:
+- Streams assistant responses as they're generated
+- Sends metadata events with timing information
+- Automatic reconnection with 5-second retry intervals
+- Periodic heartbeats to detect stale connections
+
+### WebSocket - `/ws/chat` endpoint
+
+**Use this when**: Building interactive chat UIs, need persistent connections, require bidirectional communication.
+
+**Features**:
+- Maintains connection for entire conversation
+- Lower latency for real-time updates
+- Handles multiple message exchanges without reconnecting
+
+**Example**:
+```python
+import websockets
+import json
+
+async with websockets.connect('ws://localhost:8000/ws/chat') as ws:
+    await ws.send(json.dumps({
+        'thread_id': 'thread_abc123',
+        'message': 'Hello!'
+    }))
+    async for message in ws:
+        data = json.loads(message)
+        # Handle streaming events
 ```
+
+Both protocols stream the same OpenAI Assistant events:
+- `thread.message.delta` - Incremental message content
+- `thread.run.completed` - Run finished
+- `metadata` - Performance metrics
+- `error` - Error information
+
+For technical implementation details of the streaming protocols, see [assistant_service/services/README.md](assistant_service/services/README.md).
 
 ## Project Structure
 
 ```
 custom-assistant-service/
 ├── assistant_service/            # Core service runtime
-│   ├── server/                  # HTTP/WebSocket API layer
-│   │   ├── main.py             # FastAPI application
-│   │   ├── schemas.py          # Request/response models
-│   │   └── error_handlers.py   # Error handling
-│   ├── processors/              # Assistant logic processing
-│   │   ├── openai_orchestrator.py # OpenAI integration
-│   │   ├── message_parser.py    # Message processing
-│   │   ├── tool_executor.py    # Custom action execution
-│   │   └── stream_handler.py    # Real-time streaming
-│   ├── entities/                # Data models
-│   │   └── config.py           # Configuration classes
-│   ├── repositories/            # Storage abstraction
-│   │   ├── base.py             # Repository interfaces
-│   │   ├── gcp.py              # GCP implementation
-│   │   └── local.py            # Local/dev implementation
-│   ├── bootstrap.py             # Service initialization
-│   ├── structured_logging.py    # Structured logging
-│   └── tools.py                 # Action registry
-├── assistant_factory/            # Assistant creation tools
-│   ├── main.py                  # Assistant factory
-│   ├── tool_builder.py          # Action definition builder
-│   └── assistants/              # Assistant-specific code
-│       └── {assistant_name}/
-│           ├── config.py        # Assistant configuration
-│           ├── tools.py         # Custom actions
-│           └── prompts.py       # Assistant instructions
-├── scripts/                      # Utility scripts
-│   └── assistant_registration/  # Assistant registration
-│       ├── register_assistant.py # Registration script
-│       ├── registration.py       # Config models
-│       ├── example-config.json   # Example configuration
-│       └── sample_data/          # Sample knowledge base
+│   ├── server/                  # FastAPI application & API endpoints
+│   ├── services/                # Service layer (see services/README.md)
+│   ├── repositories/            # Configuration storage (local/GCP)
+│   └── tools.py                 # Custom action registry
+├── assistant_factory/
+│   └── assistants/
+│       └── {your_assistant}/    # Your custom actions go here
+│           └── tools.py
+├── scripts/                     # Utility scripts (see scripts/README.md)
+│   └── assistant_registration/  # Assistant creation tools
 └── tests/                       # Test suite
 ```
+
+## Documentation
+
+- **[scripts/README.md](scripts/README.md)** - Detailed documentation for utility scripts including chat clients and assistant registration
+- **[assistant_service/services/README.md](assistant_service/services/README.md)** - Technical documentation for the service layer architecture, streaming handlers, and event processing
 
 ## Configuration
 
@@ -287,20 +257,15 @@ The service requires these environment variables to start:
 
 ### Assistant Configuration
 
-Assistants are configured via JSON files with these options:
-
-```json
-{
-  "assistant_name": "Assistant Name",
-  "instructions": "System prompt for the assistant",
-  "initial_message": "Initial greeting message for users",
-  "model": "gpt-4-turbo-preview",
-  "code_interpreter": true,
-  "file_search": true,
-  "function_names": ["custom_action_1", "custom_action_2"],
-  "vector_store_files": ["knowledge_base.pdf"]
-}
-```
+Assistants are configured via JSON files. Key options include:
+- `assistant_name` - Display name for your assistant
+- `instructions` - System prompt defining assistant behavior
+- `initial_message` - Greeting shown when conversation starts
+- `model` - OpenAI model to use (e.g., `gpt-4-turbo-preview`)
+- `function_names` - List of custom actions the assistant can use
+- `code_interpreter` - Enable code execution capability
+- `file_search` - Enable document search capability
+- `vector_store_files` - Documents for knowledge base
 
 ## Advanced Usage
 
@@ -372,6 +337,10 @@ make all-test            # Run all tests with coverage
 # Run service locally
 make local-run           # Start with auto-reload (port 8000)
 
+# Interactive chat (see scripts/README.md for details)
+make chat                # HTTP chat client
+make chat-ws             # WebSocket streaming client
+
 # Assistant management
 make register-assistant   # Register new assistant from config file
 
@@ -381,26 +350,13 @@ make service-build       # Build Docker image
 
 ### Testing
 
-The project has comprehensive test coverage with custom testing patterns:
-
 ```bash
 # Run all tests with coverage
 make all-test
 
-# Run specific test types
-make unit-test         # Unit tests only
-make functional-test   # Functional tests
-make integration-test  # Integration tests
-
 # Validate before committing
 make validate-branch   # Lint + unit tests
 ```
-
-**Testing Patterns:**
-- Custom `DummyClient` pattern for OpenAI mocking
-- Local repository implementations for isolated testing
-- Correlation ID validation in all API tests
-- WebSocket testing with TestClient
 
 ## Deployment
 
@@ -448,8 +404,8 @@ The service works with any container orchestration platform. See `deployment/` f
 - **GET `/`** - Service status
 - **GET `/health`** - Health check endpoint
 - **GET `/start`** - Create new conversation thread
-- **POST `/chat`** - Send message and get responses
-- **WebSocket `/stream`** - Real-time streaming responses
+- **POST `/chat`** - Send message and get responses (supports SSE streaming)
+- **WebSocket `/ws/chat`** - Real-time WebSocket streaming
 
 ### Error Handling
 - **Comprehensive error types** with correlation IDs

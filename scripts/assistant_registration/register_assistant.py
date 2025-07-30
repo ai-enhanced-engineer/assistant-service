@@ -158,10 +158,7 @@ class AssistantRegistrar:
 
                 # Add file to vector store using official client
                 try:
-                    await self.client.beta.vector_stores.files.create(
-                        vector_store_id=vector_store_id,
-                        file_id=file.id
-                    )
+                    await self.client.beta.vector_stores.files.create(vector_store_id=vector_store_id, file_id=file.id)
                     logger.info(f"File {file.id} added to vector store")
                 except Exception as e:
                     logger.warning(f"Failed to add file {file.id} to vector store: {e}")
