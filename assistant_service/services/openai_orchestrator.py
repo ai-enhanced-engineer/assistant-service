@@ -1,4 +1,20 @@
-"""OpenAI assistant orchestration service for the assistant service."""
+"""OpenAI assistant orchestration service for the assistant service.
+
+TODO: ASSISTANTS API DEPRECATION NOTICE
+The OpenAI Assistants API (beta.threads.*) is deprecated as of 2025 in favor of the new Responses API.
+Timeline:
+  - Now-2025: Assistants API is deprecated but still functional
+  - Throughout 2025: Migration resources will be provided by OpenAI
+  - Early 2026: Assistants API will be fully sunset
+
+Migration Notes:
+  - DO NOT MIGRATE YET - wait for official migration guide from OpenAI
+  - The Responses API uses previous_response_id instead of threads
+  - Monitor: https://platform.openai.com/docs/assistants/migration
+  - Track deprecation: https://platform.openai.com/docs/deprecations
+
+Plan to migrate in Q3/Q4 2025 when official guidance is available.
+"""
 
 import asyncio
 from abc import ABC, abstractmethod
