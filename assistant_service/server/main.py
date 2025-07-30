@@ -6,8 +6,9 @@ This module bootstraps the FastAPI application with all necessary components.
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Request, WebSocket
 from openai import AsyncOpenAI, OpenAIError
+from sse_starlette.sse import EventSourceResponse
 
 from ..bootstrap import (
     get_assistant_config,
@@ -19,7 +20,7 @@ from ..bootstrap import (
 )
 from ..entities import ServiceConfig
 from ..entities.schemas import ChatRequest, ChatResponse, StartResponse
-from ..structured_logging import CorrelationContext, configure_structlog, get_logger
+from ..structured_logging import CorrelationContext, configure_structlog, get_logger, get_or_create_correlation_id
 from .error_handlers import ErrorHandler
 
 # Use new structured logger
@@ -85,6 +86,34 @@ class AssistantEngineAPI:
         # Routes will be added after components are initialized
         self._setup_routes()
 
+    async def _format_sse_events(self, thread_id: str, human_query: str) -> AsyncGenerator[dict[str, Any], None]:
+        """Format OpenAI streaming events as SSE events."""
+        correlation_id = get_or_create_correlation_id()
+
+        async for event in self.orchestrator.process_run_stream(thread_id, human_query):
+            # Pass through relevant events to the client
+            if event.event in [
+                "thread.run.created",
+                "thread.run.queued",
+                "thread.run.in_progress",
+                "thread.run.requires_action",
+                "thread.run.completed",
+                "thread.run.failed",
+                "thread.message.created",
+                "thread.message.in_progress",
+                "thread.message.delta",
+                "thread.message.completed",
+                "thread.run.step.created",
+                "thread.run.step.in_progress",
+                "thread.run.step.delta",
+                "thread.run.step.completed",
+            ]:
+                yield {
+                    "event": event.event,
+                    "data": event.model_dump_json(),
+                    "id": f"{correlation_id}_{event.event}",
+                }
+
     def _setup_routes(self) -> None:
         """Set up routes after components are initialized."""
 
@@ -110,15 +139,42 @@ class AssistantEngineAPI:
                     raise ErrorHandler.handle_unexpected_error(err, "starting thread", correlation_id)
 
         @self.app.post("/chat", response_model=ChatResponse)
-        async def chat(request: ChatRequest) -> ChatResponse:
-            """Process a user message and return assistant responses."""
+        async def chat(request: ChatRequest, http_request: Request) -> ChatResponse | EventSourceResponse:
+            """Process a user message and return assistant responses.
+
+            Supports both regular JSON responses and Server-Sent Events streaming
+            based on the Accept header.
+            """
             with CorrelationContext() as correlation_id:
                 if not request.thread_id:
                     raise ErrorHandler.handle_validation_error("Missing thread_id", correlation_id)
 
-                responses = await self.orchestrator.process_run(request.thread_id, request.message)
-                logger.debug("Chat processing completed", thread_id=request.thread_id, response_count=len(responses))
-                return ChatResponse(responses=responses)
+                # Check if client wants streaming response
+                accept_header = http_request.headers.get("accept", "")
+                if "text/event-stream" in accept_header:
+                    logger.info(
+                        "Processing streaming chat request",
+                        thread_id=request.thread_id,
+                        correlation_id=correlation_id,
+                        message_length=len(request.message),
+                    )
+
+                    # Return SSE streaming response
+                    return EventSourceResponse(
+                        self._format_sse_events(request.thread_id, request.message),
+                        headers={
+                            "X-Correlation-ID": correlation_id,
+                            "Cache-Control": "no-cache",
+                            "X-Accel-Buffering": "no",  # Disable nginx buffering
+                        },
+                    )
+                else:
+                    # Regular non-streaming response
+                    responses = await self.orchestrator.process_run(request.thread_id, request.message)
+                    logger.debug(
+                        "Chat processing completed", thread_id=request.thread_id, response_count=len(responses)
+                    )
+                    return ChatResponse(responses=responses)
 
         @self.app.websocket("/stream")
         async def stream(websocket: WebSocket) -> None:

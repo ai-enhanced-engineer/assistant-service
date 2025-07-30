@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+from httpx_sse import aconnect_sse
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent
@@ -19,12 +20,55 @@ from assistant_service.structured_logging import get_logger  # noqa: E402
 logger = get_logger("http_client")
 
 
+async def process_sse_with_httpx_sse(client: httpx.AsyncClient, url: str, payload: dict) -> str:
+    """Process Server-Sent Events using httpx-sse for proper streaming."""
+    chunks = []
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+
+    async with aconnect_sse(client, "POST", url, json=payload, headers=headers, timeout=60.0) as event_source:
+        async for sse in event_source.aiter_sse():
+            try:
+                # Debug: print raw SSE event
+                # print(f"\n[DEBUG] Event: {sse.event}, Data length: {len(sse.data) if sse.data else 0}", flush=True)
+
+                # Parse the SSE data
+                event_data = json.loads(sse.data)
+
+                # Handle message delta events
+                if sse.event == "thread.message.delta":
+                    delta = event_data.get("data", {}).get("delta", {})
+                    content = delta.get("content", [])
+                    for item in content:
+                        if item.get("type") == "text":
+                            text_value = item.get("text", {}).get("value", "")
+                            chunks.append(text_value)
+                            print(text_value, end="", flush=True)
+
+                # Handle run completion
+                elif sse.event == "thread.run.completed":
+                    break
+
+                # Handle run failure
+                elif sse.event == "thread.run.failed":
+                    logger.error("Run failed", event_data=event_data)
+                    print("\n[Error: Run failed]")
+                    break
+
+            except json.JSONDecodeError as e:
+                logger.error("JSON decode error in SSE", error=str(e), data=sse.data)
+                continue
+
+    return "".join(chunks)
+
+
 async def process_streaming_response(response: httpx.Response) -> str:
     """Process a streaming response and return the final message."""
     chunks = []
     buffer = ""
-
-    logger.info("Processing streaming response")
 
     async for chunk in response.aiter_bytes(chunk_size=1024):
         if not chunk:
@@ -43,8 +87,6 @@ async def process_streaming_response(response: httpx.Response) -> str:
             line = line.strip()
             if not line:
                 continue
-
-            logger.debug("Processing line", line=line)
 
             try:
                 # Parse the JSON event
@@ -116,7 +158,6 @@ async def start_conversation(base_url: str, thread_id: Optional[str] = None):
             while True:
                 user_input = input("\nYou: ")
                 if user_input.strip().lower() in {"exit", "quit"}:
-                    logger.info("Ending conversation")
                     break
 
                 # Prepare the payload
@@ -133,34 +174,30 @@ async def start_conversation(base_url: str, thread_id: Optional[str] = None):
 
                 try:
                     # Send message with streaming
-                    logger.info("Sending message", thread_id=thread_id, message=user_input)
-
                     print("\nAssistant: ", end="", flush=True)
 
-                    # Send chat request
-                    response = await client.post(
-                        "/chat", json=payload, headers={"Accept": "text/event-stream"}, timeout=httpx.Timeout(60.0)
-                    )
+                    # Try SSE streaming first
+                    try:
+                        final_message = await process_sse_with_httpx_sse(client, "/chat", payload)
+                        if not final_message:
+                            print("[No response generated]")
+                    except Exception as sse_error:
+                        # Fallback to regular request if SSE fails
+                        logger.debug("SSE failed, falling back to regular request", error=str(sse_error))
 
-                    if response.status_code == 200:
-                        # Check if response is streaming
-                        content_type = response.headers.get("content-type", "")
+                        response = await client.post(
+                            "/chat", json=payload, headers={"Accept": "application/json"}, timeout=httpx.Timeout(60.0)
+                        )
 
-                        if "stream" in content_type or "event-stream" in content_type:
-                            # Process streaming response
-                            final_message = await process_streaming_response(response)
-                            if not final_message:
-                                print("[No response generated]")
-                        else:
+                        if response.status_code == 200:
                             # Process regular JSON response
                             data = response.json()
                             responses = data.get("responses", [])
                             for resp in responses:
                                 print(resp)
-                            logger.info("Received responses", count=len(responses))
-                    else:
-                        print(f"\n[Error: {response.status_code}]")
-                        logger.error("HTTP error", status_code=response.status_code, response=response.text)
+                        else:
+                            print(f"\n[Error: {response.status_code}]")
+                            logger.error("HTTP error", status_code=response.status_code, response=response.text)
 
                     print()  # New line after response
 
@@ -190,8 +227,20 @@ def main():
         default=None,
         help="Existing thread ID to continue conversation (optional)",
     )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Suppress debug logging output",
+    )
 
     args = parser.parse_args()
+
+    # Set logging level based on quiet flag
+    if args.quiet:
+        import logging
+
+        logging.getLogger("http_client").setLevel(logging.ERROR)
 
     # Run the async conversation
     asyncio.run(start_conversation(args.base_url, args.thread_id))

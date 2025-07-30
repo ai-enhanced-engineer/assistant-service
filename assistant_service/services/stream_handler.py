@@ -62,7 +62,15 @@ class StreamHandler(IStreamHandler):
             )
         finally:
             logger.info("WebSocket connection closing", connection_id=connection_id)
-            await websocket.close()
+            try:
+                # Only close if the connection is still open
+                if websocket.client_state.value <= 1:  # CONNECTING=0, CONNECTED=1
+                    await websocket.close()
+            except Exception as e:
+                # Connection already closed, log but don't raise
+                logger.debug(
+                    "WebSocket already closed", connection_id=connection_id, error_type=type(e).__name__, error=str(e)
+                )
 
     async def _handle_message_loop(self, websocket: FastAPIWebSocket, connection_id: int) -> None:
         """Handle the WebSocket message processing loop.
