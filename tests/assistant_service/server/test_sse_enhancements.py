@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from assistant_service.entities import HEADER_CORRELATION_ID, SSE_RESPONSE_HEADERS
 from assistant_service.server.main import AssistantEngineAPI
 
 
@@ -41,6 +42,8 @@ def api_with_mocks(mock_orchestrator, monkeypatch):
 
     # Replace orchestrator with mock
     api.orchestrator = mock_orchestrator
+    # Replace SSE stream handler's orchestrator with mock
+    api.sse_stream_handler.orchestrator = mock_orchestrator
 
     return api
 
@@ -59,7 +62,7 @@ async def test_sse_event_formatting_with_retry(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api._format_sse_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
         events.append(event)
 
     # Check that events have retry field
@@ -84,7 +87,7 @@ async def test_sse_error_handling(api_with_mocks):
     api.orchestrator.process_run_stream = error_stream
 
     events = []
-    async for event in api._format_sse_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
         events.append(event)
 
     # Should have initial event and error event
@@ -112,7 +115,7 @@ async def test_sse_metadata_event(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api._format_sse_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
         events.append(event)
 
     # Find metadata event
@@ -145,7 +148,7 @@ async def test_sse_heartbeat_mechanism(api_with_mocks):
         # Start time
         mock_time.return_value = 0
 
-        event_generator = api._format_sse_events("test_thread", "test_message")
+        event_generator = api.sse_stream_handler.format_events("test_thread", "test_message")
 
         # First event
         event = await event_generator.__anext__()
@@ -180,10 +183,10 @@ async def test_sse_event_id_format(api_with_mocks):
     events = []
     correlation_id = None
 
-    with patch("assistant_service.server.main.get_or_create_correlation_id") as mock_corr_id:
+    with patch("assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock_corr_id:
         mock_corr_id.return_value = "test-correlation-123"
 
-        async for event in api._format_sse_events("test_thread", "test_message"):
+        async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
             events.append(event)
             if not correlation_id and "id" in event:
                 # Extract correlation ID from first event
@@ -218,11 +221,13 @@ async def test_sse_response_headers(api_with_mocks):
         ) as response:
             assert response.status_code == 200
             assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
-            assert response.headers["cache-control"] == "no-cache, no-transform"
-            assert response.headers["connection"] == "keep-alive"
-            assert response.headers["x-accel-buffering"] == "no"
-            assert response.headers["x-content-type-options"] == "nosniff"
-            assert "x-correlation-id" in response.headers
+
+            # Verify all SSE response headers are present
+            for header_name, expected_value in SSE_RESPONSE_HEADERS.items():
+                assert response.headers[header_name.lower()] == expected_value.lower()
+
+            # Verify correlation ID header is present
+            assert HEADER_CORRELATION_ID.lower() in response.headers
 
 
 @pytest.mark.asyncio
@@ -239,7 +244,7 @@ async def test_sse_handles_non_sse_events(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api._format_sse_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
         if "event" in event:  # Skip heartbeats
             events.append(event)
 
@@ -264,7 +269,7 @@ async def test_sse_empty_stream(api_with_mocks):
     api.orchestrator.process_run_stream = empty_stream
 
     events = []
-    async for event in api._format_sse_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
         events.append(event)
 
     # Should have no events

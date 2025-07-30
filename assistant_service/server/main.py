@@ -3,7 +3,6 @@
 This module bootstraps the FastAPI application with all necessary components.
 """
 
-import json
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
 
@@ -17,11 +16,12 @@ from ..bootstrap import (
     get_openai_client,
     get_orchestrator,
     get_secret_repository,
-    get_stream_handler,
+    get_sse_stream_handler,
+    get_websocket_stream_handler,
 )
-from ..entities import SSE_STREAM_EVENTS, ServiceConfig
+from ..entities import HEADER_CORRELATION_ID, SSE_RESPONSE_HEADERS, ServiceConfig
 from ..entities.schemas import ChatRequest, ChatResponse, StartResponse
-from ..structured_logging import CorrelationContext, configure_structlog, get_logger, get_or_create_correlation_id
+from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler
 
 # Use new structured logger
@@ -63,7 +63,8 @@ class AssistantEngineAPI:
         # Create components using factory functions
         self.client: AsyncOpenAI = get_openai_client(self.service_config)
         self.orchestrator = get_orchestrator(self.client, self.service_config, self.assistant_config)
-        self.stream_handler = get_stream_handler(self.orchestrator, self.service_config)
+        self.websocket_stream_handler = get_websocket_stream_handler(self.orchestrator, self.service_config)
+        self.sse_stream_handler = get_sse_stream_handler(self.orchestrator)
 
         # Log configuration (without sensitive data)
         logger.info(
@@ -87,73 +88,7 @@ class AssistantEngineAPI:
         # Routes will be added after components are initialized
         self._setup_routes()
 
-    async def _format_sse_events(self, thread_id: str, human_query: str) -> AsyncGenerator[dict[str, Any], None]:
-        """Format OpenAI streaming events as SSE events with enhanced features."""
-        import time
-
-        correlation_id = get_or_create_correlation_id()
-        start_time = time.time()
-        event_count = 0
-        last_heartbeat = time.time()
-        heartbeat_interval = 15  # Send heartbeat every 15 seconds
-
-        try:
-            async for event in self.orchestrator.process_run_stream(thread_id, human_query):
-                # Send heartbeat if needed
-                current_time = time.time()
-                if current_time - last_heartbeat > heartbeat_interval:
-                    yield {
-                        "comment": "keepalive",
-                        "retry": 5000,  # Retry after 5 seconds if connection lost
-                    }
-                    last_heartbeat = current_time
-
-                # Pass through relevant events to the client
-                if event.event in SSE_STREAM_EVENTS:
-                    event_count += 1
-                    yield {
-                        "event": event.event,
-                        "data": event.model_dump_json(),
-                        "id": f"{correlation_id}_{event.event}_{event_count}",
-                        "retry": 5000,  # Retry after 5 seconds if connection lost
-                    }
-
-                    # Add metadata for completion events
-                    if event.event == "thread.run.completed":
-                        elapsed_time = time.time() - start_time
-                        yield {
-                            "event": "metadata",
-                            "data": json.dumps(
-                                {
-                                    "correlation_id": correlation_id,
-                                    "elapsed_time_seconds": round(elapsed_time, 3),
-                                    "event_count": event_count,
-                                    "thread_id": thread_id,
-                                }
-                            ),
-                            "id": f"{correlation_id}_metadata",
-                        }
-
-        except Exception as e:
-            # Send error event to client
-            logger.error(
-                "Error in SSE stream",
-                error=str(e),
-                error_type=type(e).__name__,
-                thread_id=thread_id,
-                correlation_id=correlation_id,
-            )
-            yield {
-                "event": "error",
-                "data": json.dumps(
-                    {
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                        "correlation_id": correlation_id,
-                    }
-                ),
-                "id": f"{correlation_id}_error",
-            }
+    # The _format_sse_events method has been moved to SSEStreamHandler
 
     def _setup_routes(self) -> None:
         """Set up routes after components are initialized."""
@@ -201,15 +136,13 @@ class AssistantEngineAPI:
                     )
 
                     # Return SSE streaming response
+                    headers = {
+                        HEADER_CORRELATION_ID: correlation_id,
+                        **SSE_RESPONSE_HEADERS,
+                    }
                     return EventSourceResponse(
-                        self._format_sse_events(request.thread_id, request.message),
-                        headers={
-                            "X-Correlation-ID": correlation_id,
-                            "Cache-Control": "no-cache, no-transform",
-                            "X-Accel-Buffering": "no",  # Disable nginx buffering
-                            "Connection": "keep-alive",
-                            "X-Content-Type-Options": "nosniff",
-                        },
+                        self.sse_stream_handler.format_events(request.thread_id, request.message),
+                        headers=headers,
                     )
                 else:
                     # Regular non-streaming response
@@ -222,7 +155,7 @@ class AssistantEngineAPI:
         @self.app.websocket("/ws/chat")
         async def ws_chat(websocket: WebSocket) -> None:
             """Handle WebSocket chat connections for real-time streaming."""
-            await self.stream_handler.handle_connection(websocket)
+            await self.websocket_stream_handler.handle_connection(websocket)
 
 
 def get_app() -> FastAPI:

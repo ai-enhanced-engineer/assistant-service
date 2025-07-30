@@ -16,15 +16,15 @@ if TYPE_CHECKING:
 logger = get_logger("STREAM_HANDLER")
 
 
-class IStreamHandler(ABC):
-    """Interface for stream handling."""
+class IWebSocketStreamHandler(ABC):
+    """Interface for WebSocket stream handling."""
 
     @abstractmethod
     async def handle_connection(self, websocket: FastAPIWebSocket) -> None:
         pass
 
 
-class StreamHandler(IStreamHandler):
+class WebSocketStreamHandler(IWebSocketStreamHandler):
     """Handles WebSocket connections and message streaming."""
 
     def __init__(self, orchestrator: "IOrchestrator"):
