@@ -15,6 +15,7 @@ from httpx_sse import aconnect_sse
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from assistant_service.entities import MESSAGE_DELTA_EVENT, RUN_COMPLETED_EVENT, RUN_FAILED_EVENT  # noqa: E402
 from assistant_service.structured_logging import get_logger  # noqa: E402
 
 logger = get_logger("http_client")
@@ -39,7 +40,7 @@ async def process_sse_with_httpx_sse(client: httpx.AsyncClient, url: str, payloa
                 event_data = json.loads(sse.data)
 
                 # Handle message delta events
-                if sse.event == "thread.message.delta":
+                if sse.event == MESSAGE_DELTA_EVENT:
                     delta = event_data.get("data", {}).get("delta", {})
                     content = delta.get("content", [])
                     for item in content:
@@ -49,11 +50,11 @@ async def process_sse_with_httpx_sse(client: httpx.AsyncClient, url: str, payloa
                             print(text_value, end="", flush=True)
 
                 # Handle run completion
-                elif sse.event == "thread.run.completed":
+                elif sse.event == RUN_COMPLETED_EVENT:
                     break
 
                 # Handle run failure
-                elif sse.event == "thread.run.failed":
+                elif sse.event == RUN_FAILED_EVENT:
                     logger.error("Run failed", event_data=event_data)
                     print("\n[Error: Run failed]")
                     break
@@ -93,7 +94,7 @@ async def process_streaming_response(response: httpx.Response) -> str:
                 data = json.loads(line)
 
                 # Extract message content based on event type
-                if "event" in data and data.get("event") == "thread.message.delta":
+                if "event" in data and data.get("event") == MESSAGE_DELTA_EVENT:
                     # Extract text delta from streaming events
                     if hasattr(data.get("data", {}), "delta") and hasattr(data["data"].delta, "content"):
                         for content_item in data["data"].delta.content:

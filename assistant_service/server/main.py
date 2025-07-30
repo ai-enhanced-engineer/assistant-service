@@ -18,7 +18,7 @@ from ..bootstrap import (
     get_secret_repository,
     get_stream_handler,
 )
-from ..entities import ServiceConfig
+from ..entities import SSE_STREAM_EVENTS, ServiceConfig
 from ..entities.schemas import ChatRequest, ChatResponse, StartResponse
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger, get_or_create_correlation_id
 from .error_handlers import ErrorHandler
@@ -92,22 +92,7 @@ class AssistantEngineAPI:
 
         async for event in self.orchestrator.process_run_stream(thread_id, human_query):
             # Pass through relevant events to the client
-            if event.event in [
-                "thread.run.created",
-                "thread.run.queued",
-                "thread.run.in_progress",
-                "thread.run.requires_action",
-                "thread.run.completed",
-                "thread.run.failed",
-                "thread.message.created",
-                "thread.message.in_progress",
-                "thread.message.delta",
-                "thread.message.completed",
-                "thread.run.step.created",
-                "thread.run.step.in_progress",
-                "thread.run.step.delta",
-                "thread.run.step.completed",
-            ]:
+            if event.event in SSE_STREAM_EVENTS:
                 yield {
                     "event": event.event,
                     "data": event.model_dump_json(),
