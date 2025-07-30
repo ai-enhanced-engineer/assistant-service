@@ -84,9 +84,9 @@ class ServiceConfig(BaseSettings):
 class AssistantConfig(BaseModel):
     """Configuration for an OpenAI assistant instance."""
 
-    assistant_id: str
+    assistant_id: str = Field(default="", description="Assistant ID (empty during registration)")
     assistant_name: str
     initial_message: str
     code_interpreter: bool = Field(default=False)
-    retrieval: bool = Field(default=False)
+    file_search: bool = Field(default=False, description="Enable file search (vector store) capability")
     function_names: list[str] = Field(default_factory=list)

@@ -40,6 +40,6 @@ class LocalConfigRepository(BaseConfigRepository):
             assistant_name="Development Assistant",
             initial_message="Hello! I'm your development assistant. How can I help you today?",
             code_interpreter=True,
-            retrieval=False,
+            file_search=False,
             function_names=[],
         )

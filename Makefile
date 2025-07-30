@@ -249,6 +249,22 @@ chat: ## Start HTTP chat client (requires running API server)
 	$(GREEN_LINE)
 
 # ----------------------------
+# Assistant Management
+# ----------------------------
+
+register-assistant: ## Register a new assistant with OpenAI from config file. Example: make register-assistant ARGS='assistant-config.json'
+	@echo "🤖 Registering new assistant with OpenAI..."
+	@echo "🔑 OpenAI Key: $(if $(OPENAI_API_KEY),✅ Set,❌ Not Set)"
+	@echo ""
+	@echo "📝 Examples:"
+	@echo "   make register-assistant ARGS='assistant-config.json'"
+	@echo "   make register-assistant ARGS='scripts/assistant_registration/example-config.json'"
+	@echo "   make register-assistant ARGS='--generate-schema'  # Generate config schema"
+	@echo ""
+	uv run python -m scripts.assistant_registration.register_assistant $(ARGS)
+	$(GREEN_LINE)
+
+# ----------------------------
 # Build and Deployment
 # ----------------------------
 

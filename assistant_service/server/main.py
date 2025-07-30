@@ -70,7 +70,7 @@ class AssistantEngineAPI:
             assistant_name=self.assistant_config.assistant_name,
             initial_message=self.assistant_config.initial_message,
             code_interpreter=self.assistant_config.code_interpreter,
-            retrieval=self.assistant_config.retrieval,
+            retrieval=self.assistant_config.file_search,
             function_names=self.assistant_config.function_names,
             openai_apikey="sk" if self.service_config.openai_api_key else None,
             orchestrator_type=self.service_config.orchestrator_type,

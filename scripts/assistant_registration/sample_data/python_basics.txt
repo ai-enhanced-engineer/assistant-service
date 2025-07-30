@@ -1,0 +1,11 @@
+Python Programming Basics
+
+Python is a high-level, interpreted programming language known for its simplicity and readability.
+
+Key Features:
+- Dynamic typing
+- Automatic memory management
+- Extensive standard library
+- Support for multiple programming paradigms
+
+Common use cases include web development, data analysis, artificial intelligence, and automation.
