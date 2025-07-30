@@ -5,7 +5,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
-from ..entities import SSE_STREAM_EVENTS
+from ..entities import ERROR_EVENT, METADATA_EVENT, RUN_COMPLETED_EVENT, SSE_STREAM_EVENTS
 from ..structured_logging import get_logger, get_or_create_correlation_id
 
 if TYPE_CHECKING:
@@ -86,10 +86,10 @@ class SSEStreamHandler(ISSEStreamHandler):
                     }
 
                     # Add metadata for completion events
-                    if event.event == "thread.run.completed":
+                    if event.event == RUN_COMPLETED_EVENT:
                         elapsed_time = time.time() - start_time
                         yield {
-                            "event": "metadata",
+                            "event": METADATA_EVENT,
                             "data": json.dumps(
                                 {
                                     "correlation_id": correlation_id,
@@ -111,7 +111,7 @@ class SSEStreamHandler(ISSEStreamHandler):
                 correlation_id=correlation_id,
             )
             yield {
-                "event": "error",
+                "event": ERROR_EVENT,
                 "data": json.dumps(
                     {
                         "error": str(e),

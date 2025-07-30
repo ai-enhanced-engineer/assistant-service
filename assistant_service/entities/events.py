@@ -25,3 +25,17 @@ SSE_STREAM_EVENTS = {
 MESSAGE_DELTA_EVENT = "thread.message.delta"
 RUN_COMPLETED_EVENT = "thread.run.completed"
 RUN_FAILED_EVENT = "thread.run.failed"
+RUN_CREATED_EVENT = "thread.run.created"
+RUN_STEP_COMPLETED_EVENT = "thread.run.step.completed"
+RUN_REQUIRES_ACTION_EVENT = "thread.run.requires_action"
+
+# Step detail types
+STEP_TYPE_TOOL_CALLS = "tool_calls"
+STEP_TYPE_MESSAGE_CREATION = "message_creation"
+
+# Action types
+ACTION_TYPE_SUBMIT_TOOL_OUTPUTS = "submit_tool_outputs"
+
+# Custom events for SSE/WebSocket streaming
+METADATA_EVENT = "metadata"
+ERROR_EVENT = "error"

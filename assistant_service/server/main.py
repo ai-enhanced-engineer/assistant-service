@@ -1,7 +1,7 @@
-"""Main application module for the Assistant Engine.
+"""FastAPI application entrypoint for the OpenAI Assistant service.
 
-This module bootstraps the FastAPI application with all necessary components.
-"""
+Provides HTTP and WebSocket endpoints for conversational AI interactions with support
+for both synchronous JSON responses and asynchronous Server-Sent Events streaming."""
 
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
@@ -24,16 +24,14 @@ from ..entities.schemas import ChatRequest, ChatResponse, StartResponse
 from ..structured_logging import CorrelationContext, configure_structlog, get_logger
 from .error_handlers import ErrorHandler
 
-# Use new structured logger
 logger = get_logger("MAIN")
 
 
 def create_lifespan(api_instance: "AssistantEngineAPI") -> Any:
-    """Create a lifespan context manager for the API instance."""
+    """Create FastAPI lifespan manager for graceful startup/shutdown handling."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        """Manage application startup and shutdown."""
         logger.info("Application starting up...")
         yield
         logger.info("Application shutting down...")
@@ -43,30 +41,24 @@ def create_lifespan(api_instance: "AssistantEngineAPI") -> Any:
 
 
 class AssistantEngineAPI:
-    """Main API class for the assistant engine."""
+    """Core API orchestrator that manages OpenAI Assistant integration and request routing."""
 
     def __init__(self, service_config: Optional[ServiceConfig] = None) -> None:
-        """Initialize the assistant engine with configuration.
-
-        Args:
-            service_config: Optional service configuration. If not provided, will be loaded from environment.
-        """
-        # Load service configuration
         self.service_config = service_config or ServiceConfig()
 
-        # Set up repositories using factory functions
+        # Repository layer switches between local (dev) and GCP (production)
         secret_repository = get_secret_repository(self.service_config)
         config_repository = get_config_repository(self.service_config)
 
         self.assistant_config = get_assistant_config(secret_repository, config_repository)
 
-        # Create components using factory functions
         self.client: AsyncOpenAI = get_openai_client(self.service_config)
         self.orchestrator = get_orchestrator(self.client, self.service_config, self.assistant_config)
+
+        # Separate handlers for WebSocket (bidirectional) vs SSE (server-push) streaming
         self.websocket_stream_handler = get_websocket_stream_handler(self.orchestrator, self.service_config)
         self.sse_stream_handler = get_sse_stream_handler(self.orchestrator)
 
-        # Log configuration (without sensitive data)
         logger.info(
             "Booting with config",
             assistant_id=self.assistant_config.assistant_id,
@@ -82,16 +74,11 @@ class AssistantEngineAPI:
             message_parser_type=self.service_config.message_parser_type,
         )
 
-        # Create FastAPI app
         self.app = FastAPI(title="Assistant Engine", lifespan=create_lifespan(self))
-
-        # Routes will be added after components are initialized
         self._setup_routes()
 
-    # The _format_sse_events method has been moved to SSEStreamHandler
-
     def _setup_routes(self) -> None:
-        """Set up routes after components are initialized."""
+        """Register all API endpoints including health check, thread creation, and chat interfaces."""
 
         @self.app.get("/")
         async def root() -> dict[str, str]:
@@ -99,11 +86,12 @@ class AssistantEngineAPI:
 
         @self.app.get("/start")
         async def start() -> StartResponse:
-            """Start a new conversation and return the thread information."""
+            """Create a new OpenAI thread for conversation tracking."""
             with CorrelationContext() as correlation_id:
                 try:
                     thread = await self.client.beta.threads.create()
                     logger.info("New thread created successfully", thread_id=thread.id, correlation_id=correlation_id)
+
                     return StartResponse(
                         thread_id=thread.id,
                         initial_message=self.assistant_config.initial_message,
@@ -116,16 +104,17 @@ class AssistantEngineAPI:
 
         @self.app.post("/chat", response_model=ChatResponse)
         async def chat(request: ChatRequest, http_request: Request) -> ChatResponse | EventSourceResponse:
-            """Process a user message and return assistant responses.
+            """Process user messages with support for both synchronous and streaming responses.
 
-            Supports both regular JSON responses and Server-Sent Events streaming
-            based on the Accept header.
+            Response format is determined by the Accept header:
+            - application/json: Returns complete response after processing
+            - text/event-stream: Streams response chunks as they're generated
             """
             with CorrelationContext() as correlation_id:
                 if not request.thread_id:
                     raise ErrorHandler.handle_validation_error("Missing thread_id", correlation_id)
 
-                # Check if client wants streaming response
+                # Response format determined by Accept header
                 accept_header = http_request.headers.get("accept", "")
                 if "text/event-stream" in accept_header:
                     logger.info(
@@ -135,17 +124,16 @@ class AssistantEngineAPI:
                         message_length=len(request.message),
                     )
 
-                    # Return SSE streaming response
                     headers = {
                         HEADER_CORRELATION_ID: correlation_id,
                         **SSE_RESPONSE_HEADERS,
                     }
+
                     return EventSourceResponse(
                         self.sse_stream_handler.format_events(request.thread_id, request.message),
                         headers=headers,
                     )
                 else:
-                    # Regular non-streaming response
                     responses = await self.orchestrator.process_run(request.thread_id, request.message)
                     logger.debug(
                         "Chat processing completed", thread_id=request.thread_id, response_count=len(responses)
@@ -154,19 +142,15 @@ class AssistantEngineAPI:
 
         @self.app.websocket("/ws/chat")
         async def ws_chat(websocket: WebSocket) -> None:
-            """Handle WebSocket chat connections for real-time streaming."""
+            """WebSocket endpoint for bidirectional real-time chat with event streaming."""
             await self.websocket_stream_handler.handle_connection(websocket)
 
 
 def get_app() -> FastAPI:
-    """Return a fully configured FastAPI application."""
-    # Configure structured logging
+    """Factory function for creating the FastAPI application instance."""
     configure_structlog()
-
-    # Create and return a new API instance
     api_instance = AssistantEngineAPI()
     return api_instance.app
 
 
-# Public API exports
 __all__ = ["get_app", "AssistantEngineAPI"]

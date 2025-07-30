@@ -6,7 +6,15 @@ from typing import Any, AsyncGenerator, Iterable, Optional
 
 from openai import AsyncOpenAI, OpenAIError
 
-from ..entities import AssistantConfig
+from ..entities import (
+    ACTION_TYPE_SUBMIT_TOOL_OUTPUTS,
+    RUN_CREATED_EVENT,
+    RUN_REQUIRES_ACTION_EVENT,
+    RUN_STEP_COMPLETED_EVENT,
+    STEP_TYPE_MESSAGE_CREATION,
+    STEP_TYPE_TOOL_CALLS,
+    AssistantConfig,
+)
 from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import IToolExecutor
@@ -261,14 +269,14 @@ class OpenAIOrchestrator(IOrchestrator):
         async for event in event_stream:
             yield event
 
-            if event.event == "thread.run.created":
+            if event.event == RUN_CREATED_EVENT:
                 run_id = event.data.id
 
             # Handle tool calls from step completed events
             if (
-                event.event == "thread.run.step.completed"
+                event.event == RUN_STEP_COMPLETED_EVENT
                 and hasattr(event.data, "step_details")
-                and event.data.step_details.type == "tool_calls"
+                and event.data.step_details.type == STEP_TYPE_TOOL_CALLS
             ):
                 context = {"thread_id": thread_id, "run_id": run_id, "correlation_id": correlation_id}
 
@@ -276,8 +284,8 @@ class OpenAIOrchestrator(IOrchestrator):
                 tool_outputs.update(step_outputs)
 
             # Handle required actions
-            if event.event == "thread.run.requires_action":
-                if event.data.required_action and event.data.required_action.type == "submit_tool_outputs":
+            if event.event == RUN_REQUIRES_ACTION_EVENT:
+                if event.data.required_action and event.data.required_action.type == ACTION_TYPE_SUBMIT_TOOL_OUTPUTS:
                     # Check for any non-function tools
                     submit_tool_outputs = getattr(event.data.required_action, "submit_tool_outputs", None)
                     if submit_tool_outputs and hasattr(submit_tool_outputs, "tool_calls"):
@@ -291,9 +299,9 @@ class OpenAIOrchestrator(IOrchestrator):
 
             # Submit tool outputs when required
             if (
-                event.event == "thread.run.requires_action"
+                event.event == RUN_REQUIRES_ACTION_EVENT
                 and event.data.required_action
-                and event.data.required_action.type == "submit_tool_outputs"
+                and event.data.required_action.type == ACTION_TYPE_SUBMIT_TOOL_OUTPUTS
                 and tool_outputs
                 and run_id
             ):
@@ -326,7 +334,7 @@ class OpenAIOrchestrator(IOrchestrator):
         messages: list[str] = []
 
         async for event in self.iterate_run_events(thread_id, human_query):
-            if event.event == "thread.run.step.completed" and event.data.step_details.type == "message_creation":
+            if event.event == RUN_STEP_COMPLETED_EVENT and event.data.step_details.type == STEP_TYPE_MESSAGE_CREATION:
                 message_id = event.data.step_details.message_creation.message_id
                 try:
                     thread_message = await self.client.beta.threads.messages.retrieve(
