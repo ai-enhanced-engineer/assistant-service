@@ -35,7 +35,7 @@ SUPPORTED_MESSAGE_PARSERS = {"default"}
 
 def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
     """Create development or production secret repository based on environment."""
-    if config.is_development:
+    if config.environment == "development":
         logger.info("Using local secret repository for development")
         return LocalSecretRepository()
     else:
@@ -47,7 +47,7 @@ def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
 
 def get_config_repository(config: ServiceConfig) -> BaseConfigRepository:
     """Create development or production config repository based on environment."""
-    if config.is_development:
+    if config.environment == "development":
         logger.info("Using local config repository for development")
         return LocalConfigRepository()
     else:
