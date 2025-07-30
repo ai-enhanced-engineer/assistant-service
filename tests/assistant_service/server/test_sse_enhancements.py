@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from assistant_service.entities import HEADER_CORRELATION_ID, SSE_RESPONSE_HEADERS
+from assistant_service.entities.headers import SSE_HEARTBEAT_COMMENT
 from assistant_service.server.main import AssistantEngineAPI
 
 
@@ -20,6 +21,9 @@ class MockEvent:
 
     def model_dump_json(self) -> str:
         return json.dumps(self._data)
+        
+    def model_dump(self) -> dict:
+        return self._data
 
 
 @pytest.fixture
@@ -62,13 +66,13 @@ async def test_sse_event_formatting_with_retry(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
         events.append(event)
 
     # Check that events have retry field
     assert len(events) == 4  # 3 events + 1 metadata
     for event in events[:-1]:  # All except metadata
-        assert event.get("retry") == 5000
+        assert event.get("retry") == api.sse_stream_handler.retry_interval
         assert "event" in event
         assert "data" in event
         assert "id" in event
@@ -87,7 +91,7 @@ async def test_sse_error_handling(api_with_mocks):
     api.orchestrator.process_run_stream = error_stream
 
     events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
         events.append(event)
 
     # Should have initial event and error event
@@ -99,6 +103,7 @@ async def test_sse_error_handling(api_with_mocks):
     assert error_data["error"] == "Test error"
     assert error_data["error_type"] == "ValueError"
     assert "correlation_id" in error_data
+    assert "timestamp" in error_data
 
 
 @pytest.mark.asyncio
@@ -115,7 +120,7 @@ async def test_sse_metadata_event(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
         events.append(event)
 
     # Find metadata event
@@ -125,6 +130,7 @@ async def test_sse_metadata_event(api_with_mocks):
     metadata = json.loads(metadata_events[0]["data"])
     assert "correlation_id" in metadata
     assert "elapsed_time_seconds" in metadata
+    assert "timestamp" in metadata
     assert metadata["event_count"] == 3
     assert metadata["thread_id"] == "test_thread"
 
@@ -148,28 +154,28 @@ async def test_sse_heartbeat_mechanism(api_with_mocks):
         # Start time
         mock_time.return_value = 0
 
-        event_generator = api.sse_stream_handler.format_events("test_thread", "test_message")
+        event_generator = api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1")
 
         # First event
         event = await event_generator.__anext__()
         events.append(event)
 
         # Advance time to trigger heartbeat
-        mock_time.return_value = 20  # More than 15 seconds
+        mock_time.return_value = 20  # More than default 15 seconds
 
         # Next event should include heartbeat
         async for event in event_generator:
             events.append(event)
 
     # Check for heartbeat comment
-    heartbeat_events = [e for e in events if e.get("comment") == "keepalive"]
+    heartbeat_events = [e for e in events if e.get("comment") == SSE_HEARTBEAT_COMMENT]
     assert len(heartbeat_events) >= 1
-    assert heartbeat_events[0]["retry"] == 5000
+    assert heartbeat_events[0]["retry"] == api.sse_stream_handler.retry_interval
 
 
 @pytest.mark.asyncio
 async def test_sse_event_id_format(api_with_mocks):
-    """Test that event IDs include correlation ID and counter."""
+    """Test that event IDs include truncated correlation ID and counter."""
     api = api_with_mocks
 
     # Create mock event stream
@@ -186,16 +192,17 @@ async def test_sse_event_id_format(api_with_mocks):
     with patch("assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock_corr_id:
         mock_corr_id.return_value = "test-correlation-123"
 
-        async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+        async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
             events.append(event)
             if not correlation_id and "id" in event:
                 # Extract correlation ID from first event
                 correlation_id = event["id"].split("_")[0]
 
-    # Verify event ID format
-    assert events[0]["id"] == "test-correlation-123_thread.run.created_1"
-    assert events[1]["id"] == "test-correlation-123_thread.message.delta_2"
-    assert events[2]["id"] == "test-correlation-123_thread.run.completed_3"
+    # Verify event ID format uses truncated correlation ID (8 characters)
+    truncated_id = "test-cor"  # First 8 characters of "test-correlation-123"
+    assert events[0]["id"] == f"{truncated_id}_thread.run.created_1"
+    assert events[1]["id"] == f"{truncated_id}_thread.message.delta_2"
+    assert events[2]["id"] == f"{truncated_id}_thread.run.completed_3"
 
 
 @pytest.mark.asyncio
@@ -244,7 +251,7 @@ async def test_sse_handles_non_sse_events(api_with_mocks):
     api.orchestrator.process_run_stream = mock_stream
 
     events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
         if "event" in event:  # Skip heartbeats
             events.append(event)
 
@@ -269,8 +276,74 @@ async def test_sse_empty_stream(api_with_mocks):
     api.orchestrator.process_run_stream = empty_stream
 
     events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message"):
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
         events.append(event)
 
     # Should have no events
     assert len(events) == 0
+
+
+@pytest.mark.asyncio
+async def test_sse_rate_limiting_integration(api_with_mocks):
+    """Test rate limiting in SSE handler integration."""
+    api = api_with_mocks
+
+    # Set low connection limit for testing
+    api.sse_stream_handler.max_connections_per_client = 1
+    
+    # Create mock event stream
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    # First connection should work
+    events = []
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
+        events.append(event)
+    
+    assert len(events) == 1
+    assert events[0]["event"] == "thread.run.created"
+
+    # Second connection from same IP should be rate limited
+    events = []
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
+        events.append(event)
+        break  # Only need first event
+
+    assert len(events) == 1
+    assert events[0]["event"] == "error"
+    error_data = json.loads(events[0]["data"])
+    assert error_data["error"] == "Rate limit exceeded"
+
+
+@pytest.mark.asyncio
+async def test_sse_connection_timeout_integration(api_with_mocks):
+    """Test connection timeout in SSE handler integration."""
+    api = api_with_mocks
+
+    # Set very short timeout for testing
+    api.sse_stream_handler.max_connection_duration = 0.01
+    
+    # Create slow stream
+    async def slow_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        import asyncio
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        await asyncio.sleep(0.05)  # Longer than timeout
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = slow_stream
+
+    events = []
+    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
+        events.append(event)
+        if event.get("event") == "error" and "timeout" in event.get("id", ""):
+            break
+
+    # Should have initial event and timeout error
+    timeout_events = [e for e in events if e.get("event") == "error" and "timeout" in e.get("id", "")]
+    assert len(timeout_events) == 1
+    
+    error_data = json.loads(timeout_events[0]["data"])
+    assert error_data["error"] == "Connection timeout reached"
+    assert error_data["error_type"] == "ConnectionTimeoutError"

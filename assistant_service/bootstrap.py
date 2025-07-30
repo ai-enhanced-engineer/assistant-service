@@ -117,13 +117,13 @@ def get_websocket_stream_handler(
     raise ValueError(f"Stream handler type '{stream_handler_type}' is supported but not implemented")
 
 
-def get_sse_stream_handler(orchestrator: "IOrchestrator") -> "ISSEStreamHandler":
+def get_sse_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceConfig) -> "ISSEStreamHandler":
     """Create SSE stream handler for formatting Server-Sent Events."""
     # Import here to avoid circular dependencies
     from assistant_service.services.sse_stream_handler import SSEStreamHandler
 
     logger.info("Creating SSE stream handler")
-    return SSEStreamHandler(orchestrator)
+    return SSEStreamHandler(orchestrator, service_config)
 
 
 def get_tool_executor(service_config: ServiceConfig) -> "IToolExecutor":

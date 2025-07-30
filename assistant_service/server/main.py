@@ -57,7 +57,7 @@ class AssistantEngineAPI:
 
         # Separate handlers for WebSocket (bidirectional) vs SSE (server-push) streaming
         self.websocket_stream_handler = get_websocket_stream_handler(self.orchestrator, self.service_config)
-        self.sse_stream_handler = get_sse_stream_handler(self.orchestrator)
+        self.sse_stream_handler = get_sse_stream_handler(self.orchestrator, self.service_config)
 
         logger.info(
             "Booting with config",
@@ -129,8 +129,11 @@ class AssistantEngineAPI:
                         **SSE_RESPONSE_HEADERS,
                     }
 
+                    # Extract client IP for rate limiting
+                    client_ip = getattr(http_request.client, 'host', 'unknown') if http_request.client else 'unknown'
+                    
                     return EventSourceResponse(
-                        self.sse_stream_handler.format_events(request.thread_id, request.message),
+                        self.sse_stream_handler.format_events(request.thread_id, request.message, client_ip),
                         headers=headers,
                     )
                 else:

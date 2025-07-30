@@ -19,3 +19,8 @@ HEADER_ACCEPT = "Accept"
 # Common header values
 CONTENT_TYPE_JSON = "application/json"
 CONTENT_TYPE_EVENT_STREAM = "text/event-stream"
+
+# SSE Constants
+SSE_DEFAULT_RETRY_INTERVAL = 5000  # Default retry interval in milliseconds
+SSE_HEARTBEAT_COMMENT = "keepalive"  # Comment for heartbeat events
+SSE_CORRELATION_ID_LENGTH = 8  # Length for truncated correlation IDs
