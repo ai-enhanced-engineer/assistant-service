@@ -153,7 +153,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
+async def test_chat_endpoint_validation_with_correlation_id(monkeypatch, test_service_config):
     """Test chat endpoint validation includes correlation ID in error."""
     from assistant_service import repositories as repos
     from assistant_service.entities import AssistantConfig
@@ -203,7 +203,7 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
 
     monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
 
-    api = AssistantEngineAPI()
+    api = AssistantEngineAPI(service_config=test_service_config)
 
     with TestClient(api.app) as client:
         # Test missing thread_id includes correlation_id
