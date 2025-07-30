@@ -59,6 +59,21 @@ async def process_sse_with_httpx_sse(client: httpx.AsyncClient, url: str, payloa
                     print("\n[Error: Run failed]")
                     break
 
+                # Handle metadata events
+                elif sse.event == "metadata":
+                    metadata = event_data
+                    logger.info("Stream metadata received", metadata=metadata)
+                    # Optionally display timing info
+                    elapsed = metadata.get("elapsed_time_seconds", 0)
+                    print(f"\n[Completed in {elapsed:.2f}s]", flush=True)
+
+                # Handle error events
+                elif sse.event == "error":
+                    error_info = event_data
+                    logger.error("Stream error received", error_info=error_info)
+                    print(f"\n[Error: {error_info.get('error', 'Unknown error')}]", flush=True)
+                    break
+
             except json.JSONDecodeError as e:
                 logger.error("JSON decode error in SSE", error=str(e), data=sse.data)
                 continue

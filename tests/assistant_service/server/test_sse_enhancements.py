@@ -1,0 +1,271 @@
+"""Unit tests for SSE streaming enhancements."""
+
+import json
+from typing import Any, AsyncGenerator
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+
+from assistant_service.server.main import AssistantEngineAPI
+
+
+class MockEvent:
+    """Mock event for testing."""
+
+    def __init__(self, event_type: str, data: dict):
+        self.event = event_type
+        self._data = data
+
+    def model_dump_json(self) -> str:
+        return json.dumps(self._data)
+
+
+@pytest.fixture
+def mock_orchestrator():
+    """Create a mock orchestrator."""
+    orchestrator = MagicMock()
+    return orchestrator
+
+
+@pytest.fixture
+def api_with_mocks(mock_orchestrator, monkeypatch):
+    """Create API instance with mocked dependencies."""
+    # Set required environment variables
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("PROJECT_ID", "test-project")
+    monkeypatch.setenv("BUCKET_ID", "test-bucket")
+
+    # Create API instance
+    api = AssistantEngineAPI()
+
+    # Replace orchestrator with mock
+    api.orchestrator = mock_orchestrator
+
+    return api
+
+
+@pytest.mark.asyncio
+async def test_sse_event_formatting_with_retry(api_with_mocks):
+    """Test that SSE events include retry field."""
+    api = api_with_mocks
+
+    # Create mock event stream
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        yield MockEvent("thread.message.delta", {"delta": {"content": [{"type": "text", "text": {"value": "Hello"}}]}})
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    events = []
+    async for event in api._format_sse_events("test_thread", "test_message"):
+        events.append(event)
+
+    # Check that events have retry field
+    assert len(events) == 4  # 3 events + 1 metadata
+    for event in events[:-1]:  # All except metadata
+        assert event.get("retry") == 5000
+        assert "event" in event
+        assert "data" in event
+        assert "id" in event
+
+
+@pytest.mark.asyncio
+async def test_sse_error_handling(api_with_mocks):
+    """Test that errors are properly formatted as SSE events."""
+    api = api_with_mocks
+
+    # Create stream that raises error
+    async def error_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        raise ValueError("Test error")
+
+    api.orchestrator.process_run_stream = error_stream
+
+    events = []
+    async for event in api._format_sse_events("test_thread", "test_message"):
+        events.append(event)
+
+    # Should have initial event and error event
+    assert len(events) == 2
+    assert events[0]["event"] == "thread.run.created"
+    assert events[1]["event"] == "error"
+
+    error_data = json.loads(events[1]["data"])
+    assert error_data["error"] == "Test error"
+    assert error_data["error_type"] == "ValueError"
+    assert "correlation_id" in error_data
+
+
+@pytest.mark.asyncio
+async def test_sse_metadata_event(api_with_mocks):
+    """Test that metadata event is sent after completion."""
+    api = api_with_mocks
+
+    # Create mock event stream
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        yield MockEvent("thread.message.delta", {"delta": {"content": [{"type": "text", "text": {"value": "Hello"}}]}})
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    events = []
+    async for event in api._format_sse_events("test_thread", "test_message"):
+        events.append(event)
+
+    # Find metadata event
+    metadata_events = [e for e in events if e.get("event") == "metadata"]
+    assert len(metadata_events) == 1
+
+    metadata = json.loads(metadata_events[0]["data"])
+    assert "correlation_id" in metadata
+    assert "elapsed_time_seconds" in metadata
+    assert metadata["event_count"] == 3
+    assert metadata["thread_id"] == "test_thread"
+
+
+@pytest.mark.asyncio
+async def test_sse_heartbeat_mechanism(api_with_mocks):
+    """Test that heartbeat comments are sent during long streams."""
+    api = api_with_mocks
+
+    # Create slow stream to trigger heartbeat
+    async def slow_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        # This would trigger heartbeat in real scenario, but we'll mock time
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = slow_stream
+
+    events = []
+    # Mock time to simulate heartbeat interval
+    with patch("time.time") as mock_time:
+        # Start time
+        mock_time.return_value = 0
+
+        event_generator = api._format_sse_events("test_thread", "test_message")
+
+        # First event
+        event = await event_generator.__anext__()
+        events.append(event)
+
+        # Advance time to trigger heartbeat
+        mock_time.return_value = 20  # More than 15 seconds
+
+        # Next event should include heartbeat
+        async for event in event_generator:
+            events.append(event)
+
+    # Check for heartbeat comment
+    heartbeat_events = [e for e in events if e.get("comment") == "keepalive"]
+    assert len(heartbeat_events) >= 1
+    assert heartbeat_events[0]["retry"] == 5000
+
+
+@pytest.mark.asyncio
+async def test_sse_event_id_format(api_with_mocks):
+    """Test that event IDs include correlation ID and counter."""
+    api = api_with_mocks
+
+    # Create mock event stream
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        yield MockEvent("thread.message.delta", {"delta": {"content": [{"type": "text", "text": {"value": "Hello"}}]}})
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    events = []
+    correlation_id = None
+
+    with patch("assistant_service.server.main.get_or_create_correlation_id") as mock_corr_id:
+        mock_corr_id.return_value = "test-correlation-123"
+
+        async for event in api._format_sse_events("test_thread", "test_message"):
+            events.append(event)
+            if not correlation_id and "id" in event:
+                # Extract correlation ID from first event
+                correlation_id = event["id"].split("_")[0]
+
+    # Verify event ID format
+    assert events[0]["id"] == "test-correlation-123_thread.run.created_1"
+    assert events[1]["id"] == "test-correlation-123_thread.message.delta_2"
+    assert events[2]["id"] == "test-correlation-123_thread.run.completed_3"
+
+
+@pytest.mark.asyncio
+async def test_sse_response_headers(api_with_mocks):
+    """Test that SSE responses include proper headers."""
+    api = api_with_mocks
+
+    # Create mock event stream
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    # Use TestClient to test the actual endpoint
+    with TestClient(api.app) as client:
+        # Need to use the streaming interface
+        with client.stream(
+            "POST",
+            "/chat",
+            json={"thread_id": "test_thread", "message": "Hello"},
+            headers={"Accept": "text/event-stream"},
+        ) as response:
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            assert response.headers["cache-control"] == "no-cache, no-transform"
+            assert response.headers["connection"] == "keep-alive"
+            assert response.headers["x-accel-buffering"] == "no"
+            assert response.headers["x-content-type-options"] == "nosniff"
+            assert "x-correlation-id" in response.headers
+
+
+@pytest.mark.asyncio
+async def test_sse_handles_non_sse_events(api_with_mocks):
+    """Test that non-SSE events are filtered out."""
+    api = api_with_mocks
+
+    # Create stream with mixed events
+    async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        yield MockEvent("thread.run.created", {"id": "run_123"})
+        yield MockEvent("some.internal.event", {"internal": "data"})  # Should be filtered
+        yield MockEvent("thread.run.completed", {"status": "completed"})
+
+    api.orchestrator.process_run_stream = mock_stream
+
+    events = []
+    async for event in api._format_sse_events("test_thread", "test_message"):
+        if "event" in event:  # Skip heartbeats
+            events.append(event)
+
+    # Should only have SSE events and metadata
+    event_types = [e["event"] for e in events]
+    assert "some.internal.event" not in event_types
+    assert "thread.run.created" in event_types
+    assert "thread.run.completed" in event_types
+    assert "metadata" in event_types
+
+
+@pytest.mark.asyncio
+async def test_sse_empty_stream(api_with_mocks):
+    """Test handling of empty event stream."""
+    api = api_with_mocks
+
+    # Create empty stream
+    async def empty_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
+        return
+        yield  # Make it a generator
+
+    api.orchestrator.process_run_stream = empty_stream
+
+    events = []
+    async for event in api._format_sse_events("test_thread", "test_message"):
+        events.append(event)
+
+    # Should have no events
+    assert len(events) == 0
