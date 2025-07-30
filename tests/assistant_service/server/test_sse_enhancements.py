@@ -1,5 +1,6 @@
 """Unit tests for SSE streaming enhancements."""
 
+import asyncio
 import json
 from typing import Any, AsyncGenerator
 from unittest.mock import MagicMock, patch
@@ -291,29 +292,42 @@ async def test_sse_rate_limiting_integration(api_with_mocks):
     # Set low connection limit for testing
     api.sse_stream_handler.max_connections_per_client = 1
     
-    # Create mock event stream
+    # Create mock event stream that doesn't immediately complete
     async def mock_stream(thread_id: str, message: str) -> AsyncGenerator[Any, None]:
         yield MockEvent("thread.run.created", {"id": "run_123"})
+        # Add a small delay to keep connection alive
+        await asyncio.sleep(0.01)
 
     api.orchestrator.process_run_stream = mock_stream
 
-    # First connection should work
-    events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
-        events.append(event)
+    # Start first connection concurrently
+    async def first_connection():
+        events = []
+        async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
+            events.append(event)
+        return events
+
+    # Start second connection concurrently  
+    async def second_connection():
+        # Small delay to let first connection establish
+        await asyncio.sleep(0.005)
+        events = []
+        async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
+            events.append(event)
+            break  # Only need first event (should be rate limit error)
+        return events
+
+    # Run both connections concurrently
+    first_events, second_events = await asyncio.gather(first_connection(), second_connection())
     
-    assert len(events) == 1
-    assert events[0]["event"] == "thread.run.created"
+    # First connection should work normally
+    assert len(first_events) == 1
+    assert first_events[0]["event"] == "thread.run.created"
 
-    # Second connection from same IP should be rate limited
-    events = []
-    async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):
-        events.append(event)
-        break  # Only need first event
-
-    assert len(events) == 1
-    assert events[0]["event"] == "error"
-    error_data = json.loads(events[0]["data"])
+    # Second connection should be rate limited
+    assert len(second_events) == 1
+    assert second_events[0]["event"] == "error"
+    error_data = json.loads(second_events[0]["data"])
     assert error_data["error"] == "Rate limit exceeded"
 
 

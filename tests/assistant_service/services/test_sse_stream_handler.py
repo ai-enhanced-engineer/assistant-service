@@ -275,29 +275,53 @@ def test_sse_handler_initialization(service_config):
 @pytest.mark.asyncio
 async def test_sse_handler_rate_limiting(mock_correlation_id, service_config):
     """Test rate limiting functionality."""
-    orchestrator = MockOrchestrator([])
+    
+    # Create mock event that keeps connection alive briefly
+    mock_event = MagicMock()
+    mock_event.event = "thread.run.created"
+    mock_event.model_dump_json.return_value = '{"event": "thread.run.created"}'
+    mock_event.model_dump.return_value = {"event": "thread.run.created"}
+    
+    # Create orchestrator that yields event with small delay
+    async def slow_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
+        yield mock_event
+        await asyncio.sleep(0.01)  # Keep connection alive
+    
+    orchestrator = MagicMock()
+    orchestrator.process_run_stream = slow_stream
     
     # Set very low connection limit for testing
     service_config.sse_max_connections_per_client = 1
     handler = SSEStreamHandler(orchestrator, service_config)
 
-    # First connection should succeed
-    formatted_events = []
-    async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
-        formatted_events.append(event)
+    # Start first connection concurrently
+    async def first_connection():
+        formatted_events = []
+        async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
+            formatted_events.append(event)
+        return formatted_events
     
-    # Should have no events (empty stream)
-    assert len(formatted_events) == 0
+    # Start second connection concurrently
+    async def second_connection():
+        # Small delay to let first connection establish
+        await asyncio.sleep(0.005)
+        formatted_events = []
+        async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
+            formatted_events.append(event)
+            break  # Only get first event (rate limit error)
+        return formatted_events
     
-    # Second connection from same IP should be rate limited
-    formatted_events = []
-    async for event in handler.format_events("thread-123", "test query", "127.0.0.1"):
-        formatted_events.append(event)
-        break  # Only get first event (rate limit error)
+    # Run both connections concurrently
+    first_events, second_events = await asyncio.gather(first_connection(), second_connection())
     
-    assert len(formatted_events) == 1
-    assert formatted_events[0]["event"] == "error"
-    error_data = json.loads(formatted_events[0]["data"])
+    # First connection should succeed and get the event
+    assert len(first_events) == 1
+    assert first_events[0]["event"] == "thread.run.created"
+    
+    # Second connection should be rate limited
+    assert len(second_events) == 1
+    assert second_events[0]["event"] == "error"
+    error_data = json.loads(second_events[0]["data"])
     assert error_data["error"] == "Rate limit exceeded"
     assert error_data["error_type"] == "RateLimitError"
 
