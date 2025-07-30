@@ -117,9 +117,8 @@ def api(monkeypatch):
     from assistant_service import repositories as repos
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             self.project_id = project_id
-            self.client_id = client_id
 
         def write_secret(self, _):
             pass
@@ -128,8 +127,7 @@ def api(monkeypatch):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
-            self.client_id = client_id
+        def __init__(self, project_id: str, bucket_name: str):
             self.project_id = project_id
             self.bucket_name = bucket_name
 
@@ -137,9 +135,9 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_service.entities import EngineAssistantConfig
+            from assistant_service.entities import AssistantConfig
 
-            return EngineAssistantConfig(
+            return AssistantConfig(
                 assistant_id="aid",
                 assistant_name="name",
                 initial_message="hi",
@@ -158,7 +156,7 @@ def api(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
+        openai_api_key="test-key",
     )
 
     # Create API first

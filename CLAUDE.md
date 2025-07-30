@@ -1,10 +1,10 @@
 # Assistant Service - Project-Specific Guidelines
 
-This document contains project-specific patterns, workflows, and implementation details for the **multi-tenant Python assistant service** that integrates with OpenAI's Assistant API.
+This document contains project-specific patterns, workflows, and implementation details for the **Python assistant service** that integrates with OpenAI's Assistant API.
 
 ## Project Overview
 
-This project is a **multi-tenant Python assistant service** that integrates with OpenAI's Assistant API to provide conversational AI capabilities with custom tool support and streaming responses.
+This project is a **Python assistant service** that integrates with OpenAI's Assistant API to provide conversational AI capabilities with custom tool support and streaming responses.
 
 ## Architecture Overview
 
@@ -39,7 +39,7 @@ The system follows a **modular, layered architecture** with clear separation of 
 The system supports **multi-environment configuration**:
 - **Local Development**: In-memory repositories for config and secrets
 - **Production**: GCP Cloud Storage (config) + Secret Manager (secrets)
-- **Environment Variables**: `PROJECT_ID`, `BUCKET_ID`, `CLIENT_ID`, `OPENAI_API_KEY`
+- **Environment Variables**: `PROJECT_ID`, `BUCKET_ID`, `OPENAI_API_KEY`
 
 ## Custom Make Targets
 
@@ -66,7 +66,7 @@ The system supports **multi-environment configuration**:
 
 ### Service Management
 - `make local-run` - Run locally with auto-reload (port 8000)
-- `make build-engine` - Build Docker image for specific CLIENT_ID
+- `make service-build` - Build Docker image for assistant service
 - `make auth-gcloud` - Authenticate with Google Cloud
 
 ### Utilities
@@ -74,9 +74,9 @@ The system supports **multi-environment configuration**:
 
 ## Key Features & Implementation Details
 
-### Multi-Tenant Support
-- Client-specific configurations stored in GCP
-- Custom functions per client in `client_spec/` directories
+### Custom Tool Support
+- Assistant-specific configurations stored in GCP or locally
+- Custom functions in `assistants/` directories
 - Dynamic tool loading via `TOOL_MAP` dictionary
 
 ### Streaming Architecture
@@ -125,11 +125,14 @@ Tool Processing → Message Processing → HTTP Response
 ## Environment Variables
 
 ### Required
-- `PROJECT_ID` - GCP project ID
-- `BUCKET_ID` - GCP bucket for configurations
-- `CLIENT_ID` - Client identifier for multi-tenant support
+- `PROJECT_ID` - GCP project ID (can be dummy value in development)
+- `BUCKET_ID` - GCP bucket for configurations (can be dummy value in development)
 - `OPENAI_API_KEY` - OpenAI API key
-- `GOOGLE_APPLICATION_CREDENTIALS` - Path to GCP credentials
+
+### Optional
+- `ENVIRONMENT` - Environment mode (development/production), defaults to development
+- `ASSISTANT_ID` - Default assistant to load
+- `GOOGLE_APPLICATION_CREDENTIALS` - Path to GCP credentials (only needed for production)
 
 ### Optional (Logging)
 - `LOGGING_LEVEL` - Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
@@ -168,15 +171,15 @@ The project avoids `unittest.mock` in favor of:
 
 ## Development Workflow
 
-### Adding a New Client
-1. Create directory: `assistant_factory/client_spec/{client_id}/`
-2. Add `tools.py` with custom tools
+### Adding Custom Tools
+1. Create directory: `assistant_factory/assistants/{assistant_name}/`
+2. Add `tools.py` with custom tool implementations
 3. Update `TOOL_MAP` in `assistant_service/tools.py`
 4. Configure assistant in GCP or local config
-5. Test with `CLIENT_ID={client_id} make local-run`
+5. Test with `make local-run`
 
 ### Implementing New Tools
-1. Define function in client's `tools.py`
+1. Define function in assistant's `tools.py`
 2. Add comprehensive docstring and type hints
 3. Register in `TOOL_MAP` dictionary
 4. Test tool execution through API
@@ -219,9 +222,8 @@ The project avoids `unittest.mock` in favor of:
 - Thread ID validation
 - Content sanitization
 
-### Multi-Tenant Isolation
-- Client-specific configurations
-- No cross-client data access
+### Assistant Isolation
+- Assistant-specific configurations
 - Separate tool namespaces
 - Configuration validation
 

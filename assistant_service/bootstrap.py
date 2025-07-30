@@ -1,11 +1,11 @@
 """Factory functions for creating and configuring application components with dependency injection."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 
 from assistant_service.entities import (
-    EngineAssistantConfig,
+    AssistantConfig,
     ServiceConfig,
 )
 
@@ -35,52 +35,51 @@ SUPPORTED_MESSAGE_PARSERS = {"default"}
 
 def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
     """Create development or production secret repository based on environment."""
-    if config.is_development:
+    if config.environment == "development":
         logger.info("Using local secret repository for development")
         return LocalSecretRepository()
     else:
         logger.info("Using GCP secret repository for production")
         return GCPSecretRepository(
             project_id=config.project_id,
-            client_id=config.client_id,
         )
 
 
 def get_config_repository(config: ServiceConfig) -> BaseConfigRepository:
     """Create development or production config repository based on environment."""
-    if config.is_development:
+    if config.environment == "development":
         logger.info("Using local config repository for development")
         return LocalConfigRepository()
     else:
         logger.info("Using GCP config repository for production")
         return GCPConfigRepository(
-            client_id=config.client_id,
             project_id=config.project_id,
             bucket_name=config.bucket_id,
         )
 
 
-def get_engine_config(
+def get_assistant_config(
     secret_repository: BaseSecretRepository, config_repository: BaseConfigRepository
-) -> EngineAssistantConfig:
+) -> AssistantConfig:
     config = config_repository.read_config()
-    if not isinstance(config, EngineAssistantConfig):
+    if not isinstance(config, AssistantConfig):
         raise TypeError("Config repository returned invalid type")
-    config.openai_apikey = secret_repository.access_secret("openai-api-key")
     return config
 
 
-def get_openai_client(config: EngineAssistantConfig) -> AsyncOpenAI:
+def get_openai_client(service_config: ServiceConfig) -> AsyncOpenAI:
     logger.info("Creating OpenAI client")
-    return AsyncOpenAI(api_key=config.openai_apikey)
+    return AsyncOpenAI(api_key=service_config.openai_api_key)
 
 
-def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOrchestrator":
+def get_orchestrator(
+    client: AsyncOpenAI, service_config: ServiceConfig, assistant_config: AssistantConfig
+) -> "IOrchestrator":
     """Create orchestrator with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
     from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
-    orchestrator_type = getattr(config, "orchestrator_type", "openai")
+    orchestrator_type = service_config.orchestrator_type
 
     if orchestrator_type not in SUPPORTED_ORCHESTRATORS:
         available = ", ".join(sorted(SUPPORTED_ORCHESTRATORS))
@@ -88,17 +87,19 @@ def get_orchestrator(client: AsyncOpenAI, config: EngineAssistantConfig) -> "IOr
 
     if orchestrator_type == "openai":
         logger.info("Creating OpenAI orchestrator")
-        tool_executor = get_tool_executor(config)
-        return OpenAIOrchestrator(client, config, tool_executor)
-    
+        tool_executor = get_tool_executor(service_config)
+        return OpenAIOrchestrator(client, assistant_config, tool_executor)
+
     # This should not be reachable due to SUPPORTED_ORCHESTRATORS check above
     raise ValueError(f"Orchestrator type '{orchestrator_type}' is supported but not implemented")
 
 
-def get_stream_handler(orchestrator: "IOrchestrator", stream_handler_type: str = "websocket") -> "IStreamHandler":
+def get_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceConfig) -> "IStreamHandler":
     """Create stream handler with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
     from assistant_service.services.stream_handler import StreamHandler
+
+    stream_handler_type = service_config.stream_handler_type
 
     if stream_handler_type not in SUPPORTED_STREAM_HANDLERS:
         available = ", ".join(sorted(SUPPORTED_STREAM_HANDLERS))
@@ -107,17 +108,17 @@ def get_stream_handler(orchestrator: "IOrchestrator", stream_handler_type: str =
     if stream_handler_type == "websocket":
         logger.info("Creating WebSocket stream handler")
         return StreamHandler(orchestrator)
-    
+
     # This should not be reachable due to SUPPORTED_STREAM_HANDLERS check above
     raise ValueError(f"Stream handler type '{stream_handler_type}' is supported but not implemented")
 
 
-def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> "IToolExecutor":
+def get_tool_executor(service_config: ServiceConfig) -> "IToolExecutor":
     """Create tool executor with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
     from assistant_service.services.tool_executor import ToolExecutor
 
-    tool_executor_type = getattr(config, "tool_executor_type", "default") if config else "default"
+    tool_executor_type = service_config.tool_executor_type
 
     if tool_executor_type not in SUPPORTED_TOOL_EXECUTORS:
         available = ", ".join(sorted(SUPPORTED_TOOL_EXECUTORS))
@@ -126,15 +127,17 @@ def get_tool_executor(config: Optional[EngineAssistantConfig] = None) -> "IToolE
     if tool_executor_type == "default":
         logger.info("Creating default tool executor")
         return ToolExecutor()
-    
+
     # This should not be reachable due to SUPPORTED_TOOL_EXECUTORS check above
     raise ValueError(f"Tool executor type '{tool_executor_type}' is supported but not implemented")
 
 
-def get_message_parser(message_parser_type: str = "default") -> "IMessageParser":
+def get_message_parser(service_config: ServiceConfig) -> "IMessageParser":
     """Create message parser with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
     from assistant_service.services.message_parser import MessageParser
+
+    message_parser_type = service_config.message_parser_type
 
     if message_parser_type not in SUPPORTED_MESSAGE_PARSERS:
         available = ", ".join(sorted(SUPPORTED_MESSAGE_PARSERS))
@@ -143,6 +146,6 @@ def get_message_parser(message_parser_type: str = "default") -> "IMessageParser"
     if message_parser_type == "default":
         logger.info("Creating default message parser")
         return MessageParser()
-    
+
     # This should not be reachable due to SUPPORTED_MESSAGE_PARSERS check above
     raise ValueError(f"Message parser type '{message_parser_type}' is supported but not implemented")

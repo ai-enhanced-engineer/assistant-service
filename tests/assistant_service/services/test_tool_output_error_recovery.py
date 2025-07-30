@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import AssistantConfig
 from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
@@ -24,9 +24,7 @@ async def test_submit_tool_outputs_success():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs)
@@ -46,9 +44,7 @@ async def test_submit_tool_outputs_retry_then_success():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
@@ -65,9 +61,7 @@ async def test_submit_tool_outputs_permanent_failure():
 
     tool_outputs = [{"tool_call_id": "123", "output": "result"}]
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("thread_123", "run_456", tool_outputs, retries=2)
@@ -86,9 +80,7 @@ async def test_cancel_run_safely_success():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.return_value = None
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
@@ -106,9 +98,7 @@ async def test_cancel_run_safely_already_terminal():
     mock_run = types.SimpleNamespace(status="completed")
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
@@ -128,9 +118,7 @@ async def test_cancel_run_safely_failure():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.side_effect = Exception("Cancel failed")
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
@@ -142,27 +130,26 @@ async def test_cancel_run_safely_failure():
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
     from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    from assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
+            return AssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
@@ -175,7 +162,7 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
+        openai_api_key="test-key",
     )
 
     # Monkeypatch the client

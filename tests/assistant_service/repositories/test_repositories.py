@@ -1,12 +1,12 @@
 from typing import Any
 
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import AssistantConfig
 from assistant_service.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test_local_config_repository_roundtrip() -> None:
     repo = LocalConfigRepository()
-    config = EngineAssistantConfig(
+    config = AssistantConfig(
         assistant_id="a1",
         assistant_name="test",
         initial_message="hi",
@@ -25,9 +25,6 @@ def test_local_secret_repository_writes_and_reads(capsys: Any) -> None:
     # LocalSecretRepository returns "local-{suffix}" for non-openai keys
     assert secret == "local-foo"
 
-    # Test OpenAI API key access
-    import os
-
-    os.environ["OPENAI_API_KEY"] = "test-key"
+    # Test all secrets now return local-{suffix} pattern
     openai_key = repo.access_secret("openai-api-key")
-    assert openai_key == "test-key"
+    assert openai_key == "local-openai-api-key"

@@ -6,7 +6,7 @@ from typing import Any, AsyncGenerator, Iterable, Optional
 
 from openai import AsyncOpenAI, OpenAIError
 
-from ..entities import EngineAssistantConfig
+from ..entities import AssistantConfig
 from ..server.error_handlers import ErrorHandler
 from ..structured_logging import get_logger, get_or_create_correlation_id
 from .tool_executor import IToolExecutor
@@ -29,7 +29,7 @@ class IOrchestrator(ABC):
 class OpenAIOrchestrator(IOrchestrator):
     """Orchestrates OpenAI assistant runs and event streaming."""
 
-    def __init__(self, client: AsyncOpenAI, config: EngineAssistantConfig, tool_executor: IToolExecutor):
+    def __init__(self, client: AsyncOpenAI, config: AssistantConfig, tool_executor: IToolExecutor):
         self.client = client
         self.config = config
         self.tool_executor = tool_executor

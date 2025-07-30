@@ -1,0 +1,10 @@
+API Development Guide
+
+REST API Best Practices:
+1. Use meaningful resource names
+2. Implement proper HTTP status codes
+3. Version your APIs
+4. Include pagination for large datasets
+5. Provide clear error messages
+
+Always follow security best practices including authentication, authorization, and input validation.

@@ -25,7 +25,6 @@ TEST_DIR = tests/
 SCRIPTS_DIR = scripts/
 PROJECT_VERSION := $(shell awk '/^\[project\]/ {flag=1; next} /^\[/{flag=0} flag && /^version/ {gsub(/"/, "", $$2); print $$2}' pyproject.toml)
 PYTHON_VERSION := 3.10
-CLIENT_ID = leogv
 
 # Default API settings
 API_HOST ?= 0.0.0.0
@@ -189,7 +188,6 @@ api-run: environment-sync ## Start API server in dev mode. Example: OPENAI_API_K
 	@echo "📝 Configuration examples:"
 	@echo "   OPENAI_API_KEY=sk-... make api-run                    # With API key"
 	@echo "   ASSISTANT_ID=asst_... make api-run                    # With specific assistant"
-	@echo "   CLIENT_ID=my-client make api-run                      # With custom client"
 	@echo ""
 	@echo "🔧 Advanced options using ARGS:"
 	@echo "   make api-run ARGS='--port 8001 --host localhost'      # Custom host/port"
@@ -249,14 +247,28 @@ chat: ## Start HTTP chat client (requires running API server)
 	$(GREEN_LINE)
 
 # ----------------------------
+# Assistant Management
+# ----------------------------
+
+register-assistant: ## Register a new assistant with OpenAI from config file. Example: make register-assistant ARGS='assistant-config.json'
+	@echo "🤖 Registering new assistant with OpenAI..."
+	@echo "🔑 OpenAI Key: $(if $(OPENAI_API_KEY),✅ Set,❌ Not Set)"
+	@echo ""
+	@echo "📝 Examples:"
+	@echo "   make register-assistant ARGS='assistant-config.json'"
+	@echo "   make register-assistant ARGS='scripts/assistant_registration/example-config.json'"
+	@echo "   make register-assistant ARGS='--generate-schema'  # Generate config schema"
+	@echo ""
+	uv run python -m scripts.assistant_registration.register_assistant $(ARGS)
+	$(GREEN_LINE)
+
+# ----------------------------
 # Build and Deployment
 # ----------------------------
 
 service-build: environment-sync ## Build Docker image for assistant service
 	@echo "🏗️  Building Assistant Service Docker image..."
 	@echo "📦 Version: $(PROJECT_VERSION)"
-	@echo "👤 Client: $(CLIENT_ID)"
-	cp assistant_factory/client_spec/$(CLIENT_ID)/tools.py assistant_service/tools.py
 	DOCKER_BUILDKIT=1 docker build --target=runtime . -t assistant-service:latest -t assistant-service:$(PROJECT_VERSION)
 	@echo "✅ Docker image built successfully!"
 	$(GREEN_LINE)

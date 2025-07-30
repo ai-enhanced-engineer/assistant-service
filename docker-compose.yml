@@ -5,9 +5,9 @@ services:
     build:
       context: .
     environment:
-      - PROJECT_ID=botbrewers
-      - BUCKET_ID=botbrewers
-      - CLIENT_ID=leogv
+      - PROJECT_ID=your-project-id
+      - BUCKET_ID=your-bucket-id
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/app/application_default_credentials.json
     ports:
       - "8000:8000"

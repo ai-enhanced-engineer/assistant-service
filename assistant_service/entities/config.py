@@ -1,6 +1,6 @@
 """Configuration models for the assistant engine."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,67 +13,71 @@ class ServiceConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore",  # Ignore extra environment variables
-        populate_by_name=True,  # Allow both field names and validation aliases
+        extra="ignore",
+        populate_by_name=True,
     )
 
-    # Environment configuration
     environment: Literal["development", "production"] = Field(
         default="development",
-        description="The environment the service is running in",
+        description="Environment mode",
         validation_alias="ENVIRONMENT",
     )
-
-    # GCP configuration
     project_id: str = Field(
-        default="",
         description="GCP project ID",
         validation_alias="PROJECT_ID",
     )
     bucket_id: str = Field(
-        default="",
-        description="GCS bucket ID for configuration storage",
+        description="GCS bucket ID",
         validation_alias="BUCKET_ID",
     )
-    client_id: str = Field(
-        default="",
-        description="Client ID for multi-tenant support",
-        validation_alias="CLIENT_ID",
+    openai_api_key: str = Field(
+        description="OpenAI API key",
+        validation_alias="OPENAI_API_KEY",
     )
-
-    @property
-    def is_production(self) -> bool:
-        """Check if running in production environment."""
-        return self.environment == "production" and bool(self.project_id) and bool(self.bucket_id)
-
-    @property
-    def is_development(self) -> bool:
-        """Check if running in development environment."""
-        return not self.is_production
-
-
-class EngineAssistantConfig(BaseModel):
-    """Configuration for an OpenAI assistant instance."""
-
-    assistant_id: str
-    assistant_name: str
-    initial_message: str
-    code_interpreter: bool = Field(default=False)
-    retrieval: bool = Field(default=False)
-    function_names: list[str] = Field(default_factory=list)
-    # Secrets
-    openai_apikey: Optional[str] = Field(default=None)
-
-    # Component type configurations for dependency injection  
     orchestrator_type: Literal["openai"] = Field(
-        default="openai", description="Type of orchestrator to use. Currently supported: 'openai'"
+        default="openai",
+        description="Orchestrator type",
+        validation_alias="ORCHESTRATOR_TYPE",
     )
     stream_handler_type: Literal["websocket"] = Field(
-        default="websocket", description="Type of stream handler to use. Currently supported: 'websocket'"
+        default="websocket",
+        description="Stream handler type",
+        validation_alias="STREAM_HANDLER_TYPE",
     )
     tool_executor_type: Literal["default"] = Field(
-        default="default", description="Type of tool executor to use. Currently supported: 'default'"
+        default="default",
+        description="Tool executor type",
+        validation_alias="TOOL_EXECUTOR_TYPE",
     )
     message_parser_type: Literal["default"] = Field(
-        default="default", description="Type of message parser to use. Currently supported: 'default'"
+        default="default",
+        description="Message parser type",
+        validation_alias="MESSAGE_PARSER_TYPE",
+    )
+
+
+class AssistantConfig(BaseModel):
+    """Configuration for an OpenAI assistant instance."""
+
+    assistant_id: str = Field(
+        default="",
+        description="Assistant ID",
+    )
+    assistant_name: str = Field(
+        description="Assistant name",
+    )
+    initial_message: str = Field(
+        description="Initial greeting message",
+    )
+    code_interpreter: bool = Field(
+        default=False,
+        description="Enable code interpreter",
+    )
+    file_search: bool = Field(
+        default=False,
+        description="Enable file search",
+    )
+    function_names: list[str] = Field(
+        default_factory=list,
+        description="List of enabled functions",
     )

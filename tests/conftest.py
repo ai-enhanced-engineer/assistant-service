@@ -6,15 +6,14 @@ from unittest.mock import AsyncMock
 import pytest
 
 from assistant_service import repositories as repos
-from assistant_service.entities import EngineAssistantConfig, ServiceConfig
+from assistant_service.entities import AssistantConfig, ServiceConfig
 
 
 class DummySecretRepository:
     """Mock secret repository for testing."""
 
-    def __init__(self, project_id: str = "", client_id: str = ""):
+    def __init__(self, project_id: str = ""):
         self.project_id = project_id
-        self.client_id = client_id
 
     def write_secret(self, _):
         """No-op write for testing."""
@@ -32,8 +31,7 @@ class DummySecretRepository:
 class DummyConfigRepository:
     """Mock config repository for testing."""
 
-    def __init__(self, client_id: str = "", project_id: str = "", bucket_name: str = ""):
-        self.client_id = client_id
+    def __init__(self, project_id: str = "", bucket_name: str = ""):
         self.project_id = project_id
         self.bucket_name = bucket_name
 
@@ -43,7 +41,7 @@ class DummyConfigRepository:
 
     def read_config(self):
         """Return default test config."""
-        return EngineAssistantConfig(
+        return AssistantConfig(
             assistant_id="test-assistant",
             assistant_name="Development Assistant",
             initial_message="Hello! I'm your development assistant. How can I help you today?",
@@ -99,14 +97,14 @@ def test_service_config():
         environment="development",
         project_id="test-project",
         bucket_id="test-bucket",
-        client_id="test-client",
+        openai_api_key="test-key",
     )
 
 
 @pytest.fixture
 def test_engine_config():
     """Provide a test engine configuration."""
-    return EngineAssistantConfig(
+    return AssistantConfig(
         assistant_id="test-assistant",
         assistant_name="Test Assistant",
         initial_message="Hello",

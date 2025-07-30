@@ -1,0 +1,14 @@
+{
+  "assistant_name": "Test Assistant 1",
+  "instructions": "You are a helpful assistant that answers questions using the provided knowledge base.",
+  "initial_message": "Hello! I'm here to help you with Python programming questions.",
+  "model": "gpt-4-turbo-preview",
+  "code_interpreter": true,
+  "function_names": [],
+  "vector_store_name": "Test Knowledge Base",
+  "vector_store_file_paths": [
+    "scripts/assistant_registration/sample_data/python_basics.txt",
+    "scripts/assistant_registration/sample_data/api_guide.txt",
+    "scripts/assistant_registration/sample_data/faq.md"
+  ]
+}

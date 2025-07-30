@@ -10,8 +10,8 @@ from fastapi import FastAPI, WebSocket
 from openai import AsyncOpenAI, OpenAIError
 
 from ..bootstrap import (
+    get_assistant_config,
     get_config_repository,
-    get_engine_config,
     get_openai_client,
     get_orchestrator,
     get_secret_repository,
@@ -56,27 +56,27 @@ class AssistantEngineAPI:
         secret_repository = get_secret_repository(self.service_config)
         config_repository = get_config_repository(self.service_config)
 
-        self.engine_config = get_engine_config(secret_repository, config_repository)
+        self.assistant_config = get_assistant_config(secret_repository, config_repository)
 
         # Create components using factory functions
-        self.client: AsyncOpenAI = get_openai_client(self.engine_config)
-        self.orchestrator = get_orchestrator(self.client, self.engine_config)
-        self.stream_handler = get_stream_handler(self.orchestrator, self.engine_config.stream_handler_type)
+        self.client: AsyncOpenAI = get_openai_client(self.service_config)
+        self.orchestrator = get_orchestrator(self.client, self.service_config, self.assistant_config)
+        self.stream_handler = get_stream_handler(self.orchestrator, self.service_config)
 
         # Log configuration (without sensitive data)
         logger.info(
             "Booting with config",
-            assistant_id=self.engine_config.assistant_id,
-            assistant_name=self.engine_config.assistant_name,
-            initial_message=self.engine_config.initial_message,
-            code_interpreter=self.engine_config.code_interpreter,
-            retrieval=self.engine_config.retrieval,
-            function_names=self.engine_config.function_names,
-            openai_apikey="sk" if self.engine_config.openai_apikey else None,
-            orchestrator_type=self.engine_config.orchestrator_type,
-            stream_handler_type=self.engine_config.stream_handler_type,
-            tool_executor_type=self.engine_config.tool_executor_type,
-            message_parser_type=self.engine_config.message_parser_type,
+            assistant_id=self.assistant_config.assistant_id,
+            assistant_name=self.assistant_config.assistant_name,
+            initial_message=self.assistant_config.initial_message,
+            code_interpreter=self.assistant_config.code_interpreter,
+            retrieval=self.assistant_config.file_search,
+            function_names=self.assistant_config.function_names,
+            openai_apikey="sk" if self.service_config.openai_api_key else None,
+            orchestrator_type=self.service_config.orchestrator_type,
+            stream_handler_type=self.service_config.stream_handler_type,
+            tool_executor_type=self.service_config.tool_executor_type,
+            message_parser_type=self.service_config.message_parser_type,
         )
 
         # Create FastAPI app
@@ -101,7 +101,7 @@ class AssistantEngineAPI:
                     logger.info("New thread created successfully", thread_id=thread.id, correlation_id=correlation_id)
                     return StartResponse(
                         thread_id=thread.id,
-                        initial_message=self.engine_config.initial_message,
+                        initial_message=self.assistant_config.initial_message,
                         correlation_id=correlation_id,
                     )
                 except OpenAIError as err:

@@ -37,6 +37,12 @@ def mock_websocket():
     ws.receive_json = AsyncMock()
     ws.send_text = AsyncMock()
     ws.send_json = AsyncMock()
+
+    # Mock the client_state attribute with a value indicating connected state
+    # WebSocket states: CONNECTING=0, CONNECTED=1, DISCONNECTING=2, DISCONNECTED=3
+    ws.client_state = AsyncMock()
+    ws.client_state.value = 1  # CONNECTED state
+
     return ws
 
 

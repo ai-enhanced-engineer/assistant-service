@@ -94,27 +94,26 @@ def test_api_endpoints_include_correlation_ids(api):
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
     from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    from assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
+            return AssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
@@ -128,7 +127,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
+        openai_api_key="test-key",
     )
 
     # Import and create API first
@@ -154,30 +153,29 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
+async def test_chat_endpoint_validation_with_correlation_id(monkeypatch, test_service_config):
     """Test chat endpoint validation includes correlation ID in error."""
     from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    from assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
+            return AssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
@@ -205,7 +203,7 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
 
     monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
 
-    api = AssistantEngineAPI()
+    api = AssistantEngineAPI(service_config=test_service_config)
 
     with TestClient(api.app) as client:
         # Test missing thread_id includes correlation_id
