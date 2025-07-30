@@ -94,7 +94,7 @@ def test_api_endpoints_include_correlation_ids(api):
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
     from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    from assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -114,7 +114,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
             pass
 
         def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
+            return AssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
@@ -157,7 +157,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     """Test chat endpoint validation includes correlation ID in error."""
     from assistant_service import repositories as repos
-    from assistant_service.entities import EngineAssistantConfig
+    from assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -177,7 +177,7 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
             pass
 
         def read_config(self):
-            return EngineAssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
+            return AssistantConfig(assistant_id="a", assistant_name="name", initial_message="hi")
 
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)

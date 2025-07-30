@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import AssistantConfig
 
 from .base import BaseConfigRepository, BaseSecretRepository
 
@@ -18,13 +18,7 @@ class LocalSecretRepository(BaseSecretRepository):
         pass
 
     def access_secret(self, secret_suffix: str) -> str:
-        """Return OpenAI API key from environment or prompt user."""
-        if secret_suffix == "openai-api-key":
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                # Return a placeholder that will be caught later
-                return "OPENAI_API_KEY_NOT_SET"
-            return api_key
+        """Return local secret."""
         return f"local-{secret_suffix}"
 
 
@@ -37,11 +31,11 @@ class LocalConfigRepository(BaseConfigRepository):
     def write_config(self, config: Any) -> None:
         pass
 
-    def read_config(self) -> EngineAssistantConfig:
+    def read_config(self) -> AssistantConfig:
         """Return default development configuration."""
         assistant_id = os.getenv("ASSISTANT_ID", "asst_dev_default")
 
-        return EngineAssistantConfig(
+        return AssistantConfig(
             assistant_id=assistant_id,
             assistant_name="Development Assistant",
             initial_message="Hello! I'm your development assistant. How can I help you today?",

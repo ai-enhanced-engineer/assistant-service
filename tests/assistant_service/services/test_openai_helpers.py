@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from assistant_service.entities import EngineAssistantConfig
+from assistant_service.entities import AssistantConfig
 from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
@@ -19,9 +19,7 @@ async def test_retrieve_run_returns_none_on_error():
     mock_client = AsyncMock()
     mock_client.beta.threads.runs.retrieve.side_effect = RuntimeError("boom")
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._retrieve_run("t", "r")
@@ -35,9 +33,7 @@ async def test_list_run_steps_returns_none_on_error():
     mock_client = AsyncMock()
     mock_client.beta.threads.runs.steps.list.side_effect = RuntimeError("boom")
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._list_run_steps("t", "r")
@@ -52,9 +48,7 @@ async def test_submit_tool_outputs_retries():
     # First call fails, second succeeds
     mock_client.beta.threads.runs.submit_tool_outputs.side_effect = [RuntimeError("fail"), "ok"]
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("t", "r", [])
@@ -68,9 +62,7 @@ async def test_submit_tool_outputs_returns_none_after_retries():
     mock_client = AsyncMock()
     mock_client.beta.threads.runs.submit_tool_outputs.side_effect = RuntimeError("fail")
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._submit_tool_outputs_with_backoff("t", "r", [], retries=2)
@@ -87,9 +79,7 @@ async def test_cancel_run_safely_success():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.return_value = None
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
@@ -105,9 +95,7 @@ async def test_cancel_run_safely_already_terminal():
     mock_run.status = "completed"
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")
@@ -125,9 +113,7 @@ async def test_cancel_run_safely_failure():
     mock_client.beta.threads.runs.retrieve.return_value = mock_run
     mock_client.beta.threads.runs.cancel.side_effect = Exception("Cancel failed")
 
-    config = EngineAssistantConfig(
-        assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello"
-    )
+    config = AssistantConfig(assistant_id="test-assistant", assistant_name="Test Assistant", initial_message="Hello")
     orchestrator = OpenAIOrchestrator(mock_client, config, create_mock_tool_executor())
 
     result = await orchestrator._cancel_run_safely("thread_123", "run_456")

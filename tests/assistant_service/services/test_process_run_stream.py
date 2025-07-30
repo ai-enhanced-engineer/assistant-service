@@ -137,9 +137,9 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_service.entities import EngineAssistantConfig
+            from assistant_service.entities import AssistantConfig
 
-            return EngineAssistantConfig(
+            return AssistantConfig(
                 assistant_id="aid",
                 assistant_name="name",
                 initial_message="hi",

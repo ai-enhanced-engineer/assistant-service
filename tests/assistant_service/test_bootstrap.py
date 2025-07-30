@@ -1,4 +1,4 @@
-from assistant_service.bootstrap import get_config_repository, get_engine_config, get_secret_repository
+from assistant_service.bootstrap import get_assistant_config, get_config_repository, get_secret_repository
 from assistant_service.entities import ServiceConfig
 from assistant_service.repositories import (
     LocalConfigRepository,
@@ -6,7 +6,7 @@ from assistant_service.repositories import (
 )
 
 
-def test__get_engine_config(monkeypatch):
+def test__get_assistant_config(monkeypatch):
     with monkeypatch.context() as mp:
         mp.setenv("PROJECT_ID", "test-project")
         mp.setenv("CLIENT_ID", "test-client")
@@ -17,13 +17,13 @@ def test__get_engine_config(monkeypatch):
         local_secrets = LocalSecretRepository()  # No arguments
         local_config = LocalConfigRepository()  # No arguments
 
-        engine_config = get_engine_config(local_secrets, local_config)
+        assistant_config = get_assistant_config(local_secrets, local_config)
 
         # LocalConfigRepository always uses ASSISTANT_ID env var or default
-        assert engine_config.assistant_id == "test-assistant-id"
-        assert engine_config.assistant_name == "Development Assistant"
-        assert engine_config.initial_message == "Hello! I'm your development assistant. How can I help you today?"
-        assert engine_config.openai_apikey == "test-api-key"
+        assert assistant_config.assistant_id == "test-assistant-id"
+        assert assistant_config.assistant_name == "Development Assistant"
+        assert assistant_config.initial_message == "Hello! I'm your development assistant. How can I help you today?"
+        # openai_apikey is no longer part of AssistantConfig, moved to ServiceConfig
 
 
 def test__get_secret_repository_development():

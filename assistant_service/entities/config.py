@@ -1,6 +1,6 @@
 """Configuration models for the assistant engine."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,6 +41,35 @@ class ServiceConfig(BaseSettings):
         validation_alias="CLIENT_ID",
     )
 
+    # OpenAI configuration
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key",
+        validation_alias="OPENAI_API_KEY",
+    )
+
+    # Component type configurations for dependency injection
+    orchestrator_type: Literal["openai"] = Field(
+        default="openai",
+        description="Type of orchestrator to use. Currently supported: 'openai'",
+        validation_alias="ORCHESTRATOR_TYPE",
+    )
+    stream_handler_type: Literal["websocket"] = Field(
+        default="websocket",
+        description="Type of stream handler to use. Currently supported: 'websocket'",
+        validation_alias="STREAM_HANDLER_TYPE",
+    )
+    tool_executor_type: Literal["default"] = Field(
+        default="default",
+        description="Type of tool executor to use. Currently supported: 'default'",
+        validation_alias="TOOL_EXECUTOR_TYPE",
+    )
+    message_parser_type: Literal["default"] = Field(
+        default="default",
+        description="Type of message parser to use. Currently supported: 'default'",
+        validation_alias="MESSAGE_PARSER_TYPE",
+    )
+
     @property
     def is_production(self) -> bool:
         """Check if running in production environment."""
@@ -52,7 +81,7 @@ class ServiceConfig(BaseSettings):
         return not self.is_production
 
 
-class EngineAssistantConfig(BaseModel):
+class AssistantConfig(BaseModel):
     """Configuration for an OpenAI assistant instance."""
 
     assistant_id: str
@@ -61,19 +90,3 @@ class EngineAssistantConfig(BaseModel):
     code_interpreter: bool = Field(default=False)
     retrieval: bool = Field(default=False)
     function_names: list[str] = Field(default_factory=list)
-    # Secrets
-    openai_apikey: Optional[str] = Field(default=None)
-
-    # Component type configurations for dependency injection  
-    orchestrator_type: Literal["openai"] = Field(
-        default="openai", description="Type of orchestrator to use. Currently supported: 'openai'"
-    )
-    stream_handler_type: Literal["websocket"] = Field(
-        default="websocket", description="Type of stream handler to use. Currently supported: 'websocket'"
-    )
-    tool_executor_type: Literal["default"] = Field(
-        default="default", description="Type of tool executor to use. Currently supported: 'default'"
-    )
-    message_parser_type: Literal["default"] = Field(
-        default="default", description="Type of message parser to use. Currently supported: 'default'"
-    )

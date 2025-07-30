@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from assistant_service import repositories as repos
-from assistant_service.entities import EngineAssistantConfig, ServiceConfig
+from assistant_service.entities import AssistantConfig, ServiceConfig
 
 
 class DummySecretRepository:
@@ -43,7 +43,7 @@ class DummyConfigRepository:
 
     def read_config(self):
         """Return default test config."""
-        return EngineAssistantConfig(
+        return AssistantConfig(
             assistant_id="test-assistant",
             assistant_name="Development Assistant",
             initial_message="Hello! I'm your development assistant. How can I help you today?",
@@ -106,7 +106,7 @@ def test_service_config():
 @pytest.fixture
 def test_engine_config():
     """Provide a test engine configuration."""
-    return EngineAssistantConfig(
+    return AssistantConfig(
         assistant_id="test-assistant",
         assistant_name="Test Assistant",
         initial_message="Hello",
