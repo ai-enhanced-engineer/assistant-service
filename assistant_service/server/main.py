@@ -72,7 +72,7 @@ class AssistantEngineAPI:
             assistant_name=self.assistant_config.assistant_name,
             initial_message=self.assistant_config.initial_message,
             code_interpreter=self.assistant_config.code_interpreter,
-            retrieval=self.assistant_config.file_search,
+            file_search=self.assistant_config.file_search,
             function_names=self.assistant_config.function_names,
             openai_apikey="sk" if self.service_config.openai_api_key else None,
             orchestrator_type=self.service_config.orchestrator_type,
@@ -230,38 +230,10 @@ def get_app() -> FastAPI:
     # Configure structured logging
     configure_structlog()
 
-    # Use the singleton pattern to avoid re-initialization
-    api_instance = _ensure_api_initialized()
+    # Create and return a new API instance
+    api_instance = AssistantEngineAPI()
     return api_instance.app
 
 
-# Create a singleton instance for backward compatibility
-# Note: Instantiation is deferred to avoid initialization errors during imports
-api: Optional[AssistantEngineAPI] = None
-app: Optional[FastAPI] = None
-
-
-def _ensure_api_initialized() -> AssistantEngineAPI:
-    """Ensure the API singleton is initialized."""
-    global api, app
-    if api is None:
-        api = AssistantEngineAPI()
-        app = api.app
-    return api
-
-
-async def process_run(thread_id: str, human_query: str) -> list[str]:
-    """Proxy to the API instance for backward compatibility."""
-    api_instance = _ensure_api_initialized()
-    return await api_instance.orchestrator.process_run(thread_id, human_query)
-
-
-async def process_run_stream(thread_id: str, human_query: str) -> AsyncGenerator[Any, None]:
-    """Proxy streaming run for backward compatibility."""
-    api_instance = _ensure_api_initialized()
-    async for event in api_instance.orchestrator.process_run_stream(thread_id, human_query):
-        yield event
-
-
-# Export for backward compatibility
-__all__ = ["get_app", "AssistantEngineAPI", "process_run", "process_run_stream"]
+# Public API exports
+__all__ = ["get_app", "AssistantEngineAPI"]
