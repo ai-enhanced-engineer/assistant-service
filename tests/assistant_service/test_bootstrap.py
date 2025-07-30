@@ -38,19 +38,15 @@ def test__get_secret_repository_production(monkeypatch):
 
     # Patch the GCPSecretRepository to avoid actual GCP calls
     class MockGCPSecretRepository:
-        def __init__(self, project_id, client_id):
+        def __init__(self, project_id):
             self.project_id = project_id
-            self.client_id = client_id
 
     monkeypatch.setattr("assistant_service.bootstrap.GCPSecretRepository", MockGCPSecretRepository)
 
-    config = ServiceConfig(
-        environment="production", project_id="test-project", bucket_id="test-bucket", client_id="test-client"
-    )
+    config = ServiceConfig(environment="production", project_id="test-project", bucket_id="test-bucket")
     repo = get_secret_repository(config)
     assert isinstance(repo, MockGCPSecretRepository)
     assert repo.project_id == "test-project"
-    assert repo.client_id == "test-client"
 
 
 def test__get_config_repository_development():
@@ -65,18 +61,14 @@ def test__get_config_repository_production(monkeypatch):
 
     # Patch the GCPConfigRepository to avoid actual GCP calls
     class MockGCPConfigRepository:
-        def __init__(self, client_id, project_id, bucket_name):
-            self.client_id = client_id
+        def __init__(self, project_id, bucket_name):
             self.project_id = project_id
             self.bucket_name = bucket_name
 
     monkeypatch.setattr("assistant_service.bootstrap.GCPConfigRepository", MockGCPConfigRepository)
 
-    config = ServiceConfig(
-        environment="production", project_id="test-project", bucket_id="test-bucket", client_id="test-client"
-    )
+    config = ServiceConfig(environment="production", project_id="test-project", bucket_id="test-bucket")
     repo = get_config_repository(config)
     assert isinstance(repo, MockGCPConfigRepository)
     assert repo.project_id == "test-project"
     assert repo.bucket_name == "test-bucket"
-    assert repo.client_id == "test-client"

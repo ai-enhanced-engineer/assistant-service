@@ -50,7 +50,6 @@ def test_lifespan_creates_client(monkeypatch: Any, mock_repositories) -> None:
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
     )
 
     api = AssistantEngineAPI(service_config=test_config)

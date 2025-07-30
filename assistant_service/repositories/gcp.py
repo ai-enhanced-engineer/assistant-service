@@ -14,10 +14,9 @@ from .base import BaseConfigRepository, BaseSecretRepository
 class GCPSecretRepository(BaseSecretRepository):
     """GCP Secret Manager implementation."""
 
-    def __init__(self, client_id: str, project_id: str):
+    def __init__(self, project_id: str):
         self._client = secretmanager.SecretManagerServiceClient()
         self._project_id = project_id
-        self._client_id = client_id
 
     def write_secret(self, secret_suffix: str) -> None:
         pass
@@ -32,15 +31,15 @@ class GCPSecretRepository(BaseSecretRepository):
         return secret
 
     def build_secret_name(self, secret_suffix: str) -> str:
-        return self._client_id + "-" + secret_suffix
+        return f"assistant-{secret_suffix}"
 
 
 class GCPConfigRepository(BaseConfigRepository):
     """GCP Storage implementation for configuration management."""
 
-    def __init__(self, client_id: str, project_id: str, bucket_name: str):
+    def __init__(self, project_id: str, bucket_name: str):
         client = storage.Client(project=project_id)
-        self._blob = client.bucket(bucket_name).blob("configs/" + client_id)
+        self._blob = client.bucket(bucket_name).blob("configs/assistant")
 
     def write_config(self, config: Any) -> None:
         with self._blob.open("w") as f:

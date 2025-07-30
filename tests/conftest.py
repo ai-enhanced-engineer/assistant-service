@@ -12,9 +12,8 @@ from assistant_service.entities import AssistantConfig, ServiceConfig
 class DummySecretRepository:
     """Mock secret repository for testing."""
 
-    def __init__(self, project_id: str = "", client_id: str = ""):
+    def __init__(self, project_id: str = ""):
         self.project_id = project_id
-        self.client_id = client_id
 
     def write_secret(self, _):
         """No-op write for testing."""
@@ -32,8 +31,7 @@ class DummySecretRepository:
 class DummyConfigRepository:
     """Mock config repository for testing."""
 
-    def __init__(self, client_id: str = "", project_id: str = "", bucket_name: str = ""):
-        self.client_id = client_id
+    def __init__(self, project_id: str = "", bucket_name: str = ""):
         self.project_id = project_id
         self.bucket_name = bucket_name
 
@@ -99,7 +97,6 @@ def test_service_config():
         environment="development",
         project_id="test-project",
         bucket_id="test-bucket",
-        client_id="test-client",
     )
 
 

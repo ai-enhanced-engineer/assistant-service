@@ -99,18 +99,17 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):
@@ -128,7 +127,6 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
     )
 
     # Import and create API first
@@ -162,18 +160,17 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch):
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):

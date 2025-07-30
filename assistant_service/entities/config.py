@@ -35,11 +35,6 @@ class ServiceConfig(BaseSettings):
         description="GCS bucket ID for configuration storage",
         validation_alias="BUCKET_ID",
     )
-    client_id: str = Field(
-        default="",
-        description="Client ID for multi-tenant support",
-        validation_alias="CLIENT_ID",
-    )
 
     # OpenAI configuration
     openai_api_key: str = Field(

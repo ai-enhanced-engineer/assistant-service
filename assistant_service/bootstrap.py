@@ -42,7 +42,6 @@ def get_secret_repository(config: ServiceConfig) -> BaseSecretRepository:
         logger.info("Using GCP secret repository for production")
         return GCPSecretRepository(
             project_id=config.project_id,
-            client_id=config.client_id,
         )
 
 
@@ -54,7 +53,6 @@ def get_config_repository(config: ServiceConfig) -> BaseConfigRepository:
     else:
         logger.info("Using GCP config repository for production")
         return GCPConfigRepository(
-            client_id=config.client_id,
             project_id=config.project_id,
             bucket_name=config.bucket_id,
         )

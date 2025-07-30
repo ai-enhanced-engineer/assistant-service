@@ -135,18 +135,17 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
-    monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     class DummySecretRepo:
-        def __init__(self, project_id: str, client_id: str):
+        def __init__(self, project_id: str):
             pass
 
         def access_secret(self, _):
             return "sk"
 
     class DummyConfigRepo:
-        def __init__(self, client_id: str, project_id: str, bucket_name: str):
+        def __init__(self, project_id: str, bucket_name: str):
             pass
 
         def read_config(self):
@@ -163,7 +162,6 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
         environment="development",
         project_id="p",
         bucket_id="b",
-        client_id="c",
     )
 
     # Monkeypatch the client
