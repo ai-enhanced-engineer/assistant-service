@@ -27,6 +27,7 @@ def search_customers(query: str) -> str:
 assistant_config = {
     "assistant_name": "Customer Support Assistant",
     "instructions": "Help users with customer inquiries using our database.",
+    "initial_message": "Hello! I'm here to help with any customer inquiries. How can I assist you today?",
     "custom_actions": ["search_customers"],
     "vector_store_files": ["docs/product_guide.pdf", "docs/faq.md"]
 }
@@ -115,6 +116,7 @@ Create `assistant-config.json`:
 {
   "assistant_name": "My First Assistant",
   "instructions": "You are a helpful assistant that can perform calculations.",
+  "initial_message": "Hello! I'm ready to help you with calculations. What would you like me to compute?",
   "model": "gpt-4-turbo-preview",
   "code_interpreter": true
 }
@@ -176,6 +178,7 @@ Update your assistant configuration:
 {
   "assistant_name": "Business Assistant",
   "instructions": "Help users with weather and inventory queries.",
+  "initial_message": "Welcome! I can help you check the weather or look up inventory. What would you like to know?",
   "model": "gpt-4-turbo-preview",
   "function_names": ["get_weather", "query_inventory"]
 }
@@ -290,6 +293,7 @@ Assistants are configured via JSON files with these options:
 {
   "assistant_name": "Assistant Name",
   "instructions": "System prompt for the assistant",
+  "initial_message": "Initial greeting message for users",
   "model": "gpt-4-turbo-preview",
   "code_interpreter": true,
   "file_search": true,
@@ -308,6 +312,7 @@ Combine custom actions with document search:
 {
   "assistant_name": "Support Assistant",
   "instructions": "Help users with product questions using our documentation.",
+  "initial_message": "Hello! I'm your support assistant. I can help with product questions, warranty checks, or create support tickets. How can I help?",
   "function_names": ["check_warranty", "create_ticket"],
   "vector_store_name": "Product Documentation",
   "vector_store_file_paths": [
