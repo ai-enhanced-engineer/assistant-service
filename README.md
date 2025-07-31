@@ -4,7 +4,7 @@ A production-ready service for deploying AI assistants with custom actions. Buil
 
 ## Why This Project?
 
-OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service bridges that gap by providing:
+OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service solves that by providing:
 
 - **Custom Actions** - Turn any Python function into an assistant capability
 - **Real-Time Streaming** - Get responses as they're generated via SSE or WebSocket
@@ -67,18 +67,10 @@ assistant-service/
 └── README.md             # This file
 ```
 
-### Key Components
-
-- **`assistant_service/`**: The main application package containing all service logic
-  - **`server/main.py`**: FastAPI application with REST and WebSocket endpoints
-  - **`services/`**: Core business logic for OpenAI integration, streaming, and tool execution. See [services/README.md](assistant_service/services/README.md) for architecture details
-  - **`tools.py`**: Register your custom Python functions here to make them available as assistant actions
-
-- **`scripts/`**: Development and operational utilities. See [scripts/README.md](scripts/README.md) for usage details
-  - Registration tools for creating assistants
-  - Interactive chat clients for testing
-
-- **`Makefile`**: Comprehensive development commands for environment setup, testing, linting, and deployment
+**Key files to know:**
+- `assistant_service/tools.py` - Register your custom Python functions here
+- `assistant_service/services/` - Core streaming and OpenAI integration ([detailed docs](assistant_service/services/README.md))
+- `scripts/` - Utility scripts for registration and testing ([detailed docs](scripts/README.md))
 
 ## Quick Start
 
@@ -146,7 +138,7 @@ Create `assistant-config.json`:
 Register your assistant with OpenAI (this creates the assistant in your OpenAI account at [platform.openai.com/assistants](https://platform.openai.com/assistants/)):
 ```bash
 make register-assistant ARGS='assistant-config.json'
-# Save the assistant_id from output
+# Output: Assistant created with ID: asst_xxxxxxxxxxxxxx
 ```
 
 ### 5. Run & Test
@@ -154,17 +146,21 @@ make register-assistant ARGS='assistant-config.json'
 Start the API server and interact with your assistant using the provided chat client:
 
 ```bash
-# Terminal 1: Start the API server
-make api-run
+# Terminal 1: Start the API server with your assistant
+ASSISTANT_ID=asst_xxxxxxxxxxxxxx make api-run
 
 # Terminal 2: Chat with your assistant
 make chat
 ```
 
-The chat client provides an interactive conversation interface. You can also use `make chat-ws` for WebSocket streaming, which provides real-time responses as they're generated (see [Streaming](#streaming) for details).
+> **Tip**: Add `ASSISTANT_ID=asst_xxxxxxxxxxxxxx` to your `.env` file to avoid specifying it each time.
+
+The chat client provides an interactive conversation interface. You can also use `make chat-ws` for WebSocket streaming, which provides real-time responses as they're generated.
 
 
 ## API Usage
+
+While the chat clients (`make chat` and `make chat-ws`) provide the easiest way to interact with your assistant, you can also use the REST API directly for integration with your applications.
 
 ### Create a Conversation
 ```bash
@@ -180,18 +176,14 @@ curl -X POST "http://localhost:8000/chat" \
 # Returns: {"responses": ["The current weather is..."]}
 ```
 
-### Streaming
+### Real-Time Streaming
 
-The service supports real-time streaming through two protocols:
-- **Server-Sent Events (SSE)** - For web applications via the `/chat` endpoint
-- **WebSocket** - For interactive chat UIs via the `/ws/chat` endpoint
+For applications that need real-time responses as they're generated:
+
+- **Server-Sent Events (SSE)** - Add `Accept: text/event-stream` header to `/chat` endpoint for web applications
+- **WebSocket** - Connect to `/ws/chat` for bidirectional streaming in interactive applications
 
 For detailed implementation, code examples, and technical documentation, see [assistant_service/services/README.md](assistant_service/services/README.md).
-
-## Documentation
-
-- **[scripts/README.md](scripts/README.md)** - Detailed documentation for utility scripts including chat clients and assistant registration
-- **[assistant_service/services/README.md](assistant_service/services/README.md)** - Technical documentation for the service layer architecture, streaming handlers, and event processing
 
 ## Configuration
 
@@ -258,7 +250,7 @@ Assistants are configured via JSON files that define their behavior, capabilitie
 
 ### Working with Knowledge Bases
 
-Combine custom actions with document search:
+OpenAI's file search capability allows your assistant to answer questions from uploaded documents. This is perfect for creating assistants that can reference product documentation, policies, or any text-based knowledge base alongside your custom actions:
 
 ```json
 {
@@ -277,7 +269,7 @@ Combine custom actions with document search:
 
 ### Multi-Assistant Deployment
 
-Deploy multiple specialized assistants:
+Large organizations often need different assistants for different departments or use cases. You can deploy multiple specialized assistants, each with its own configuration and tools:
 
 ```bash
 # Customer Support Assistant
@@ -292,7 +284,7 @@ make register-assistant ARGS='assistants/tech-assistant.json'
 
 ### Schema Generation
 
-Generate a JSON schema for validation:
+To ensure your assistant configurations are valid, you can generate a JSON schema for validation in your CI/CD pipeline:
 
 ```bash
 make register-assistant ARGS='--generate-schema' > assistant-schema.json
@@ -345,6 +337,44 @@ make all-test
 make validate-branch   # Lint + unit tests
 ```
 
+## Deployment
+
+### Docker Deployment
+
+The service includes a production-ready Dockerfile for containerized deployment:
+
+```bash
+# Build the Docker image
+make service-build
+
+# Run locally with Docker
+docker run -p 8000:8000 \
+  --env-file .env \
+  assistant-service:latest
+```
+
+### Cloud Deployment
+
+The service is designed to run on any container platform:
+
+#### Google Cloud Run
+```bash
+gcloud run deploy assistant-service \
+  --image gcr.io/your-project/assistant-service:latest \
+  --port 8000 \
+  --set-env-vars OPENAI_API_KEY="$OPENAI_API_KEY"
+```
+
+#### AWS ECS / Kubernetes
+The containerized service works with any orchestration platform. Ensure you configure environment variables through your platform's secret management system.
+
+### Production Considerations
+
+- Store API keys in secret management systems (AWS Secrets Manager, GCP Secret Manager, etc.)
+- Use structured logging for monitoring and debugging
+- Set appropriate resource limits based on your expected load
+- Consider implementing rate limiting for public-facing deployments
+
 ## Troubleshooting
 
 ### Debugging Tips
@@ -358,12 +388,11 @@ make validate-branch   # Lint + unit tests
 - **Missing environment variables** - Ensure all required variables are in your `.env` file
 - **Assistant not found** - Verify the assistant_id matches one created in your OpenAI account
 
+## Documentation
+
+- **[scripts/README.md](scripts/README.md)** - Detailed documentation for utility scripts including chat clients and assistant registration
+- **[assistant_service/services/README.md](assistant_service/services/README.md)** - Technical documentation for the service layer architecture, streaming handlers, and event processing
+
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Acknowledgments
-
-Built using:
-- [OpenAI Assistant API](https://platform.openai.com/docs/assistants)
-- [FastAPI](https://fastapi.tiangolo.com/)
+TBA
