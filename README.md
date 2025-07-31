@@ -97,11 +97,23 @@ make validate-branch  # Verify environment is correctly configured
 
 ### 2. Configure
 
-Create `.env` file with required environment variables:
+Create a `.env` file in the project root with the required environment variables:
+
+**Example .env file:**
 ```bash
+# Required: Your OpenAI API key from platform.openai.com/api-keys
 OPENAI_API_KEY="your-openai-api-key"
-PROJECT_ID="dummy-project"    # Any value works for local development
-BUCKET_ID="dummy-bucket"      # Any value works for local development
+
+# Required: GCP configuration (dummy values work for local development)
+PROJECT_ID="dummy-project"
+BUCKET_ID="dummy-bucket"
+
+# Optional: Default assistant to load (add after creating your assistant)
+# ASSISTANT_ID="asst_xxxxxxxxxxxxxx"
+
+# Optional: Environment and logging configuration
+# ENVIRONMENT="development"
+# LOGGING_LEVEL="INFO"
 ```
 
 > **Note**: This quick start stores assistant configurations on your local disk while creating the actual assistants in your OpenAI account at [platform.openai.com/assistants](https://platform.openai.com/assistants/). You'll be able to see and manage your assistants there.
@@ -379,7 +391,7 @@ The containerized service works with any orchestration platform. Ensure you conf
 
 ### Debugging Tips
 - **Check logs** - The service uses structured logging with correlation IDs. Set `LOGGING_LEVEL=DEBUG` for verbose output
-- **Connection issues** - Verify the API server is running on port 8000 with `curl http://localhost:8000/health`
+- **Connection issues** - Verify the API server is running on port 8000 with the health endpoint: `curl http://localhost:8000/health`
 - **OpenAI errors** - These return 502 status codes. Check your API key and OpenAI service status
 - **Tool execution failures** - Tool errors include correlation IDs. Search logs for the ID to trace the full request
 
