@@ -1,6 +1,6 @@
-# Services Module - Technical Documentation
+# Services Module
 
-The `services` module contains the application services layer for handling OpenAI Assistant API interactions, tool execution, message processing, and real-time streaming via both WebSocket and Server-Sent Events (SSE). This module implements the Event-Driven Processing pattern to handle real-time assistant interactions.
+This module contains the core business logic for OpenAI Assistant API interactions, tool execution, message processing, and real-time streaming. It implements event-driven processing to handle assistant interactions in real-time via both WebSocket and Server-Sent Events (SSE).
 
 ## Streaming Protocols
 
@@ -22,18 +22,20 @@ services/
 
 ## Core Components
 
+The services module is organized around five main components that work together to provide streaming assistant interactions:
+
 ### 1. OpenAI Orchestrator (`openai_orchestrator.py`)
 
-The `OpenAIOrchestrator` class is the central orchestrator for OpenAI Assistant interactions.
+The central orchestrator that manages all interactions with the OpenAI Assistant API. This component handles the complete lifecycle of assistant runs, from thread creation to response streaming.
 
-#### Key Responsibilities:
+**Key Responsibilities:**
 - Creating and managing conversation threads
 - Processing streaming events from OpenAI
 - Coordinating tool execution
 - Handling error recovery with retry logic
 - Managing the assistant run lifecycle
 
-#### Main Methods:
+**Main Methods:**
 
 ```python
 async def process_run(thread_id: str, human_query: str) -> list[str]
@@ -54,7 +56,7 @@ Core event processing loop that handles:
 - Tool output submission
 - Event streaming
 
-#### OpenAI Helper Methods (Private):
+**OpenAI Helper Methods (Private):**
 
 ```python
 async def _retrieve_run(thread_id: str, run_id: str) -> Optional[Any]
@@ -70,16 +72,16 @@ These methods provide resilient OpenAI API interactions with:
 
 ### 2. Tool Executor (`tool_executor.py`)
 
-The `ToolExecutor` class handles the execution of custom tools/functions that the assistant can call.
+Handles the secure execution of custom Python functions when the assistant determines it needs to use a tool. This component acts as the bridge between OpenAI's function calling and your business logic.
 
-#### Key Features:
+**Key Features:**
 - Dynamic function registry (`TOOL_MAP`)
 - Argument validation against function signatures
 - JSON argument parsing
 - Comprehensive error handling
 - Correlation ID tracking
 
-#### Main Method:
+**Main Method:**
 
 ```python
 def execute_tool(tool_name: str, tool_args: str | dict, context: dict) -> dict
@@ -93,7 +95,7 @@ Returns standardized output:
 }
 ```
 
-#### Security Considerations:
+**Security Considerations:**
 - Validates all function arguments before execution
 - Prevents execution of unknown functions
 - Includes correlation IDs in error messages
@@ -101,9 +103,9 @@ Returns standardized output:
 
 ### 3. Message Parser (`message_parser.py`)
 
-Provides data structures and parsing logic for OpenAI messages and steps.
+Provides data structures and parsing logic for OpenAI messages and execution steps. This component transforms raw OpenAI events into structured data for processing.
 
-#### Data Classes:
+**Data Classes:**
 
 **`StepData`** - Represents a single execution step:
 - `name`: Step/tool name
@@ -117,7 +119,7 @@ Provides data structures and parsing logic for OpenAI messages and steps.
 - `content`: Text content
 - `id`: Unique identifier
 
-#### Processing Classes:
+**Processing Classes:**
 
 **`ToolTracker`** - Tracks tool execution state:
 - Maintains step references
@@ -129,18 +131,18 @@ Provides data structures and parsing logic for OpenAI messages and steps.
 - Handles multiple content blocks
 - Maintains message references
 
-### 4. Stream Handler (`stream_handler.py`)
+### 4. WebSocket Stream Handler (`stream_handler.py`)
 
-The `StreamHandler` class manages real-time streaming connections via WebSocket at the `/ws/chat` endpoint.
+Manages real-time bidirectional streaming connections via WebSocket at the `/ws/chat` endpoint. This handler maintains persistent connections for interactive chat applications.
 
-#### Key Features:
+**Key Features:**
 - Full connection lifecycle management
 - Correlation ID tracking per request
 - Graceful disconnect handling
 - Structured error responses
 - Event streaming from OpenAI orchestrator
 
-#### Connection Flow:
+**Connection Flow:**
 
 1. **Accept Connection** → Log and track connection
 2. **Message Loop** → Process incoming requests continuously
@@ -149,7 +151,7 @@ The `StreamHandler` class manages real-time streaming connections via WebSocket 
 5. **Error Handling** → Send structured error messages
 6. **Cleanup** → Close connection gracefully
 
-#### Error Response Format:
+**Error Response Format:**
 ```json
 {
     "error": "Error message",
@@ -160,22 +162,22 @@ The `StreamHandler` class manages real-time streaming connections via WebSocket 
 
 ### 5. SSE Stream Handler (`sse_stream_handler.py`)
 
-The `SSEStreamHandler` class manages Server-Sent Events streaming for the `/chat` endpoint when the Accept header includes `text/event-stream`.
+Manages Server-Sent Events streaming for web applications via the `/chat` endpoint. This handler provides unidirectional streaming with automatic reconnection support.
 
-#### Key Features:
+**Key Features:**
 - Server-to-client only streaming (unidirectional)
 - Automatic reconnection support with retry intervals
 - Heartbeat mechanism to detect stale connections
 - Event ID tracking for resumption
 - Metadata events with performance metrics
 
-#### Event Types:
+**Event Types:**
 - **Message Events**: `thread.message.delta`, `thread.run.completed`
 - **Metadata Events**: Performance metrics, correlation IDs
 - **Error Events**: Structured error information
 - **Heartbeat Comments**: Keep-alive signals
 
-#### SSE Format:
+**SSE Format:**
 ```
 event: thread.message.delta
 id: correlation_123_delta_1
@@ -211,17 +213,19 @@ graph TD
 
 ## Error Handling Strategy
 
-### 1. **Layered Error Handling**
-- Each processor handles its specific errors
-- Errors are logged with correlation IDs
-- HTTP errors mapped to appropriate status codes
+The service implements a comprehensive error handling strategy to ensure reliability and debuggability in production:
 
-### 2. **Retry Logic**
+### 1. Layered Error Handling
+- Each component handles its specific error types
+- All errors include correlation IDs for tracing
+- HTTP status codes accurately reflect error types
+
+### 2. Retry Logic
 - Tool output submission: 3 retries with exponential backoff
 - Run cancellation on permanent failures
 - Graceful degradation for non-critical operations
 
-### 3. **Error Types**
+### 3. Error Types
 - **OpenAI Errors** → 502 Bad Gateway
 - **Validation Errors** → 400 Bad Request
 - **Tool Errors** → Included in response with correlation ID
@@ -229,17 +233,24 @@ graph TD
 
 ## Usage Examples
 
-### HTTP Endpoint Usage (Sequential)
+These examples show how the service components are used within the FastAPI application:
+
+### HTTP Endpoint (Traditional Request/Response)
+
+Used in `server/main.py` for the `/chat` endpoint without streaming:
+
 ```python
-# In FastAPI route - traditional request/response
+# Traditional request/response pattern
 orchestrator = OpenAIOrchestrator(client, config)
 messages = await orchestrator.process_run(thread_id, user_message)
 return {"responses": messages}
 ```
 
-### HTTP Endpoint Usage (SSE Streaming)
+### SSE Streaming
+
+Used in `server/main.py` when client sends `Accept: text/event-stream` header:
+
 ```python
-# In FastAPI route with Accept: text/event-stream
 from sse_starlette.sse import EventSourceResponse
 
 async def chat_sse(request: ChatRequest):
@@ -247,7 +258,7 @@ async def chat_sse(request: ChatRequest):
         async for event in orchestrator.process_run_stream(
             request.thread_id, request.message
         ):
-            # Format events for SSE
+            # Format events for SSE protocol
             yield {
                 "event": event.event,
                 "data": event.model_dump_json(),
@@ -257,20 +268,26 @@ async def chat_sse(request: ChatRequest):
     return EventSourceResponse(event_generator())
 ```
 
-### WebSocket Usage
+### WebSocket Streaming
+
+Used in `server/main.py` for the `/ws/chat` endpoint:
+
 ```python
-# In WebSocket endpoint at /ws/chat
+# WebSocket endpoint for bidirectional streaming
 stream_handler = StreamHandler(orchestrator)
 await stream_handler.handle_connection(websocket)
 ```
 
-
 ### Tool Registration
+
+Define custom functions in `assistant_service/tools.py`:
+
 ```python
-# In tools.py
 def my_tool(param: str) -> str:
+    """Tool description for the assistant."""
     return f"Processed: {param}"
 
+# Register in TOOL_MAP for discovery
 TOOL_MAP = {
     "my_tool": my_tool
 }
@@ -297,10 +314,23 @@ TOOL_MAP = {
 
 ## Testing
 
-The services module includes comprehensive test coverage:
-- `test_openai_orchestrator.py`: OpenAI orchestration and integration
-- `test_tool_executor.py`: Tool execution and validation
-- `test_message_parser.py`: Message and step parsing
-- `test_stream_handler.py`: Stream handling and WebSocket connections
+Run the comprehensive test suite for the services module:
 
-Tests use AsyncMock and custom dummy clients to avoid external dependencies.
+```bash
+# Run all service tests
+make unit-test
+
+# Run with coverage report
+make all-test
+
+# Run specific test file
+uv run pytest tests/assistant_service/services/test_openai_orchestrator.py -v
+```
+
+The test suite covers:
+- OpenAI orchestration and integration flows
+- Tool execution and validation logic
+- Message and step parsing
+- Stream handling and WebSocket connections
+
+Tests use AsyncMock and custom dummy clients to avoid external dependencies while maintaining realistic behavior.

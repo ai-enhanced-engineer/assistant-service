@@ -1,26 +1,23 @@
-# Assistant Service Scripts
+# Scripts
 
-This directory contains utility scripts for running and interacting with the assistant-service.
+Utility scripts for managing assistants and testing interactions. All scripts can be run directly with `uv run python` or through the convenient `make` commands.
 
-The service supports two streaming protocols:
-- **WebSocket** (`/ws/chat`) - Full-duplex, bidirectional communication for interactive chat UIs
-- **Server-Sent Events** (`/chat` with SSE) - One-way streaming for web applications
+## Overview
 
-## Scripts Overview
+### Assistant Registration
 
-### `assistant_registration/register_assistant.py`
 Creates and configures new OpenAI assistants with custom actions and knowledge bases.
 
 **Usage:**
 ```bash
 # Register a new assistant from config file
-python scripts/assistant_registration/register_assistant.py assistant-config.json
+make register-assistant ARGS='assistant-config.json'
 
 # Generate JSON schema for validation
-python scripts/assistant_registration/register_assistant.py --generate-schema
+make register-assistant ARGS='--generate-schema'
 
-# Use with make command (recommended)
-make register-assistant ARGS='assistant-config.json'
+# Direct usage (if needed)
+uv run python scripts/assistant_registration/register_assistant.py assistant-config.json
 ```
 
 **Example Configuration:**
@@ -42,21 +39,23 @@ make register-assistant ARGS='assistant-config.json'
 - Returns assistant ID for use with the service
 - Supports schema generation for config validation
 
-### `isolation/api_layer.py`
-Boots the assistant-service API in isolation for testing and development.
+### API Service (Development)
+
+The API can be started for development and testing:
 
 **Usage:**
 ```bash
-# Basic usage (starts on localhost:8000)
-python scripts/isolation/api_layer.py
+# Recommended: Use make command
+make api-run
 
-# With custom options
-python scripts/isolation/api_layer.py \
+# With environment variables
+ASSISTANT_ID=asst_xxx make api-run
+
+# Direct usage with custom options
+uv run python scripts/isolation/api_layer.py \
   --port 8080 \
   --reload \
-  --log-level debug \
-  --openai-key sk-your-key \
-  --assistant-id asst_your_assistant_id
+  --log-level debug
 ```
 
 **Options:**
@@ -68,24 +67,22 @@ python scripts/isolation/api_layer.py \
 - `--assistant-id`: OpenAI Assistant ID to use
 - `--client-id`: Client ID for multi-tenant configuration
 
-### `conversation/websocket.py`
-WebSocket-based client for real-time streaming chat via the `/ws/chat` endpoint.
+### WebSocket Chat Client
+
+Real-time streaming chat client using WebSocket protocol for interactive conversations.
 
 **Usage:**
 ```bash
-# Connect to local service
-python scripts/conversation/websocket.py
-
-# Connect to remote service
-python scripts/conversation/websocket.py \
-  --base-url ws://api.example.com:8000
+# Recommended: Use make command
+make chat-ws
 
 # Continue existing conversation
-python scripts/conversation/websocket.py \
-  --thread-id thread_abc123
-```
+make chat-ws ARGS='--thread-id thread_abc123'
 
-**Note:** The WebSocket client automatically connects to the `/ws/chat` endpoint.
+# Direct usage for remote service
+uv run python scripts/conversation/websocket.py \
+  --base-url ws://api.example.com:8000
+```
 
 **Features:**
 - Real-time streaming responses
@@ -94,24 +91,24 @@ python scripts/conversation/websocket.py \
 - Graceful error handling
 - Interactive command-line interface
 
-### `conversation/http_chat.py`
-HTTP-based client supporting both sequential and Server-Sent Events (SSE) streaming modes.
+### HTTP Chat Client
+
+HTTP-based chat client supporting both traditional request/response and Server-Sent Events (SSE) streaming.
 
 **Usage:**
 ```bash
-# Connect to local service (sequential mode)
-python scripts/conversation/http_chat.py
+# Recommended: Use make command (sequential mode)
+make chat
 
 # Enable SSE streaming mode
-python scripts/conversation/http_chat.py --stream
-
-# Connect to remote service
-python scripts/conversation/http_chat.py \
-  --base-url http://api.example.com:8000
+make chat ARGS='--stream'
 
 # Continue existing conversation
-python scripts/conversation/http_chat.py \
-  --thread-id thread_abc123
+make chat ARGS='--thread-id thread_abc123'
+
+# Direct usage for remote service
+uv run python scripts/conversation/http_chat.py \
+  --base-url http://api.example.com:8000
 ```
 
 **Features:**
@@ -125,48 +122,41 @@ python scripts/conversation/http_chat.py \
 
 ## Quick Start
 
-1. **Setup environment:**
-   ```bash
-   make environment-create
-   ```
-
-2. **Set your OpenAI API key:**
-   ```bash
-   export OPENAI_API_KEY=sk-your-key-here
-   ```
-
-3. **Start the API:**
-   ```bash
-   make local-run
-   ```
-
-4. **In another terminal, start chatting:**
-   ```bash
-   # Using WebSocket for real-time streaming
-   make chat-ws
-   
-   # Using HTTP for sequential chat  
-   make chat
-   ```
-
-## Direct Script Usage
-
-If you prefer to run the scripts directly without make commands:
+Get up and running with interactive chat in minutes:
 
 ```bash
-# Start API
-python scripts/isolation/api_layer.py --reload
+# Terminal 1: Start the API server
+make api-run
 
-# Chat clients
-python scripts/conversation/websocket.py  # WebSocket streaming
-python scripts/conversation/http_chat.py   # HTTP (sequential or SSE)
-python scripts/conversation/http_chat.py --stream  # HTTP with SSE streaming
+# Terminal 2: Start chatting
+make chat-ws    # WebSocket real-time streaming (recommended)
+make chat       # HTTP sequential mode
 ```
 
-## Example Session
+For SSE streaming mode:
+```bash
+make chat ARGS='--stream'
+```
+
+## Advanced Usage
+
+### Direct Script Execution
+
+For advanced use cases or debugging, you can run scripts directly:
+
+```bash
+# Start API with custom options
+uv run python scripts/isolation/api_layer.py --reload --log-level debug
+
+# Chat clients with specific configurations
+uv run python scripts/conversation/websocket.py --base-url ws://localhost:8080
+uv run python scripts/conversation/http_chat.py --stream --thread-id thread_abc123
+```
+
+### Example Chat Session
 
 ```
-$ python scripts/conversation/websocket.py
+$ make chat-ws
 
 ============================================================
 New conversation started!
@@ -177,3 +167,24 @@ Assistant: Hello! How can I help you today?
 Connected! Type 'exit' or 'quit' to end the conversation.
 
 You: What's the weather like?
+Assistant: I'd be happy to help you check the weather! However, I need to know which location you're interested in. Could you please tell me the city or area you'd like to know about?
+
+You: exit
+Goodbye!
+```
+
+## Streaming Protocols
+
+The service supports two streaming protocols, each suited for different use cases:
+
+### WebSocket (`/ws/chat`)
+- **Best for**: Interactive chat applications, real-time UIs
+- **Protocol**: Full-duplex, bidirectional communication
+- **Client**: `make chat-ws`
+
+### Server-Sent Events (`/chat` with SSE)
+- **Best for**: Web applications, unidirectional streaming
+- **Protocol**: HTTP-based, server-to-client only
+- **Client**: `make chat ARGS='--stream'`
+
+Both protocols deliver the same real-time streaming experience with character-by-character output.

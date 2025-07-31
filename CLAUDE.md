@@ -65,7 +65,7 @@ The system supports **multi-environment configuration**:
 - `make all-test-validate-branch` - Full validation + all tests
 
 ### Service Management
-- `make local-run` - Run locally with auto-reload (port 8000)
+- `make api-run` - Run locally with auto-reload (port 8000)
 - `make service-build` - Build Docker image for assistant service
 - `make auth-gcloud` - Authenticate with Google Cloud
 
@@ -176,7 +176,7 @@ The project avoids `unittest.mock` in favor of:
 2. Add `tools.py` with custom tool implementations
 3. Update `TOOL_MAP` in `assistant_service/tools.py`
 4. Configure assistant in GCP or local config
-5. Test with `make local-run`
+5. Test with `make api-run`
 
 ### Implementing New Tools
 1. Define function in assistant's `tools.py`
