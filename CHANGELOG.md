@@ -2,6 +2,47 @@
 
 <!-- version list -->
 
+## v1.5.0 (2025-07-31)
+
+### Bug Fixes
+
+- Enable direct push releases in CI workflow
+  ([`b03e465`](https://github.com/ai-enhanced-engineer/assistant-service/commit/b03e465f84de58dc7290a98be4f98b8e7fe46e07))
+
+- Use RELEASE_TOKEN for GitHub Actions push permissions
+  ([`036cc37`](https://github.com/ai-enhanced-engineer/assistant-service/commit/036cc378eba155f2aff6e3fac4ea7cbb44f040fa))
+
+### Chores
+
+- Final cleanup for public release
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+### Documentation
+
+- Address PR review recommendations for documentation consistency
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+- Comprehensive README overhaul for clarity and usability
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+- Improve technical documentation consistency and usability
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+- Polish README for public release and improved clarity
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+### Features
+
+- Documentation Overhaul and Cleanup for Public Release
+  ([#67](https://github.com/ai-enhanced-engineer/assistant-service/pull/67),
+  [`fed4a75`](https://github.com/ai-enhanced-engineer/assistant-service/commit/fed4a757a1c9c271304dd5e49c80626be6ab8d6c))
+
+
 ## v1.3.0 (2025-07-29)
 
 ### Chores
