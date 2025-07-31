@@ -2,6 +2,31 @@
 
 <!-- version list -->
 
+## v1.5.3 (2025-07-31)
+
+### Bug Fixes
+
+- Update pyproject.toml package include path for renamed module
+  ([#68](https://github.com/ai-enhanced-engineer/ai-assistant-service/pull/68),
+  [`515a664`](https://github.com/ai-enhanced-engineer/ai-assistant-service/commit/515a6647c8d7105c1f3d41d3ef28bbdeb6edd17c))
+
+### Documentation
+
+- Update CLAUDE.md to reflect current project state
+  ([#68](https://github.com/ai-enhanced-engineer/ai-assistant-service/pull/68),
+  [`515a664`](https://github.com/ai-enhanced-engineer/ai-assistant-service/commit/515a6647c8d7105c1f3d41d3ef28bbdeb6edd17c))
+
+### Refactoring
+
+- Rename assistant_service to ai_assistant_service
+  ([#68](https://github.com/ai-enhanced-engineer/ai-assistant-service/pull/68),
+  [`515a664`](https://github.com/ai-enhanced-engineer/ai-assistant-service/commit/515a6647c8d7105c1f3d41d3ef28bbdeb6edd17c))
+
+- Rename package from assistant_service to ai_assistant_service
+  ([#68](https://github.com/ai-enhanced-engineer/ai-assistant-service/pull/68),
+  [`515a664`](https://github.com/ai-enhanced-engineer/ai-assistant-service/commit/515a6647c8d7105c1f3d41d3ef28bbdeb6edd17c))
+
+
 ## v1.5.2 (2025-07-31)
 
 
