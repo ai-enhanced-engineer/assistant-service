@@ -4,7 +4,7 @@ A production-ready service for deploying AI assistants with custom actions. Buil
 
 ## Why This Project?
 
-OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service solves that by providing:
+OpenAI Assistants are incredibly powerful, but integrating them with custom business logic in production can be complex. This service solves that by providing:
 
 - **Custom Actions** - Turn any Python function into an assistant capability
 - **Real-Time Streaming** - Get responses as they're generated via SSE or WebSocket
