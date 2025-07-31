@@ -20,7 +20,7 @@ GREEN_LINE=@echo "\033[0;32m--------------------------------------------------\0
 YELLOW_LINE=@echo "\033[0;33m--------------------------------------------------\033[0m"
 RED_LINE=@echo "\033[0;31m--------------------------------------------------\033[0m"
 
-SOURCE_DIR = assistant_service/
+SOURCE_DIR = ai_assistant_service/
 TEST_DIR = tests/
 SCRIPTS_DIR = scripts/
 PROJECT_VERSION := $(shell awk '/^\[project\]/ {flag=1; next} /^\[/{flag=0} flag && /^version/ {gsub(/"/, "", $$2); print $$2}' pyproject.toml)
@@ -144,7 +144,7 @@ integration-test: ## Run integration tests with pytest
 all-test: ## Run all tests with coverage report
 	@echo "🧪 Running ALL tests with coverage..."
 	uv run python -m pytest -m "not integration" -vv -s $(TEST_DIR) \
-		--cov=assistant_service \
+		--cov=ai_assistant_service \
 		--cov-config=pyproject.toml \
 		--cov-fail-under=85 \
 		--cov-report=term-missing
@@ -200,7 +200,7 @@ api-run: environment-sync ## Start API server in dev mode. Example: OPENAI_API_K
 api-kill: ## Kill running API development server
 	@echo "🛑 Stopping API development server..."
 	@pkill -f "api_layer.py" && echo "✅ API server stopped successfully" || echo "ℹ️  No API server process found"
-	@pkill -f "uvicorn.*assistant_service" 2>/dev/null || true
+	@pkill -f "uvicorn.*ai_assistant_service" 2>/dev/null || true
 	@lsof -ti:$(API_PORT) | xargs kill -9 2>/dev/null && echo "✅ Freed port $(API_PORT)" || true
 	$(GREEN_LINE)
 

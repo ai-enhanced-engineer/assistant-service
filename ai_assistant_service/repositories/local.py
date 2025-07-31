@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from assistant_service.entities import AssistantConfig
+from ai_assistant_service.entities import AssistantConfig
 
 from .base import BaseConfigRepository, BaseSecretRepository
 

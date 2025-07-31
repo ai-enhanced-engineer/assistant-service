@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from assistant_service.entities import AssistantConfig
-from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+from ai_assistant_service.entities import AssistantConfig
+from ai_assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
 def create_mock_tool_executor():

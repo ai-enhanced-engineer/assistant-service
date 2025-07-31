@@ -14,7 +14,7 @@ import websockets
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from assistant_service.structured_logging import get_logger  # noqa: E402
+from ai_assistant_service.structured_logging import get_logger  # noqa: E402
 
 logger = get_logger("websocket_client")
 

@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant_service.structured_logging import (
+from ai_assistant_service.structured_logging import (
     CorrelationContext,
     generate_correlation_id,
     get_correlation_id,
@@ -93,8 +93,8 @@ def test_api_endpoints_include_correlation_ids(api):
 @pytest.mark.asyncio
 async def test_error_responses_include_correlation_ids(monkeypatch):
     """Test that error responses include correlation IDs for debugging."""
-    from assistant_service import repositories as repos
-    from assistant_service.entities import AssistantConfig
+    from ai_assistant_service import repositories as repos
+    from ai_assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -120,7 +120,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 
     from openai import OpenAIError
 
-    from assistant_service.entities import ServiceConfig
+    from ai_assistant_service.entities import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(
@@ -131,7 +131,7 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
     )
 
     # Import and create API first
-    from assistant_service.server.main import AssistantEngineAPI
+    from ai_assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI(service_config=test_config)
 
@@ -155,8 +155,8 @@ async def test_error_responses_include_correlation_ids(monkeypatch):
 @pytest.mark.asyncio
 async def test_chat_endpoint_validation_with_correlation_id(monkeypatch, test_service_config):
     """Test chat endpoint validation includes correlation ID in error."""
-    from assistant_service import repositories as repos
-    from assistant_service.entities import AssistantConfig
+    from ai_assistant_service import repositories as repos
+    from ai_assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -198,10 +198,10 @@ async def test_chat_endpoint_validation_with_correlation_id(monkeypatch, test_se
     dummy_client = DummyClient()
 
     # Patch the factory function
-    import assistant_service.bootstrap
-    from assistant_service.server.main import AssistantEngineAPI
+    import ai_assistant_service.bootstrap
+    from ai_assistant_service.server.main import AssistantEngineAPI
 
-    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
+    monkeypatch.setattr(ai_assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
 
     api = AssistantEngineAPI(service_config=test_service_config)
 

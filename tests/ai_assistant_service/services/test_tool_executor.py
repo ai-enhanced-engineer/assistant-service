@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from assistant_service.services.message_parser import ToolTracker
+from ai_assistant_service.services.message_parser import ToolTracker
 
 
 @pytest.mark.asyncio

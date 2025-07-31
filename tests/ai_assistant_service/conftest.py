@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from assistant_service.server.main import AssistantEngineAPI
+from ai_assistant_service.server.main import AssistantEngineAPI
 
 
 @pytest.fixture
@@ -18,9 +18,9 @@ def api(monkeypatch, mock_repositories, dummy_client, test_service_config):
         return dummy_client
 
     # Patch in the main module where it's imported
-    import assistant_service.server.main
+    import ai_assistant_service.server.main
 
-    monkeypatch.setattr(assistant_service.server.main, "get_openai_client", mock_get_openai_client)
+    monkeypatch.setattr(ai_assistant_service.server.main, "get_openai_client", mock_get_openai_client)
 
     # Create the API instance
     api = AssistantEngineAPI(service_config=test_service_config)
@@ -58,6 +58,6 @@ def mock_orchestrator():
 @pytest.fixture
 def websocket_handler(mock_orchestrator):
     """Create a WebSocketStreamHandler instance."""
-    from assistant_service.services.ws_stream_handler import WebSocketStreamHandler
+    from ai_assistant_service.services.ws_stream_handler import WebSocketStreamHandler
 
     return WebSocketStreamHandler(mock_orchestrator)

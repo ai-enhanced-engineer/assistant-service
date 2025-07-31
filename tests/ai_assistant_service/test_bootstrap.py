@@ -1,6 +1,6 @@
-from assistant_service.bootstrap import get_assistant_config, get_config_repository, get_secret_repository
-from assistant_service.entities import ServiceConfig
-from assistant_service.repositories import (
+from ai_assistant_service.bootstrap import get_assistant_config, get_config_repository, get_secret_repository
+from ai_assistant_service.entities import ServiceConfig
+from ai_assistant_service.repositories import (
     LocalConfigRepository,
     LocalSecretRepository,
 )
@@ -46,7 +46,7 @@ def test__get_secret_repository_production(monkeypatch):
         def __init__(self, project_id):
             self.project_id = project_id
 
-    monkeypatch.setattr("assistant_service.bootstrap.GCPSecretRepository", MockGCPSecretRepository)
+    monkeypatch.setattr("ai_assistant_service.bootstrap.GCPSecretRepository", MockGCPSecretRepository)
 
     config = ServiceConfig(
         environment="production",
@@ -80,7 +80,7 @@ def test__get_config_repository_production(monkeypatch):
             self.project_id = project_id
             self.bucket_name = bucket_name
 
-    monkeypatch.setattr("assistant_service.bootstrap.GCPConfigRepository", MockGCPConfigRepository)
+    monkeypatch.setattr("ai_assistant_service.bootstrap.GCPConfigRepository", MockGCPConfigRepository)
 
     config = ServiceConfig(
         environment="production",

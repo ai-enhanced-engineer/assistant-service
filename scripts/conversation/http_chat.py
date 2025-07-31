@@ -15,8 +15,8 @@ from httpx_sse import aconnect_sse
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from assistant_service.entities import MESSAGE_DELTA_EVENT, RUN_COMPLETED_EVENT, RUN_FAILED_EVENT  # noqa: E402
-from assistant_service.structured_logging import get_logger  # noqa: E402
+from ai_assistant_service.entities import MESSAGE_DELTA_EVENT, RUN_COMPLETED_EVENT, RUN_FAILED_EVENT  # noqa: E402
+from ai_assistant_service.structured_logging import get_logger  # noqa: E402
 
 logger = get_logger("http_client")
 

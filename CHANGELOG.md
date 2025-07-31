@@ -140,7 +140,7 @@
   ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
   [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
 
-- Reorganize assistant_service/main.py with layer-based architecture
+- Reorganize ai_assistant_service/main.py with layer-based architecture
   ([#64](https://github.com/lkronecker13/assistant-service/pull/64),
   [`acb66f9`](https://github.com/lkronecker13/assistant-service/commit/acb66f986ec87516febd54f3cd196822d12232fc))
 

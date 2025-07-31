@@ -18,8 +18,8 @@ ENV IS_CONTAINER=true
 COPY --from=uv_installer /uv /uvx /bin/
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/assistant_service /app/assistant_service
+COPY --from=builder /app/ai_assistant_service /app/ai_assistant_service
 COPY --from=builder /app/.env /app/.env
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "assistant_service.server.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "ai_assistant_service.server.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant_service.entities import HEADER_CORRELATION_ID, SSE_RESPONSE_HEADERS
-from assistant_service.entities.headers import SSE_HEARTBEAT_COMMENT
-from assistant_service.server.main import AssistantEngineAPI
+from ai_assistant_service.entities import HEADER_CORRELATION_ID, SSE_RESPONSE_HEADERS
+from ai_assistant_service.entities.headers import SSE_HEARTBEAT_COMMENT
+from ai_assistant_service.server.main import AssistantEngineAPI
 
 
 class MockEvent:
@@ -190,7 +190,7 @@ async def test_sse_event_id_format(api_with_mocks):
     events = []
     correlation_id = None
 
-    with patch("assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock_corr_id:
+    with patch("ai_assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock_corr_id:
         mock_corr_id.return_value = "test-correlation-123"
 
         async for event in api.sse_stream_handler.format_events("test_thread", "test_message", "127.0.0.1"):

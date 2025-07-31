@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from openai import OpenAIError
 
-from assistant_service.entities import ServiceConfig
+from ai_assistant_service.entities import ServiceConfig
 
 
 def test_lifespan(api: tuple[Any, Any]) -> None:
@@ -33,9 +33,9 @@ def test_lifespan_creates_client(monkeypatch: Any, mock_repositories) -> None:
     mock_client = MockAsyncOpenAI()
 
     # Patch the factory function
-    import assistant_service.bootstrap
+    import ai_assistant_service.bootstrap
 
-    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: mock_client)
+    monkeypatch.setattr(ai_assistant_service.bootstrap, "get_openai_client", lambda config: mock_client)
 
     monkeypatch.setenv("PROJECT_ID", "p")
     monkeypatch.setenv("BUCKET_ID", "b")
@@ -43,7 +43,7 @@ def test_lifespan_creates_client(monkeypatch: Any, mock_repositories) -> None:
     monkeypatch.setenv("ASSISTANT_ID", "a")
 
     # Import after patches are set up
-    from assistant_service.server.main import AssistantEngineAPI
+    from ai_assistant_service.server.main import AssistantEngineAPI
 
     # Create a test service config
     test_config = ServiceConfig(
@@ -199,7 +199,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[Any, Any]) ->
     api_obj, dummy_client = api
 
     # Mock TOOL_MAP to be empty
-    with patch("assistant_service.tools.TOOL_MAP", {}):
+    with patch("ai_assistant_service.tools.TOOL_MAP", {}):
         # Create a mock tool call event
         tool_call = types.SimpleNamespace(
             id="tool_123",
@@ -224,7 +224,7 @@ async def test_function_tool_call_invalid_function_name(api: tuple[Any, Any]) ->
                     if tool_call.type == "function":
                         name = tool_call.function.name
 
-                        from assistant_service.tools import TOOL_MAP
+                        from ai_assistant_service.tools import TOOL_MAP
 
                         if name not in TOOL_MAP:
                             tool_outputs[tool_call.id] = {

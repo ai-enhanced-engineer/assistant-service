@@ -47,7 +47,7 @@ class GCPConfigRepository(BaseConfigRepository):
 
     def read_config(self) -> Any:
         # Importing here to avoid circular import
-        from assistant_service.entities import AssistantConfig
+        from ai_assistant_service.entities import AssistantConfig
 
         with self._blob.open("r") as f:
             return AssistantConfig(**json.loads(f.read()))

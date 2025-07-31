@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from pydantic import Field
 
-from assistant_service.entities.config import AssistantConfig
+from ai_assistant_service.entities.config import AssistantConfig
 
 
 class AssistantRegistrationConfig(AssistantConfig):
