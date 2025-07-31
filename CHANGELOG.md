@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.1 (2025-07-31)
+
+### Bug Fixes
+
+- Make release job depend on lint and test
+  ([`562b762`](https://github.com/ai-enhanced-engineer/assistant-service/commit/562b762ea56b40d485e048a57f85805bf01b7ef7))
+
+
 ## v1.5.0 (2025-07-31)
 
 ### Bug Fixes

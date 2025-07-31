@@ -1,6 +1,6 @@
 [project]
 name = "assistant-service"
-version = "1.5.0"
+version = "1.5.1"
 description = "Multi-tenant Python assistant service with OpenAI integration"
 authors = [{name="Leopoldo Garcia Vargas", email="lk13.dev@gmail.com"}]
 requires-python = ">=3.10,<3.13"
