@@ -1,39 +1,17 @@
 # Assistant Service
 
-A production-ready service for deploying AI assistants with custom actions. Built on OpenAI's Assistant API, this service bridges the gap between language models and your business logic, enabling assistants that can execute code, query databases, call APIs, and more.
+A production-ready service for deploying AI assistants with custom actions. Built on [OpenAI's Assistant API](https://platform.openai.com/docs/assistants/overview), this service bridges the gap between foundation models and your business logic, enabling assistants that can execute code, query databases, call APIs, and more.
 
 ## Why This Project?
 
-OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service solves that by providing:
+OpenAI Assistants are incredibly powerful, but integrating them with custom business logic can be complex. This service bridges that gap by providing:
 
-- **🚀 Custom Actions** - Write Python functions that become assistant capabilities
-- **⚡ Production-Ready** - Built-in streaming, error handling, and logging
-- **🔧 Flexible Integration** - Connect to databases, APIs, or any Python code
-- **📚 Knowledge Bases** - Combine custom actions with document search
-
-## Quick Example
-
-Create an assistant that can query your database and search documentation:
-
-```python
-# Define a custom action
-def search_customers(query: str) -> str:
-    """Search customer database for information."""
-    # Your database logic here
-    results = db.search(query)
-    return f"Found {len(results)} customers matching '{query}'"
-
-# Register it with your assistant
-assistant_config = {
-    "assistant_name": "Customer Support Assistant",
-    "instructions": "Help users with customer inquiries using our database.",
-    "initial_message": "Hello! I'm here to help with any customer inquiries. How can I assist you today?",
-    "function_names": ["search_customers"],
-    "vector_store_files": ["docs/product_guide.pdf", "docs/faq.md"]
-}
-```
-
-Your assistant can now intelligently combine OpenAI's language understanding with your business data!
+- **Custom Actions** - Turn any Python function into an assistant capability
+- **Real-Time Streaming** - Get responses as they're generated via SSE or WebSocket
+- **Production-Ready** - Comprehensive error handling, structured logging, correlation IDs
+- **Cloud-Native** - Deploy to GCP, AWS, or any container platform
+- **Fully Async** - Built on FastAPI for high-performance concurrent operations
+- **Knowledge Bases** - Combine custom actions with document search
 
 ## Use Cases
 
@@ -43,15 +21,6 @@ Build assistants that can:
 - **DevOps Assistant** - Execute scripts, check system status, manage deployments
 - **Sales Assistant** - Access CRM data, update opportunities, send emails
 - **Research Assistant** - Search documents, summarize findings, cite sources
-
-## Key Features
-
-- **Custom Actions** - Turn any Python function into an assistant capability
-- **Real-Time Streaming** - Get responses as they're generated via SSE or WebSocket
-- **Production-Ready** - Comprehensive error handling, structured logging, correlation IDs
-- **Cloud-Native** - Deploy to GCP, AWS, or any container platform
-- **Fully Async** - Built on FastAPI for high-performance concurrent operations
-- **Testable** - Mock OpenAI calls and test your custom actions locally
 
 ## Architecture
 
@@ -74,6 +43,42 @@ Build assistants that can:
                         └─────────────────────┘
 ```
 
+The Assistant Service acts as intelligent middleware between your applications and OpenAI's Assistant API. When your app sends a message, the service creates a streaming run with OpenAI, processing events in real-time. As the assistant generates responses, it may invoke your custom actions (Python functions) to query databases, call APIs, or interact with file systems. These function results are seamlessly fed back into the assistant's context, allowing it to provide informed, actionable responses. The entire flow is event-driven, supporting both REST/SSE and WebSocket protocols for real-time streaming.
+
+## Project Structure
+
+```
+assistant-service/
+├── assistant_service/       # Core service implementation
+│   ├── entities/           # Data models and configuration schemas
+│   ├── repositories/       # Storage abstraction (local/GCP)
+│   ├── server/            # FastAPI application and endpoints
+│   ├── services/          # Business logic and streaming (see services/README.md)
+│   ├── bootstrap.py       # Application initialization and dependency injection
+│   ├── structured_logging.py  # Structured logging with correlation IDs
+│   └── tools.py           # Custom action registry - add your functions here
+├── scripts/               # Utility scripts (see scripts/README.md)
+│   ├── assistant_registration/  # Tools for creating and managing assistants
+│   └── conversation/      # Interactive chat clients for testing
+├── tests/                 # Comprehensive test suite
+├── Makefile              # Development workflow commands
+├── pyproject.toml        # Project dependencies and configuration
+├── Dockerfile            # Container configuration for deployment
+└── README.md             # This file
+```
+
+### Key Components
+
+- **`assistant_service/`**: The main application package containing all service logic
+  - **`server/main.py`**: FastAPI application with REST and WebSocket endpoints
+  - **`services/`**: Core business logic for OpenAI integration, streaming, and tool execution. See [services/README.md](assistant_service/services/README.md) for architecture details
+  - **`tools.py`**: Register your custom Python functions here to make them available as assistant actions
+
+- **`scripts/`**: Development and operational utilities. See [scripts/README.md](scripts/README.md) for usage details
+  - Registration tools for creating assistants
+  - Interactive chat clients for testing
+
+- **`Makefile`**: Comprehensive development commands for environment setup, testing, linting, and deployment
 
 ## Quick Start
 
@@ -81,27 +86,39 @@ Get your first assistant with custom actions running in 5 minutes:
 
 ### Prerequisites
 - Python 3.10-3.12
-- OpenAI API key
-- `uv` package manager (`pip install uv`)
+- OpenAI account and API key (get one at [platform.openai.com/api-keys](https://platform.openai.com/api-keys))
+- [`uv`](https://github.com/astral-sh/uv) package manager (`pip install uv`)
 
 ### 1. Setup
 
+Set up your Python environment:
 ```bash
-git clone https://github.com/yourusername/custom-assistant-service
-cd custom-assistant-service
 make environment-create
+make validate-branch  # Verify environment is correctly configured
 ```
+
+> **Note**: If you don't have the code yet, first clone the repository:
+> ```bash
+> git clone https://github.com/yourusername/assistant-service
+> cd assistant-service
+> ```
 
 ### 2. Configure
 
-Create `.env` file:
+Create `.env` file with required environment variables:
 ```bash
 OPENAI_API_KEY="your-openai-api-key"
+PROJECT_ID="dummy-project"    # Any value works for local development
+BUCKET_ID="dummy-bucket"      # Any value works for local development
 ```
+
+> **Note**: This quick start stores assistant configurations on your local disk while creating the actual assistants in your OpenAI account at [platform.openai.com/assistants](https://platform.openai.com/assistants/). You'll be able to see and manage your assistants there.
 
 ### 3. Create Custom Action
 
-Create `assistant_factory/assistants/my_assistant/tools.py`:
+Register custom actions (functions) that your assistant can call. These functions become tools available to your assistant during conversations. When the assistant determines it needs to use a tool, the function will be executed within this service (not by OpenAI), giving you full control over the execution environment.
+
+Edit `assistant_service/tools.py`:
 ```python
 def get_weather(location: str) -> str:
     """Get current weather for a location."""
@@ -112,6 +129,8 @@ TOOL_MAP = {"get_weather": get_weather}
 ```
 
 ### 4. Register Assistant
+
+Define your assistant's behavior and capabilities in a configuration file (see [Assistant Configuration](#assistant-configuration) for all options).
 
 Create `assistant-config.json`:
 ```json
@@ -124,7 +143,7 @@ Create `assistant-config.json`:
 }
 ```
 
-Register:
+Register your assistant with OpenAI (this creates the assistant in your OpenAI account at [platform.openai.com/assistants](https://platform.openai.com/assistants/)):
 ```bash
 make register-assistant ARGS='assistant-config.json'
 # Save the assistant_id from output
@@ -132,15 +151,17 @@ make register-assistant ARGS='assistant-config.json'
 
 ### 5. Run & Test
 
-```bash
-# Terminal 1: Start the service
-make local-run
+Start the API server and interact with your assistant using the provided chat client:
 
-# Terminal 2: Test your assistant
-curl -X POST "http://localhost:8000/chat" \
-  -H "Content-Type: application/json" \
-  -d '{"thread_id": "new", "message": "What is the weather in New York?"}'
+```bash
+# Terminal 1: Start the API server
+make api-run
+
+# Terminal 2: Chat with your assistant
+make chat
 ```
+
+The chat client provides an interactive conversation interface. You can also use `make chat-ws` for WebSocket streaming, which provides real-time responses as they're generated (see [Streaming](#streaming) for details).
 
 
 ## API Usage
@@ -161,71 +182,11 @@ curl -X POST "http://localhost:8000/chat" \
 
 ### Streaming
 
-See [Streaming Protocols](#streaming-protocols) section below for real-time streaming options.
+The service supports real-time streaming through two protocols:
+- **Server-Sent Events (SSE)** - For web applications via the `/chat` endpoint
+- **WebSocket** - For interactive chat UIs via the `/ws/chat` endpoint
 
-## Streaming Protocols
-
-The assistant service provides real-time streaming through two protocols:
-
-### HTTP with Server-Sent Events (SSE) - `/chat` endpoint
-
-**Use this when**: Building web applications, need one-way streaming, working behind proxies/firewalls.
-
-**Features**:
-- Streams assistant responses as they're generated
-- Sends metadata events with timing information
-- Automatic reconnection with 5-second retry intervals
-- Periodic heartbeats to detect stale connections
-
-### WebSocket - `/ws/chat` endpoint
-
-**Use this when**: Building interactive chat UIs, need persistent connections, require bidirectional communication.
-
-**Features**:
-- Maintains connection for entire conversation
-- Lower latency for real-time updates
-- Handles multiple message exchanges without reconnecting
-
-**Example**:
-```python
-import websockets
-import json
-
-async with websockets.connect('ws://localhost:8000/ws/chat') as ws:
-    await ws.send(json.dumps({
-        'thread_id': 'thread_abc123',
-        'message': 'Hello!'
-    }))
-    async for message in ws:
-        data = json.loads(message)
-        # Handle streaming events
-```
-
-Both protocols stream the same OpenAI Assistant events:
-- `thread.message.delta` - Incremental message content
-- `thread.run.completed` - Run finished
-- `metadata` - Performance metrics
-- `error` - Error information
-
-For technical implementation details of the streaming protocols, see [assistant_service/services/README.md](assistant_service/services/README.md).
-
-## Project Structure
-
-```
-custom-assistant-service/
-├── assistant_service/            # Core service runtime
-│   ├── server/                  # FastAPI application & API endpoints
-│   ├── services/                # Service layer (see services/README.md)
-│   ├── repositories/            # Configuration storage (local/GCP)
-│   └── tools.py                 # Custom action registry
-├── assistant_factory/
-│   └── assistants/
-│       └── {your_assistant}/    # Your custom actions go here
-│           └── tools.py
-├── scripts/                     # Utility scripts (see scripts/README.md)
-│   └── assistant_registration/  # Assistant creation tools
-└── tests/                       # Test suite
-```
+For detailed implementation, code examples, and technical documentation, see [assistant_service/services/README.md](assistant_service/services/README.md).
 
 ## Documentation
 
@@ -257,15 +218,41 @@ The service requires these environment variables to start:
 
 ### Assistant Configuration
 
-Assistants are configured via JSON files. Key options include:
-- `assistant_name` - Display name for your assistant
-- `instructions` - System prompt defining assistant behavior
-- `initial_message` - Greeting shown when conversation starts
-- `model` - OpenAI model to use (e.g., `gpt-4-turbo-preview`)
-- `function_names` - List of custom actions the assistant can use
-- `code_interpreter` - Enable code execution capability
-- `file_search` - Enable document search capability
-- `vector_store_files` - Documents for knowledge base
+Assistants are configured via JSON files that define their behavior, capabilities, and knowledge base. Each assistant runs independently with its own configuration.
+
+#### Complete Configuration Example
+
+```json
+{
+  "assistant_name": "Customer Support Assistant",
+  "instructions": "You are a helpful customer support assistant. Use the available tools to help customers with their inquiries. Always be polite and professional.",
+  "initial_message": "Hello! I'm here to help with your questions. How can I assist you today?",
+  "model": "gpt-4-turbo-preview",
+  "function_names": ["search_orders", "check_inventory", "create_ticket"],
+  "code_interpreter": false,
+  "file_search": true,
+  "vector_store_name": "Support Documentation",
+  "vector_store_file_paths": [
+    "docs/user_manual.pdf",
+    "docs/faq.md",
+    "docs/troubleshooting_guide.txt"
+  ]
+}
+```
+
+#### Configuration Fields
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `assistant_name` | string | Yes | Display name for your assistant | `"Customer Support Assistant"` |
+| `instructions` | string | Yes | System prompt that defines the assistant's behavior and personality | `"You are a helpful assistant..."` |
+| `initial_message` | string | Yes | Greeting message shown when a conversation starts | `"Hello! How can I help?"` |
+| `model` | string | Yes | OpenAI model to use | `"gpt-4-turbo-preview"`, `"gpt-3.5-turbo"` |
+| `function_names` | array | No | List of custom actions from TOOL_MAP the assistant can use | `["search_orders", "check_inventory"]` |
+| `code_interpreter` | boolean | No | Enable OpenAI's code execution capability | `false` |
+| `file_search` | boolean | No | Enable document search capability | `true` |
+| `vector_store_name` | string | No | Name for the document knowledge base | `"Product Documentation"` |
+| `vector_store_file_paths` | array | No | Paths to documents to include in knowledge base | `["docs/manual.pdf", "docs/faq.md"]` |
 
 ## Advanced Usage
 
@@ -335,7 +322,7 @@ make integration-test     # Run integration tests
 make all-test            # Run all tests with coverage
 
 # Run service locally
-make local-run           # Start with auto-reload (port 8000)
+make api-run             # Start with auto-reload (port 8000)
 
 # Interactive chat (see scripts/README.md for details)
 make chat                # HTTP chat client
@@ -358,86 +345,25 @@ make all-test
 make validate-branch   # Lint + unit tests
 ```
 
-## Deployment
+## Troubleshooting
 
-### Cloud Deployment
+### Debugging Tips
+- **Check logs** - The service uses structured logging with correlation IDs. Set `LOGGING_LEVEL=DEBUG` for verbose output
+- **Connection issues** - Verify the API server is running on port 8000 with `curl http://localhost:8000/health`
+- **OpenAI errors** - These return 502 status codes. Check your API key and OpenAI service status
+- **Tool execution failures** - Tool errors include correlation IDs. Search logs for the ID to trace the full request
 
-Deploy to any container platform:
-
-```bash
-# Build container
-docker build -t assistant-service .
-
-# Run with environment variables
-docker run -p 8000:8000 \
-  -e OPENAI_API_KEY="your-key" \
-  assistant-service
-```
-
-#### Google Cloud Run
-```bash
-gcloud run deploy assistant-service \
-  --image gcr.io/your-project/assistant-service:latest \
-  --set-env-vars OPENAI_API_KEY="your-key" \
-  --port 8000
-```
-
-#### AWS ECS / Kubernetes
-The service works with any container orchestration platform. See `deployment/` for examples.
-
-## Security Best Practices
-
-- **API Key Management** - Use environment variables or secret managers
-- **Input Validation** - All inputs validated with Pydantic
-- **Error Handling** - Errors sanitized to prevent information leakage
-- **Assistant Isolation** - Each assistant runs in its own context
-
-## Monitoring & Debugging
-
-### Structured Logging
-- **Native structured logging** with `structlog`
-- **Correlation IDs** for request tracing across components
-- **Configurable output** - JSON or key-value format
-- **Environment-based configuration** for log level and stream
-
-### API Endpoints
-- **GET `/`** - Service status
-- **GET `/health`** - Health check endpoint
-- **GET `/start`** - Create new conversation thread
-- **POST `/chat`** - Send message and get responses (supports SSE streaming)
-- **WebSocket `/ws/chat`** - Real-time WebSocket streaming
-
-### Error Handling
-- **Comprehensive error types** with correlation IDs
-- **OpenAI errors** → 502 Bad Gateway
-- **Validation errors** → 400 Bad Request
-- **Server errors** → 500 Internal Server Error
-- **Retry logic** with exponential backoff for transient failures
-
-## Contributing
-
-1. **Follow coding standards** - Use `ruff` for formatting and linting
-2. **Write tests** - Both unit and integration tests required
-3. **Type safety** - Comprehensive type hints mandatory
-4. **Documentation** - Update relevant docs with changes
-5. **Project guidelines** - Check `CLAUDE.md` for project-specific patterns
-
-See `CONTRIBUTING.md` for contribution guidelines and `CLAUDE.md` for detailed development patterns.
+### Common Issues
+- **"API server not running"** - Start the server with `make api-run` before using chat clients
+- **Missing environment variables** - Ensure all required variables are in your `.env` file
+- **Assistant not found** - Verify the assistant_id matches one created in your OpenAI account
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Support & Community
-
-- **Documentation**: Full docs at [docs-link]
-- **Issues**: Report bugs via GitHub Issues
-- **Discussions**: Join our Discord community
-- **Examples**: See `examples/` directory for more use cases
+MIT License - see LICENSE file for details.
 
 ## Acknowledgments
 
-Built with ❤️ using:
+Built using:
 - [OpenAI Assistant API](https://platform.openai.com/docs/assistants)
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [Pydantic](https://pydantic-docs.helpmanual.io/)
