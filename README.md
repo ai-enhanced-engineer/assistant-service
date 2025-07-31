@@ -49,7 +49,7 @@ The Assistant Service acts as intelligent middleware between your applications a
 
 ```
 assistant-service/
-├── assistant_service/       # Core service implementation
+├── ai_assistant_service/       # Core service implementation
 │   ├── entities/           # Data models and configuration schemas
 │   ├── repositories/       # Storage abstraction (local/GCP)
 │   ├── server/            # FastAPI application and endpoints
@@ -68,8 +68,8 @@ assistant-service/
 ```
 
 **Key files to know:**
-- `assistant_service/tools.py` - Register your custom Python functions here
-- `assistant_service/services/` - Core streaming and OpenAI integration ([detailed docs](assistant_service/services/README.md))
+- `ai_assistant_service/tools.py` - Register your custom Python functions here
+- `ai_assistant_service/services/` - Core streaming and OpenAI integration ([detailed docs](ai_assistant_service/services/README.md))
 - `scripts/` - Utility scripts for registration and testing ([detailed docs](scripts/README.md))
 
 ## Quick Start
@@ -122,7 +122,7 @@ BUCKET_ID="dummy-bucket"
 
 Register custom actions (functions) that your assistant can call. These functions become tools available to your assistant during conversations. When the assistant determines it needs to use a tool, the function will be executed within this service (not by OpenAI), giving you full control over the execution environment.
 
-Edit `assistant_service/tools.py`:
+Edit `ai_assistant_service/tools.py`:
 ```python
 def get_weather(location: str) -> str:
     """Get current weather for a location."""
@@ -195,7 +195,7 @@ For applications that need real-time responses as they're generated:
 - **Server-Sent Events (SSE)** - Add `Accept: text/event-stream` header to `/chat` endpoint for web applications
 - **WebSocket** - Connect to `/ws/chat` for bidirectional streaming in interactive applications
 
-For detailed implementation, code examples, and technical documentation, see [assistant_service/services/README.md](assistant_service/services/README.md).
+For detailed implementation, code examples, and technical documentation, see [ai_assistant_service/services/README.md](ai_assistant_service/services/README.md).
 
 ## Configuration
 
@@ -403,7 +403,7 @@ The containerized service works with any orchestration platform. Ensure you conf
 ## Documentation
 
 - **[scripts/README.md](scripts/README.md)** - Detailed documentation for utility scripts including chat clients and assistant registration
-- **[assistant_service/services/README.md](assistant_service/services/README.md)** - Technical documentation for the service layer architecture, streaming handlers, and event processing
+- **[ai_assistant_service/services/README.md](ai_assistant_service/services/README.md)** - Technical documentation for the service layer architecture, streaming handlers, and event processing
 
 ## License
 

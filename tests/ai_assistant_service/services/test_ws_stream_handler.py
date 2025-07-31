@@ -78,7 +78,7 @@ class TestReceiveRequest:
         # Mock receive_json to raise JSONDecodeError
         mock_websocket.receive_json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             result = await websocket_handler._receive_request(mock_websocket, 123)
@@ -101,7 +101,7 @@ class TestReceiveRequest:
         """Test handling unexpected error during receive."""
         mock_websocket.receive_json.side_effect = RuntimeError("Unexpected error")
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = False
             mock_error_handler.send_error = AsyncMock()
 
@@ -143,7 +143,7 @@ class TestProcessStream:
             raise OpenAIError("API error")
             yield  # This won't be reached but satisfies the generator requirement
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             # Patch the method directly
@@ -170,7 +170,7 @@ class TestProcessStream:
         # First send succeeds, second fails
         mock_websocket.send_text.side_effect = [None, RuntimeError("Send failed")]
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = False
             mock_error_handler.send_error = AsyncMock()
 
@@ -195,7 +195,7 @@ class TestProcessStream:
         # Simulate disconnect on first send
         mock_websocket.send_text.side_effect = WebSocketDisconnect()
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.is_disconnect_error.return_value = True
 
             # Patch the method directly
@@ -218,7 +218,7 @@ class TestHandleMessageLoop:
             WebSocketDisconnect(),  # End the loop
         ]
 
-        with patch("assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
+        with patch("ai_assistant_service.services.ws_stream_handler.WebSocketErrorHandler") as mock_error_handler:
             mock_error_handler.send_error = AsyncMock()
 
             await websocket_handler._handle_message_loop(mock_websocket, 123)

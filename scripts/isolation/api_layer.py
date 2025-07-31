@@ -112,7 +112,7 @@ def main():
 
     # Run the FastAPI application
     uvicorn.run(
-        "assistant_service.server.main:get_app",
+        "ai_assistant_service.server.main:get_app",
         factory=True,
         host=args.host,
         port=args.port,

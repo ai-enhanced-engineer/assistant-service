@@ -14,7 +14,7 @@ from openai import AsyncOpenAI
 from openai.types.beta import Assistant
 from pydantic import ValidationError
 
-from assistant_service.structured_logging import configure_structlog, get_logger
+from ai_assistant_service.structured_logging import configure_structlog, get_logger
 
 # Handle both direct execution and module execution
 try:

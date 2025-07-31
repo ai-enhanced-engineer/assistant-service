@@ -4,18 +4,18 @@ from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 
-from assistant_service.entities import (
+from ai_assistant_service.entities import (
     AssistantConfig,
     ServiceConfig,
 )
 
 if TYPE_CHECKING:
-    from assistant_service.services.message_parser import IMessageParser
-    from assistant_service.services.openai_orchestrator import IOrchestrator
-    from assistant_service.services.sse_stream_handler import ISSEStreamHandler
-    from assistant_service.services.tool_executor import IToolExecutor
-    from assistant_service.services.ws_stream_handler import IWebSocketStreamHandler
-from assistant_service.repositories import (
+    from ai_assistant_service.services.message_parser import IMessageParser
+    from ai_assistant_service.services.openai_orchestrator import IOrchestrator
+    from ai_assistant_service.services.sse_stream_handler import ISSEStreamHandler
+    from ai_assistant_service.services.tool_executor import IToolExecutor
+    from ai_assistant_service.services.ws_stream_handler import IWebSocketStreamHandler
+from ai_assistant_service.repositories import (
     BaseConfigRepository,
     BaseSecretRepository,
     GCPConfigRepository,
@@ -23,7 +23,7 @@ from assistant_service.repositories import (
     LocalConfigRepository,
     LocalSecretRepository,
 )
-from assistant_service.structured_logging import get_logger
+from ai_assistant_service.structured_logging import get_logger
 
 logger = get_logger("BOOTSTRAP")
 
@@ -79,7 +79,7 @@ def get_orchestrator(
 ) -> "IOrchestrator":
     """Create orchestrator with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+    from ai_assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
     orchestrator_type = service_config.orchestrator_type
 
@@ -101,7 +101,7 @@ def get_websocket_stream_handler(
 ) -> "IWebSocketStreamHandler":
     """Create WebSocket stream handler with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.ws_stream_handler import WebSocketStreamHandler
+    from ai_assistant_service.services.ws_stream_handler import WebSocketStreamHandler
 
     stream_handler_type = service_config.stream_handler_type
 
@@ -120,7 +120,7 @@ def get_websocket_stream_handler(
 def get_sse_stream_handler(orchestrator: "IOrchestrator", service_config: ServiceConfig) -> "ISSEStreamHandler":
     """Create SSE stream handler for formatting Server-Sent Events."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.sse_stream_handler import SSEStreamHandler
+    from ai_assistant_service.services.sse_stream_handler import SSEStreamHandler
 
     logger.info("Creating SSE stream handler")
     return SSEStreamHandler(orchestrator, service_config)
@@ -129,7 +129,7 @@ def get_sse_stream_handler(orchestrator: "IOrchestrator", service_config: Servic
 def get_tool_executor(service_config: ServiceConfig) -> "IToolExecutor":
     """Create tool executor with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.tool_executor import ToolExecutor
+    from ai_assistant_service.services.tool_executor import ToolExecutor
 
     tool_executor_type = service_config.tool_executor_type
 
@@ -148,7 +148,7 @@ def get_tool_executor(service_config: ServiceConfig) -> "IToolExecutor":
 def get_message_parser(service_config: ServiceConfig) -> "IMessageParser":
     """Create message parser with configurable type selection for future extensibility."""
     # Import here to avoid circular dependencies
-    from assistant_service.services.message_parser import MessageParser
+    from ai_assistant_service.services.message_parser import MessageParser
 
     message_parser_type = service_config.message_parser_type
 

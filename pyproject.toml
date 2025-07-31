@@ -46,7 +46,7 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "assistant_service*",
+    "ai_assistant_service*",
 ]
 
 [tool.ruff]

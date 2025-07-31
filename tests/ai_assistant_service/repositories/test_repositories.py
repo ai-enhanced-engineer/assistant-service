@@ -1,7 +1,7 @@
 from typing import Any
 
-from assistant_service.entities import AssistantConfig
-from assistant_service.repositories import LocalConfigRepository, LocalSecretRepository
+from ai_assistant_service.entities import AssistantConfig
+from ai_assistant_service.repositories import LocalConfigRepository, LocalSecretRepository
 
 
 def test_local_config_repository_roundtrip() -> None:

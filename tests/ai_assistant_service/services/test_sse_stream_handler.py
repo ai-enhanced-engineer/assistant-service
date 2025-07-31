@@ -8,10 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from assistant_service.entities.config import ServiceConfig
-from assistant_service.entities.headers import SSE_HEARTBEAT_COMMENT
-from assistant_service.services.openai_orchestrator import IOrchestrator
-from assistant_service.services.sse_stream_handler import SSEStreamHandler
+from ai_assistant_service.entities.config import ServiceConfig
+from ai_assistant_service.entities.headers import SSE_HEARTBEAT_COMMENT
+from ai_assistant_service.services.openai_orchestrator import IOrchestrator
+from ai_assistant_service.services.sse_stream_handler import SSEStreamHandler
 
 
 class MockOrchestrator(IOrchestrator):
@@ -47,7 +47,7 @@ def service_config():
 @pytest.fixture
 def mock_correlation_id():
     """Mock correlation ID for consistent testing."""
-    with patch("assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock:
+    with patch("ai_assistant_service.services.sse_stream_handler.get_or_create_correlation_id") as mock:
         mock.return_value = "test-correlation-id"
         yield mock
 

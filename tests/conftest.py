@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from assistant_service import repositories as repos
-from assistant_service.entities import AssistantConfig, ServiceConfig
+from ai_assistant_service import repositories as repos
+from ai_assistant_service.entities import AssistantConfig, ServiceConfig
 
 
 class DummySecretRepository:
@@ -124,7 +124,7 @@ def mock_repositories(monkeypatch):
 @pytest.fixture
 def mock_openai_client(monkeypatch, dummy_client):
     """Mock the OpenAI client factory."""
-    import assistant_service.bootstrap
+    import ai_assistant_service.bootstrap
 
-    monkeypatch.setattr(assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
+    monkeypatch.setattr(ai_assistant_service.bootstrap, "get_openai_client", lambda config: dummy_client)
     return dummy_client

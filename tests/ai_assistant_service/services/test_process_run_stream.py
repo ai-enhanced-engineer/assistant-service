@@ -114,7 +114,7 @@ def api(monkeypatch):
     monkeypatch.setenv("CLIENT_ID", "c")
     monkeypatch.setenv("ASSISTANT_ID", "aid")
 
-    from assistant_service import repositories as repos
+    from ai_assistant_service import repositories as repos
 
     class DummySecretRepo:
         def __init__(self, project_id: str):
@@ -135,7 +135,7 @@ def api(monkeypatch):
             pass
 
         def read_config(self):
-            from assistant_service.entities import AssistantConfig
+            from ai_assistant_service.entities import AssistantConfig
 
             return AssistantConfig(
                 assistant_id="aid",
@@ -149,7 +149,7 @@ def api(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.entities import ServiceConfig
+    from ai_assistant_service.entities import ServiceConfig
 
     # Create a test service config
     test_config = ServiceConfig(
@@ -160,7 +160,7 @@ def api(monkeypatch):
     )
 
     # Create API first
-    from assistant_service.server.main import AssistantEngineAPI
+    from ai_assistant_service.server.main import AssistantEngineAPI
 
     api = AssistantEngineAPI(service_config=test_config)
 
@@ -172,7 +172,7 @@ def api(monkeypatch):
     api.orchestrator.client = dummy_client
 
     # Import the modules where these are actually located
-    from assistant_service import tools
+    from ai_assistant_service import tools
 
     # Create a new instance of DummySubmit for this test
     test_dummy_submit = DummySubmit()

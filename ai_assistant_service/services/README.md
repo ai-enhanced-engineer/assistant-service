@@ -280,7 +280,7 @@ await stream_handler.handle_connection(websocket)
 
 ### Tool Registration
 
-Define custom functions in `assistant_service/tools.py`:
+Define custom functions in `ai_assistant_service/tools.py`:
 
 ```python
 def my_tool(param: str) -> str:
@@ -324,7 +324,7 @@ make unit-test
 make all-test
 
 # Run specific test file
-uv run pytest tests/assistant_service/services/test_openai_orchestrator.py -v
+uv run pytest tests/ai_assistant_service/services/test_openai_orchestrator.py -v
 ```
 
 The test suite covers:

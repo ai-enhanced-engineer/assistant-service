@@ -7,7 +7,7 @@ import pytest
 from fastapi import HTTPException
 from openai import OpenAIError
 
-from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+from ai_assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
 @pytest.fixture

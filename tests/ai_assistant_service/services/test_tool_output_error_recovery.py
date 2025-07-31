@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from assistant_service.entities import AssistantConfig
-from assistant_service.services.openai_orchestrator import OpenAIOrchestrator
+from ai_assistant_service.entities import AssistantConfig
+from ai_assistant_service.services.openai_orchestrator import OpenAIOrchestrator
 
 
 def create_mock_tool_executor():
@@ -129,8 +129,8 @@ async def test_cancel_run_safely_failure():
 @pytest.mark.asyncio
 async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     """Test error recovery when tool output submission fails."""
-    from assistant_service import repositories as repos
-    from assistant_service.entities import AssistantConfig
+    from ai_assistant_service import repositories as repos
+    from ai_assistant_service.entities import AssistantConfig
 
     # Mock repositories
     monkeypatch.setenv("PROJECT_ID", "p")
@@ -154,8 +154,8 @@ async def test_iterate_run_events_tool_output_submission_failure(monkeypatch):
     monkeypatch.setattr(repos, "GCPSecretRepository", DummySecretRepo)
     monkeypatch.setattr(repos, "GCPConfigRepository", DummyConfigRepo)
 
-    from assistant_service.entities import ServiceConfig
-    from assistant_service.server.main import AssistantEngineAPI
+    from ai_assistant_service.entities import ServiceConfig
+    from ai_assistant_service.server.main import AssistantEngineAPI
 
     # Create a test service config
     test_config = ServiceConfig(
