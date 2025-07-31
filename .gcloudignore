@@ -1,9 +1,0 @@
-.gcloudignore
-.git
-.gitignore
-
-.env
-
-
-.ruff_cache
-.pytest_cache
