@@ -1,5 +1,5 @@
 [project]
-name = "assistant-service"
+name = "ai-assistant-service"
 version = "1.5.2"
 description = "Multi-tenant Python assistant service with OpenAI integration"
 authors = [{name="Leopoldo Garcia Vargas", email="lk13.dev@gmail.com"}]
