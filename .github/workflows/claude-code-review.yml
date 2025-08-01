@@ -31,18 +31,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Get commit authors and co-authors
-        id: get_authors
+      - name: Print workflow actor
         run: |
-          MAIN_AUTHOR=$(git log -1 --pretty=format:'%an')  # Get the main author name
-          # Get all "Co-authored-by" names (if any)
-          CO_AUTHORS=$(git log -1 --pretty=format:%B | grep -i 'Co-authored-by:' | sed 's/Co-authored-by: //I' | tr -d '\n')
-          ALL_AUTHORS="$MAIN_AUTHOR $CO_AUTHORS"  # Combine authors
-          echo "all_authors=$ALL_AUTHORS" >> $GITHUB_OUTPUT
-
-      - name: Print commit authors for debugging
-        run: |
-          echo "Main author: ${{ steps.get_authors.outputs.all_authors }}"
+            echo "Actor is: ${{ github.actor }}"
 
       - name: Run Claude Code Review
         id: claude-review
