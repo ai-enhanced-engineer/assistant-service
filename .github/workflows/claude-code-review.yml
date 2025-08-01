@@ -31,15 +31,18 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Get current commit author
-        id: get_author
+      - name: Get commit authors and co-authors
+        id: get_authors
         run: |
-          AUTHOR=$(git log -1 --pretty=format:'%an')
-          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          MAIN_AUTHOR=$(git log -1 --pretty=format:'%an')  # Get the main author name
+          # Get all "Co-authored-by" names (if any)
+          CO_AUTHORS=$(git log -1 --pretty=format:%B | grep -i 'Co-authored-by:' | sed 's/Co-authored-by: //I' | cut -d'<' -f1 | tr -d '\n')
+          ALL_AUTHORS="$MAIN_AUTHOR $CO_AUTHORS"  # Combine authors
+          echo "all_authors=$ALL_AUTHORS" >> $GITHUB_OUTPUT
 
       - name: Run Claude Code Review
         id: claude-review
-        if: ${{ steps.get_author.outputs.author != 'claude' }}
+        if: ${{ !contains(steps.get_authors.outputs.all_authors, 'claude') }}
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
