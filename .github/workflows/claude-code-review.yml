@@ -31,10 +31,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Print workflow actor
-        run: |
-            echo "Actor is: ${{ github.actor }}"
-
       - name: Run Claude Code Review
         id: claude-review
         if: ${{ github.actor != 'claude[bot]' }}
