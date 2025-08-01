@@ -36,7 +36,7 @@ jobs:
         run: |
           MAIN_AUTHOR=$(git log -1 --pretty=format:'%an')  # Get the main author name
           # Get all "Co-authored-by" names (if any)
-          CO_AUTHORS=$(git log -1 --pretty=format:%B | grep -i 'Co-authored-by:' | sed 's/Co-authored-by: //I' | cut -d'<' -f1 | tr -d '\n')
+          CO_AUTHORS=$(git log -1 --pretty=format:%B | grep -i 'Co-authored-by:' | sed 's/Co-authored-by: //I' | tr -d '\n')
           ALL_AUTHORS="$MAIN_AUTHOR $CO_AUTHORS"  # Combine authors
           echo "all_authors=$ALL_AUTHORS" >> $GITHUB_OUTPUT
 
