@@ -40,6 +40,10 @@ jobs:
           ALL_AUTHORS="$MAIN_AUTHOR $CO_AUTHORS"  # Combine authors
           echo "all_authors=$ALL_AUTHORS" >> $GITHUB_OUTPUT
 
+      - name: Print commit authors for debugging
+        run: |
+          echo "Main author: ${{ steps.get_authors.outputs.all_authors }}"
+
       - name: Run Claude Code Review
         id: claude-review
         if: ${{ !contains(steps.get_authors.outputs.all_authors, 'claude') }}
